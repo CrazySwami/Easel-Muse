@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: 'Create and share AI workflows',
 };
 
-export const maxDuration = 800; // 13 minutes
+export const maxDuration = 300; // 5 minutes
 
 type ProjectProps = {
   params: Promise<{
