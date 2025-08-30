@@ -1,4 +1,4 @@
-import { SiGithub, SiX } from '@icons-pack/react-simple-icons';
+import { SiGithub, SiGoogle } from '@icons-pack/react-simple-icons';
 import type { Provider } from '@supabase/supabase-js';
 
 export const socialProviders: {
@@ -12,8 +12,8 @@ export const socialProviders: {
     id: 'github',
   },
   {
-    name: 'Twitter',
-    icon: SiX,
-    id: 'twitter',
+    name: 'Google',
+    icon: SiGoogle,
+    id: 'google',
   },
 ];
