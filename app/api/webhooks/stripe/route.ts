@@ -108,6 +108,10 @@ export async function POST(req: Request) {
           throw new Error('User ID not found');
         }
 
+        if (!session.subscription) {
+          throw new Error('Subscription ID not found');
+        }
+
         const subscription = await stripe.subscriptions.retrieve(
           session.subscription as string
         );
