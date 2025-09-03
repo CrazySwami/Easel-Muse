@@ -104,10 +104,6 @@ export async function POST(req: Request) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        if (!session.metadata?.userId) {
-          throw new Error('User ID not found');
-        }
-
         if (!session.subscription) {
           throw new Error('Subscription ID not found');
         }
@@ -116,6 +112,10 @@ export async function POST(req: Request) {
           session.subscription as string
         );
 
+        if (!subscription.metadata?.userId) {
+          throw new Error('User ID not found in subscription metadata');
+        }
+
         await database
           .update(profile)
           .set({
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
             subscriptionId: session.subscription as string,
             productId: subscription.items.data[0]?.price.product as string,
           })
-          .where(eq(profile.id, session.metadata.userId));
+          .where(eq(profile.id, subscription.metadata.userId));
 
         break;
       }
