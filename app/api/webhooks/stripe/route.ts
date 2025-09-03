@@ -101,6 +101,28 @@ export async function POST(req: Request) {
 
         break;
       }
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+
+        if (!session.metadata?.userId) {
+          throw new Error('User ID not found');
+        }
+
+        const subscription = await stripe.subscriptions.retrieve(
+          session.subscription as string
+        );
+
+        await database
+          .update(profile)
+          .set({
+            customerId: session.customer as string,
+            subscriptionId: session.subscription as string,
+            productId: subscription.items.data[0]?.price.product as string,
+          })
+          .where(eq(profile.id, session.metadata.userId));
+
+        break;
+      }
       default:
         console.log(`Unhandled event type ${event.type}`);
         break;
