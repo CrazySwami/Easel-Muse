@@ -11,10 +11,17 @@ export const env = createEnv({
     RESEND_TOKEN: z.string().min(1).startsWith('re_'),
     RESEND_EMAIL: z.string().email().min(1),
 
-    STRIPE_SECRET_KEY: z.string().min(1).startsWith('sk_'),
+    STRIPE_SECRET_KEY: z.string().min(1),
     STRIPE_HOBBY_PRODUCT_ID: z.string().min(1).startsWith('prod_'),
     STRIPE_PRO_PRODUCT_ID: z.string().min(1).startsWith('prod_'),
     STRIPE_USAGE_PRODUCT_ID: z.string().min(1).startsWith('prod_'),
+    STRIPE_HOBBY_USAGE_PRICE_ID: z.string().min(1).startsWith('price_'),
+    STRIPE_PRO_USAGE_PRICE_ID: z.string().min(1).startsWith('price_'),
+    STRIPE_PRO_ANNUAL_USAGE_PRICE_ID: z
+      .string()
+      .min(1)
+      .startsWith('price_')
+      .optional(),
     STRIPE_CREDITS_METER_ID: z.string().min(1).startsWith('mtr_'),
     STRIPE_CREDITS_METER_NAME: z.string().min(1),
     STRIPE_WEBHOOK_SECRET: z.string().min(1).startsWith('whsec_'),
@@ -73,6 +80,10 @@ export const env = createEnv({
     STRIPE_HOBBY_PRODUCT_ID: process.env.STRIPE_HOBBY_PRODUCT_ID,
     STRIPE_PRO_PRODUCT_ID: process.env.STRIPE_PRO_PRODUCT_ID,
     STRIPE_USAGE_PRODUCT_ID: process.env.STRIPE_USAGE_PRODUCT_ID,
+    STRIPE_HOBBY_USAGE_PRICE_ID: process.env.STRIPE_HOBBY_USAGE_PRICE_ID,
+    STRIPE_PRO_USAGE_PRICE_ID: process.env.STRIPE_PRO_USAGE_PRICE_ID,
+    STRIPE_PRO_ANNUAL_USAGE_PRICE_ID:
+      process.env.STRIPE_PRO_ANNUAL_USAGE_PRICE_ID,
     STRIPE_CREDITS_METER_ID: process.env.STRIPE_CREDITS_METER_ID,
     STRIPE_CREDITS_METER_NAME: process.env.STRIPE_CREDITS_METER_NAME,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,

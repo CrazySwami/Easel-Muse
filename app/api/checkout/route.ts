@@ -6,7 +6,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 
 const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-const successUrl = `${protocol}://${env.VERCEL_PROJECT_PRODUCTION_URL}`;
+const host =
+  process.env.NODE_ENV === 'production'
+    ? env.VERCEL_PROJECT_PRODUCTION_URL
+    : 'localhost:3000';
+
+const successUrl = `${protocol}://${host}/projects`;
 
 const getFrequencyPrice = async (
   productId: string,
@@ -14,21 +19,14 @@ const getFrequencyPrice = async (
 ) => {
   const prices = await stripe.prices.list({
     product: productId,
+    recurring: { interval: frequency },
   });
 
   if (prices.data.length === 0) {
-    throw new Error('Product prices not found');
+    throw new Error('Product prices not found for the specified frequency');
   }
 
-  const price = prices.data.find(
-    (price) => price.recurring?.interval === frequency
-  );
-
-  if (!price) {
-    throw new Error('Price not found');
-  }
-
-  return price.id;
+  return prices.data[0].id;
 };
 
 export const GET = async (request: NextRequest) => {
@@ -72,17 +70,26 @@ export const GET = async (request: NextRequest) => {
         quantity: 1,
       },
       {
-        price: await getFrequencyPrice(env.STRIPE_USAGE_PRODUCT_ID, 'month'),
+        price: env.STRIPE_HOBBY_USAGE_PRICE_ID,
       }
     );
   } else if (productName === 'pro') {
+    const mainPriceId = await getFrequencyPrice(
+      env.STRIPE_PRO_PRODUCT_ID,
+      frequency
+    );
+    const usagePriceId =
+      frequency === 'year'
+        ? env.STRIPE_PRO_ANNUAL_USAGE_PRICE_ID ?? env.STRIPE_PRO_USAGE_PRICE_ID
+        : env.STRIPE_PRO_USAGE_PRICE_ID;
+
     lineItems.push(
       {
-        price: await getFrequencyPrice(env.STRIPE_PRO_PRODUCT_ID, frequency),
+        price: mainPriceId,
         quantity: 1,
       },
       {
-        price: await getFrequencyPrice(env.STRIPE_USAGE_PRODUCT_ID, frequency),
+        price: usagePriceId,
       }
     );
   }

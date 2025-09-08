@@ -30,13 +30,32 @@ export const getCredits = async (): Promise<
       throw new Error('Customer ID not found');
     }
 
+    // Determine which usage price IDs to look for. For Pro, include annual if configured.
+    const usagePriceIds: string[] =
+      profile.productId === env.STRIPE_HOBBY_PRODUCT_ID
+        ? [env.STRIPE_HOBBY_USAGE_PRICE_ID]
+        : [
+            env.STRIPE_PRO_USAGE_PRICE_ID,
+            env.STRIPE_PRO_ANNUAL_USAGE_PRICE_ID,
+          ].filter(Boolean) as string[];
+
+    console.log('--- LOOKING FOR PRICE IDS ---', usagePriceIds);
+
     const upcomingInvoice = await stripe.invoices.createPreview({
       subscription: profile.subscriptionId,
     });
 
-    const usageProductLineItem = upcomingInvoice.lines.data.find(
-      (line) =>
-        line.pricing?.price_details?.product === env.STRIPE_USAGE_PRODUCT_ID
+    console.log(
+      '--- STRIPE INVOICE PREVIEW ---',
+      JSON.stringify(
+        upcomingInvoice.lines.data.map(
+          (line) => line.pricing?.price_details?.price
+        )
+      )
+    );
+
+    const usageProductLineItem = upcomingInvoice.lines.data.find((line) =>
+      usagePriceIds.includes(line.pricing?.price_details?.price ?? '')
     );
 
     if (!usageProductLineItem) {

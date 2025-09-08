@@ -29,51 +29,6 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId =
-          typeof subscription.customer === 'string'
-            ? subscription.customer
-            : subscription.customer.id;
-
-        if (!subscription.metadata.userId) {
-          throw new Error('User ID not found');
-        }
-
-        // Get customer to find the user ID
-        const customer = await stripe.customers.retrieve(customerId);
-
-        if (customer.deleted) {
-          throw new Error('Customer is deleted');
-        }
-
-        // If the customer has changed plan, we need to cancel the old subscription
-        const subscriptions = await stripe.subscriptions.list({
-          customer: customerId,
-        });
-
-        for (const oldSubscription of subscriptions.data) {
-          if (oldSubscription.id !== subscription.id) {
-            await stripe.subscriptions.cancel(oldSubscription.id, {
-              cancellation_details: {
-                comment: 'Customer has changed plan',
-              },
-            });
-          }
-        }
-
-        await database
-          .update(profile)
-          .set({
-            customerId,
-            subscriptionId: subscription.id,
-            productId: subscription.items.data[0]?.price.product as string,
-          })
-          .where(eq(profile.id, subscription.metadata.userId));
-
-        break;
-      }
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
 

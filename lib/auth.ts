@@ -27,17 +27,8 @@ export const currentUserProfile = async () => {
     .where(eq(profile.id, user.id));
   let userProfile = userProfiles.at(0);
 
-  if (!userProfile && user.email) {
-    const response = await database
-      .insert(profile)
-      .values({ id: user.id })
-      .returning();
-
-    if (!response.length) {
-      throw new Error('Failed to create user profile');
-    }
-
-    userProfile = response[0];
+  if (!userProfile) {
+    throw new Error('User profile not found');
   }
 
   return userProfile;
