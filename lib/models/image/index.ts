@@ -5,6 +5,7 @@ import {
 } from '@/lib/providers';
 import { bedrock } from '@ai-sdk/amazon-bedrock';
 import { luma } from '@ai-sdk/luma';
+import { gateway } from '@ai-sdk/gateway';
 import { openai } from '@ai-sdk/openai';
 import { xai } from '@ai-sdk/xai';
 import type { ImageModel } from 'ai';
@@ -28,9 +29,31 @@ type TersaImageModel = TersaModel & {
   sizes?: ImageSize[];
   supportsEdit?: boolean;
   providerOptions?: Record<string, Record<string, string>>;
+  // When true, treat the provider model as a language model that emits images
+  // via generateText() files, not an image model via generateImage().
+  lmImage?: boolean;
 };
 
 export const imageModels: Record<string, TersaImageModel> = {
+  'gemini-2.5-flash-image-preview': {
+    label: 'Gemini 2.5 Flash (Image Preview)',
+    chef: providers.google,
+    providers: [
+      {
+        ...providers.google,
+        // Route via Vercel AI Gateway
+        model: gateway(
+          'google/gemini-2.5-flash-image-preview'
+        ) as unknown as ImageModel,
+        // Set your per-generation USD cost here; this maps to credits at $0.005/credit
+        getCost: () => 0.05,
+      },
+    ],
+    // Imagen/Gemini image preview uses aspectRatio, not size, but our node provides size → aspect ratio mapping
+    sizes: ['1024x1024', '1024x1536', '1536x1024'],
+    supportsEdit: true,
+    lmImage: true,
+  },
   'grok-2-image': {
     icon: GrokIcon,
     label: 'Grok 2 Image',

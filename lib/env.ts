@@ -40,6 +40,7 @@ export const env = createEnv({
     AWS_REGION: z.string().min(1),
     HUME_API_KEY: z.string().min(1),
     LMNT_API_KEY: z.string().min(1),
+    GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
 
     // Other Models
     MINIMAX_GROUP_ID: z.string().min(1),
@@ -97,5 +98,6 @@ export const env = createEnv({
     LMNT_API_KEY: process.env.LMNT_API_KEY,
     BF_API_KEY: process.env.BF_API_KEY,
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
 });

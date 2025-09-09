@@ -13,6 +13,15 @@ This approach has several advantages:
 
 The core directory for this system is **`lib/models/`**.
 
+### Registry files by modality
+
+- Images: `lib/models/image/index.ts` (export `imageModels`)
+- Video: `lib/models/video/index.ts` (export `videoModels`)
+- Vision (image description): `lib/models/vision.ts` (export `visionModels`)
+- Speech (TTS): `lib/models/speech.ts` (export `speechModels`)
+- Transcription (STT): `lib/models/transcription.ts` (export `transcriptionModels`)
+- Provider registry (labels/icons): `lib/providers.ts`
+
 ## 2. Managing Image Models
 
 Image models are the most complex, with multiple providers and configuration options.
@@ -78,7 +87,31 @@ Other model types follow the same catalog pattern but have simpler structures.
 
 The process for adding or removing these models is the same: edit the relevant file and add or remove the model object from the exported catalog.
 
-## 4. A Note on Text & Chat Models
+## 4. Credits and pricing
+
+- Each provider entry defines a `getCost(...)` function that returns the dollar cost for one operation.
+- We convert dollars → credits in `lib/stripe.ts` using `1 credit = $0.005` (rounded up).
+- Credits are recorded via `trackCreditUsage(...)` in the feature code:
+  - Code/Text: `app/api/code/route.ts` (uses Gateway pricing and token usage)
+  - Image: `app/actions/image/create.ts`, `app/actions/image/edit.ts`
+  - Video: `app/actions/video/create.ts`
+  - Speech (TTS): `app/actions/speech/create.ts`
+
+Notes:
+- Image models typically base cost on size plus provider usage when available.
+- Video models base cost on duration (and sometimes pixels/frames).
+- Speech models base cost on character count.
+
+### Gemini 2.5 Flash Image Preview (via Gateway)
+
+- Registry entry: `lib/models/image/index.ts` id `gemini-2.5-flash-image-preview`.
+- Routed through Vercel AI Gateway: `gateway('google/gemini-2.5-flash-image-preview')`.
+- This model emits images from a language-model call. We enable image output with `providerOptions.google.responseModalities = ['TEXT','IMAGE']` and extract the first image from `result.files`.
+- Extraction supports SDK/Gateway shapes: `toArrayBuffer()`, `arrayBuffer()`, `blob()`, `data` (Uint8Array/Buffer/ArrayBuffer), `url` (including data: URIs), `inlineData`, `uint8ArrayData`, and `base64Data`.
+- Edit capability is enabled with `supportsEdit: true` so you can connect an input image node.
+- Cost per generation is defined via `getCost` on the model entry.
+
+## 5. A Note on Text & Chat Models
 
 You correctly noticed that general text/chat models are handled differently.
 

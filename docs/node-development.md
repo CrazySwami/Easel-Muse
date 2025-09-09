@@ -975,3 +975,158 @@ All nodes (except File, Tweet, and Drop) follow these patterns:
 Creating nodes in Tersa follows a consistent pattern that allows for powerful and flexible data processing. By following this guide, you can create nodes that integrate seamlessly with the existing system and provide valuable functionality to users.
 
 Remember to test your nodes thoroughly and ensure they work well with other nodes in the system. With proper design and implementation, your nodes can become powerful tools in the Tersa ecosystem.
+
+# Base Technical Foundation — Nodes, Tools, and Data Flow
+
+[Read first: Getting Started guide](./getting-started.md)
+
+## Table of Contents
+- Overview
+- Core Concepts
+  - Nodes and Edges (XYFlow)
+  - Tools and Providers (AI SDK + Gateway)
+  - Credits and Usage
+- Node Types and Behaviors
+  - Text Node
+  - Image Node (Generate & Edit)
+  - Audio: Speech (TTS) and Transcription (STT)
+  - Video Node
+  - File Node
+  - Tweet Node
+- Prompt Assembly and Multimodal Inputs
+- Execution Flow (Sequential/Parallel)
+- Persistence and Storage
+- Extending the System
+  - Add a Model
+  - Add a Tool
+  - Add a Node
+- Troubleshooting
+
+## Overview
+“Base Technical Foundation” (BTF) is the architecture that powers the canvas. It combines:
+- XYFlow for controlled graph state (nodes/edges)
+- Vercel AI SDK + Gateway for model execution
+- Supabase for auth, storage, and persistence
+- Stripe for credits/metering
+
+The canvas is a controlled graph: your actions produce a deterministic, serializable `{ nodes, edges }` model. Each node type standardizes how it accepts inputs, assembles prompts, calls the appropriate tool/model, and emits outputs.
+
+## Core Concepts
+
+### Nodes and Edges (XYFlow)
+- We use `useNodesState`/`useEdgesState` in UI to keep graph controlled.
+- Edges represent data flow. A node gathers all incoming nodes using `getIncomers(id, nodes, edges)` and extracts specific typed inputs (text, images, files, audio transcripts, tweets) via helpers in `lib/xyflow.ts`.
+- Each node has a “primitive” (empty state / upload surface) and a “transform” (actionable state with a toolbar and actions).
+
+### Tools and Providers (AI SDK + Gateway)
+- Models are defined in `lib/models/*` registries. Each entry sets:
+  - label, provider metadata, `providers[0].model`, and `getCost()` for billing
+  - optional flags like `supportsEdit`, supported sizes/ratios, and `lmImage` for LM-based image output
+- Chat/Code use the Vercel AI Gateway client in `lib/gateway.tsx`.
+- Image/Video/Speech use AI SDK provider models or specialized SDKs; some route through Gateway.
+
+### Credits and Usage
+- We compute operation dollar cost per model via `getCost(...)`.
+- Convert dollars → credits in `lib/stripe.ts` at $0.005/credit (ceil) and send meter events to Stripe.
+- Remaining credits are computed via invoice preview; see `docs/billing-and-usage.md`.
+
+## Node Types and Behaviors
+
+### Text Node
+- Gathers inputs from upstream nodes:
+  - Text prompts, audio transcription, image descriptions, tweet content, file attachments
+- Assembles a composite prompt:
+  - `Instructions` (node-local)
+  - `Text Prompts`, `Audio Prompts`, `Image Descriptions`, `Tweet Content`
+- Calls `/api/chat` (Gateway-backed). Attachments become `files` for multimodal models.
+- Output: assistant text (plus optional source URLs) is saved to node data.
+
+### Image Node
+- Two modes: Generate and Edit.
+- Upstream inputs:
+  - For Generate: Text prompts (from Text nodes) and optionally instructions/size
+  - For Edit: Incoming image (file or image node) + instructions
+- Providers:
+  - OpenAI GPT Image 1 (Images API)
+  - BFL FLUX family (image endpoint)
+  - Google Gemini 2.5 Flash Image Preview via Gateway (LM emitting image files)
+- Generate flow:
+  - If provider is a pure image model: use `experimental_generateImage`
+  - If provider is GPT Image 1: use OpenAI Images API
+  - If provider `lmImage` (e.g., Gemini preview): call `generateText` with `providerOptions.google.responseModalities=['TEXT','IMAGE']` and parse `result.files`
+- Edit flow:
+  - If `supportsEdit` and is a pure image model: use image edit endpoint/provider options
+  - For Gemini preview (LM): pass the incoming image as a `file` part in `messages[0].content` along with a `text` part; enable image output; extract file bytes
+- Output: saved to Supabase `files` bucket with public URL; node data updated with url/type and updatedAt
+
+### Audio Nodes
+- Speech (TTS): `lib/models/speech.ts` defines models; cost based on characters.
+- Transcription (STT): `lib/models/transcription.ts` defines models; outputs transcript text for downstream Text nodes.
+
+### Video Node
+- Uses `lib/models/video/index.ts` providers (Runway, Luma, Minimax, Replicate) with per-duration pricing.
+- Saves MP4 to Supabase `files` bucket and updates node data.
+
+### File Node
+- Uploads a file to `files` bucket and exposes a public URL/mediatype; can be attached to Text nodes as multimodal input.
+
+### Tweet Node
+- Extracts tweet content for downstream Text nodes.
+
+## Prompt Assembly and Multimodal Inputs
+- Text Node composes a single message string with section headers + attaches files/URLs for multimodal models.
+- Image Node Generate composes instruction + context; Edit composes instruction + input image.
+- For LM-based image output (Gemini preview), the model must be called with `generateText` and image output enabled in provider options.
+
+### Diagrams
+
+```mermaid
+flowchart LR
+  A[Text Node] -->|text| B[Image Node - Generate]
+  C[Image Node] -->|file| D[Image Node - Edit]
+  E[Audio Node - STT] -->|transcript| A
+  F[File Node] -->|attachment| A
+  G[Tweet Node] -->|content| A
+  A -->|instructions + inputs| H((Gateway/API)) -->|response| A
+  B -->|generated image| Storage[(Supabase Storage)]
+  D -->|edited image| Storage
+```
+
+```mermaid
+sequenceDiagram
+  participant Up as Upstream Nodes
+  participant Txt as Text Node
+  participant Img as Image Node
+  participant GW as AI Gateway / Providers
+  Up->>Txt: text/transcript/descriptions/files
+  Txt->>GW: /api/chat (text + files)
+  GW-->>Txt: assistant text
+  Txt->>Img: text prompt
+  Img->>GW: generate image (endpoint or LM with files)
+  GW-->>Img: image bytes/files
+  Img->>Storage: upload public URL
+```
+
+## Persistence and Storage
+- Graph `{ nodes, edges }` serialized in the project’s content.
+- Images/videos stored in Supabase `files` bucket (public); URLs referenced in node data.
+
+## Extending the System
+
+### Add a Model
+- Edit the relevant registry: `lib/models/{image|video|speech|transcription}.ts`
+- Provide `providers[0].model` and `getCost` (USD/op); set flags (`supportsEdit`, `lmImage`)
+
+### Add a Tool
+- For server tools, add a server action under `app/actions/...` wrapping the provider call.
+- For client tools, use AI SDK React hooks and add a provider-backed model to the registry.
+
+### Add a Node
+- Create `components/nodes/<kind>/primitive.tsx` and `transform.tsx`
+- Wire prompt assembly using helpers in `lib/xyflow.ts`
+- Connect to registry model(s) as appropriate and update outputs to storage/db
+
+## Troubleshooting
+- “message.content is not iterable”: LM edit path requires `messages: [{ role: 'user', content: [{type:'text'},{type:'file'}] }]` (array of parts), not a plain string.
+- “Unable to read image bytes …”: Provider files can be returned as data/url/blob/toArrayBuffer/arrayBuffer/base64Data/uint8ArrayData; our extraction covers all, but ensure the model is routed correctly (Gateway for Gemini preview) and responseModalities includes `IMAGE`.
+- Images not rendering: verify `next.config.ts` remotePatterns includes your Supabase host.

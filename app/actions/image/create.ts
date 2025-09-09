@@ -12,6 +12,7 @@ import type { Edge, Node, Viewport } from '@xyflow/react';
 import {
   type Experimental_GenerateImageResult,
   experimental_generateImage as generateImage,
+  generateText,
 } from 'ai';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -133,29 +134,137 @@ export const generateImageAction = async ({
         aspectRatio = `${width / divisor}:${height / divisor}`;
       }
 
-      const generatedImageResponse = await generateImage({
-        model: provider.model,
-        prompt: [
-          'Generate an image based on the following instructions and context.',
-          '---',
-          'Instructions:',
-          instructions ?? 'None.',
-          '---',
-          'Context:',
-          prompt,
-        ].join('\n'),
-        size: size as never,
-        aspectRatio,
-      });
+      if ((model as any).lmImage) {
+        // Gemini 2.5 Flash Image Preview returns images via generateText files
+        const result = await generateText({
+          model: provider.model as never,
+          prompt: [
+            'Generate an image based on the following instructions and context.',
+            '---',
+            'Instructions:',
+            instructions ?? 'None.',
+            '---',
+            'Context:',
+            prompt,
+          ].join('\n'),
+          providerOptions: {
+            google: { responseModalities: ['TEXT', 'IMAGE'] },
+          },
+        });
+        // no logs in production
 
-      await trackCreditUsage({
-        action: 'generate_image',
-        cost: provider.getCost({
-          size,
-        }),
-      });
+        const file = (result as any).files?.find((f: any) =>
+          f.mediaType?.startsWith('image/')
+        );
 
-      image = generatedImageResponse.image;
+        if (!file) {
+          throw new Error('No image returned by Gemini response');
+        }
+
+        let uint8Array: Uint8Array | undefined = undefined;
+        // Prefer toArrayBuffer()/arrayBuffer() if provided by AI SDK 5 GeneratedFile
+        if (typeof (file as any).toArrayBuffer === 'function') {
+          const ab = await (file as any).toArrayBuffer();
+          uint8Array = new Uint8Array(ab);
+          // noop
+        } else if (typeof (file as any).arrayBuffer === 'function') {
+          const ab = await (file as any).arrayBuffer();
+          uint8Array = new Uint8Array(ab);
+          // noop
+        } else if (file.data && (file.data as any).buffer) {
+          // Some runtimes expose a Uint8Array directly
+          uint8Array = file.data as Uint8Array;
+          // noop
+        } else if (file.data instanceof ArrayBuffer) {
+          uint8Array = new Uint8Array(file.data as ArrayBuffer);
+          // noop
+        } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(file.data)) {
+          uint8Array = new Uint8Array(file.data as Buffer);
+          // noop
+        } else if (typeof (file as any).blob === 'function') {
+          const blob = await (file as any).blob();
+          uint8Array = new Uint8Array(await blob.arrayBuffer());
+          // noop
+        } else if ((file as any).url) {
+          const urlString = (file as any).url as string;
+          if (urlString.startsWith('data:')) {
+            // data:[mime];base64,<data>
+            const comma = urlString.indexOf(',');
+            const meta = urlString.substring(5, comma); // e.g. image/png;base64
+            const b64 = urlString.substring(comma + 1);
+            uint8Array = Buffer.from(b64, 'base64');
+            // Normalize mediaType if missing
+            if (!file.mediaType && meta) {
+              (file as any).mediaType = meta.split(';')[0];
+            }
+            // noop
+          } else {
+            // Fallback: fetch from URL
+            const res = await fetch(urlString);
+            const ab = await res.arrayBuffer();
+            uint8Array = new Uint8Array(ab);
+            // noop
+          }
+        } else if ((file as any).inlineData?.data) {
+          // Some providers return inline base64
+          const b64 = (file as any).inlineData.data as string;
+          uint8Array = Buffer.from(b64, 'base64');
+          // noop
+        } else if ((file as any).uint8ArrayData) {
+          // Observed shape in Gateway: { uint8ArrayData, base64Data, mediaType }
+          uint8Array = (file as any).uint8ArrayData as Uint8Array;
+          // noop
+        } else if ((file as any).base64Data) {
+          const b64 = (file as any).base64Data as string;
+          uint8Array = Buffer.from(b64, 'base64');
+          // noop
+        }
+
+        if (!uint8Array) {
+          throw new Error('Unable to read image bytes from Gemini response');
+        }
+
+        image = {
+          base64: Buffer.from(uint8Array).toString('base64'),
+          uint8Array,
+          mediaType: (file.mediaType as string) ?? 'image/png',
+        } as Experimental_GenerateImageResult['image'];
+        // noop
+
+        await trackCreditUsage({
+          action: 'generate_image',
+          cost: provider.getCost({ size }),
+        });
+      } else {
+        const generatedImageResponse = await generateImage({
+          model: provider.model,
+          prompt: [
+            'Generate an image based on the following instructions and context.',
+            '---',
+            'Instructions:',
+            instructions ?? 'None.',
+            '---',
+            'Context:',
+            prompt,
+          ].join('\n'),
+          size: size as never,
+          aspectRatio,
+          providerOptions: {
+            google: {
+              responseModalities: ['TEXT', 'IMAGE'],
+            },
+          },
+        });
+
+        await trackCreditUsage({
+          action: 'generate_image',
+          cost: provider.getCost({
+            size,
+          }),
+        });
+
+        image = generatedImageResponse.image;
+      }
     }
 
     let extension = image.mediaType.split('/').pop();

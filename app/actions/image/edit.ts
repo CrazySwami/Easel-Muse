@@ -11,6 +11,7 @@ import type { Edge, Node, Viewport } from '@xyflow/react';
 import {
   type Experimental_GenerateImageResult,
   experimental_generateImage as generateImage,
+  generateText,
 } from 'ai';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -123,7 +124,84 @@ export const editImageAction = async ({
     const prompt =
       !instructions || instructions === '' ? defaultPrompt : instructions;
 
-    if (provider.model.modelId === 'gpt-image-1') {
+    if ((model as any).lmImage) {
+      // Gemini image-edit flow via LM files
+      const inputRes = await fetch(images[0].url);
+      const inputAb = await inputRes.arrayBuffer();
+      const inputBytes = new Uint8Array(inputAb);
+      const inputType = images[0].type;
+
+      const result = await generateText({
+        model: provider.model as never,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'file', data: inputBytes, mediaType: inputType },
+            ],
+          },
+        ],
+        providerOptions: {
+          google: { responseModalities: ['TEXT', 'IMAGE'] },
+        },
+      });
+
+      const file = (result as any).files?.find((f: any) =>
+        f.mediaType?.startsWith('image/')
+      );
+
+      if (!file) {
+        throw new Error('No image returned by Gemini');
+      }
+
+      let uint8Array: Uint8Array | undefined;
+      if (typeof (file as any).toArrayBuffer === 'function') {
+        const ab = await (file as any).toArrayBuffer();
+        uint8Array = new Uint8Array(ab);
+      } else if (typeof (file as any).arrayBuffer === 'function') {
+        const ab = await (file as any).arrayBuffer();
+        uint8Array = new Uint8Array(ab);
+      } else if (file.data && (file.data as any).buffer) {
+        uint8Array = file.data as Uint8Array;
+      } else if (file.data instanceof ArrayBuffer) {
+        uint8Array = new Uint8Array(file.data as ArrayBuffer);
+      } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer?.(file.data)) {
+        uint8Array = new Uint8Array(file.data as Buffer);
+      } else if (typeof (file as any).blob === 'function') {
+        const blob = await (file as any).blob();
+        uint8Array = new Uint8Array(await blob.arrayBuffer());
+      } else if ((file as any).url) {
+        const res = await fetch((file as any).url as string);
+        const ab = await res.arrayBuffer();
+        uint8Array = new Uint8Array(ab);
+      } else if ((file as any).inlineData?.data) {
+        const b64 = (file as any).inlineData.data as string;
+        uint8Array = Buffer.from(b64, 'base64');
+      } else if ((file as any).uint8ArrayData) {
+        uint8Array = (file as any).uint8ArrayData as Uint8Array;
+      } else if ((file as any).base64Data) {
+        const b64 = (file as any).base64Data as string;
+        uint8Array = Buffer.from(b64, 'base64');
+      }
+
+      if (!uint8Array) {
+        throw new Error('Unable to read image bytes from Gemini response');
+      }
+
+      image = {
+        base64: Buffer.from(uint8Array).toString('base64'),
+        uint8Array,
+        mediaType: (file.mediaType as string) ?? inputType ?? 'image/png',
+      } as Experimental_GenerateImageResult['image'];
+
+      await trackCreditUsage({
+        action: 'generate_image',
+        cost: provider.getCost({
+          size,
+        }),
+      });
+    } else if (provider.model.modelId === 'gpt-image-1') {
       const generatedImageResponse = await generateGptImage1Image({
         prompt,
         images,
@@ -151,6 +229,9 @@ export const editImageAction = async ({
         providerOptions: {
           bfl: {
             image: base64Image,
+          },
+          google: {
+            responseModalities: ['TEXT', 'IMAGE'],
           },
         },
       });
