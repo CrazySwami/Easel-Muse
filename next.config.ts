@@ -1,5 +1,9 @@
 import type { NextConfig } from 'next';
 
+// Resolve the Supabase host at build time so Next/Image can load public URLs
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
+
 const nextConfig: NextConfig = {
   typescript: {
     // !! WARN !!
@@ -11,11 +15,15 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
-      // Supabase storage, production
-      {
-        protocol: 'https',
-        hostname: 'zszbbhofscgnnkvyonow.supabase.co',
-      },
+      // Supabase storage, production (resolved from env)
+      ...(supabaseHost
+        ? ([
+            {
+              protocol: 'https' as const,
+              hostname: supabaseHost,
+            },
+          ] as const)
+        : []),
 
       // Supabase storage, development
       {
