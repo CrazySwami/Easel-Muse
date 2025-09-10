@@ -27,8 +27,8 @@ export async function generateShareLinks(projectId: string): Promise<
       .set({ readOnlyToken, inviteToken })
       .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)));
 
-    const base = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
+    const base = process.env.NODE_ENV === 'production'
+      ? 'https://easel.hustletogether.com'
       : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
     return {
