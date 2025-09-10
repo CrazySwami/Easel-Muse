@@ -15,6 +15,59 @@ import { Label } from '@/components/ui/label';
 import { ShareIcon, CopyIcon, MailIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+// Providers are already mounted at the project page level
+import { useOthers, useSelf } from '@liveblocks/react';
+
+const ViewersList = () => {
+  const others = useOthers();
+  const me = useSelf();
+  const viewers = [
+    ...(me
+      ? [{
+          id: me.connectionId,
+          name: (me.info as any)?.name ?? 'You',
+          email: (me.info as any)?.email as string | undefined,
+          color: (me.info as any)?.color as string | undefined,
+          avatar: (me.info as any)?.avatar as string | undefined,
+        }]
+      : []),
+    ...others.map((u) => ({
+      id: u.connectionId,
+      name: (u.info as any)?.name ?? (u.info as any)?.email ?? 'User',
+      email: (u.info as any)?.email as string | undefined,
+      color: (u.info as any)?.color as string | undefined,
+      avatar: (u.info as any)?.avatar as string | undefined,
+    })),
+  ];
+
+  return (
+    <div className="space-y-2">
+      <Label>Active viewers</Label>
+      {viewers.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No one else is viewing right now.</p>
+      ) : (
+        <div className="flex flex-col gap-2 max-h-48 overflow-auto">
+          {viewers.map((u) => (
+            <div key={u.id} className="flex items-center gap-2">
+              {u.avatar ? (
+                <img src={u.avatar} alt={u.name} className="h-5 w-5 rounded-full" />
+              ) : (
+                <div
+                  className="h-5 w-5 rounded-full"
+                  style={{ background: u.color ?? '#06f', boxShadow: '0 0 0 2px white' }}
+                />
+              )}
+              <span className="text-xs">{u.name}</span>
+              {u.email ? (
+                <span className="text-[10px] text-muted-foreground">{u.email}</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 type ShareDialogProps = {
   projectId: string;
@@ -56,7 +109,7 @@ export const ShareDialog = ({ projectId }: ShareDialogProps) => {
     }
   };
 
-  return (
+  const Inner = (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
@@ -72,6 +125,8 @@ export const ShareDialog = ({ projectId }: ShareDialogProps) => {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          <ViewersList />
+
           {!links ? (
             <Button onClick={handleGenerateLinks} disabled={isLoading} className="w-full">
               {isLoading ? 'Generating...' : 'Generate Share Links'}
@@ -119,4 +174,7 @@ export const ShareDialog = ({ projectId }: ShareDialogProps) => {
       </DialogContent>
     </Dialog>
   );
+
+  // Providers are handled by the page; render directly
+  return Inner;
 };

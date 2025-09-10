@@ -8,7 +8,7 @@ import { isValidSourceTarget } from '@/lib/xyflow';
 import { NodeDropzoneProvider } from '@/providers/node-dropzone';
 import { NodeOperationsProvider } from '@/providers/node-operations';
 import { useProject } from '@/providers/project';
-import { useRoom } from '@liveblocks/react';
+import { useFlowStore } from '@/lib/flow-store';
 import {
   Background,
   type IsValidConnection,
@@ -36,7 +36,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
-import { RoomAvatars } from '@/providers/liveblocks';
 import { edgeTypes } from './edges';
 import { nodeTypes } from './nodes';
 import {
@@ -48,14 +47,6 @@ import {
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
-  const room = (() => {
-    try {
-      // If not rendered under a RoomProvider, this will throw
-      return useRoom();
-    } catch {
-      return null as any;
-    }
-  })();
   const {
     onConnect,
     onConnectStart,
@@ -67,8 +58,11 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     ...rest
   } = props ?? {};
   const content = project?.content as { nodes: Node[]; edges: Edge[] };
-  const [nodes, setNodes] = useState<Node[]>(initialNodes ?? content?.nodes ?? []);
-  const [edges, setEdges] = useState<Edge[]>(initialEdges ?? content?.edges ?? []);
+  const nodes = useFlowStore((s: { nodes: Node[] }) => s.nodes);
+  const edges = useFlowStore((s: { edges: Edge[] }) => s.edges);
+  const setNodes = useFlowStore((s: { setNodes: (u: (p: Node[]) => Node[]) => void }) => s.setNodes);
+  const setEdges = useFlowStore((s: { setEdges: (u: (p: Edge[]) => Edge[]) => void }) => s.setEdges);
+  const replaceAll = useFlowStore((s: { replaceAll: (d: { nodes?: Node[]; edges?: Edge[] }) => void }) => s.replaceAll);
   const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
   const {
     getEdges,
@@ -82,6 +76,19 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const [saveState, setSaveState] = useSaveProject();
 
   // Yjs temporarily disabled: operate in local state only; presence remains via Liveblocks
+
+  // Seed central store from initial props or project content once
+  useEffect(() => {
+    const hasAny = (nodes?.length ?? 0) > 0 || (edges?.length ?? 0) > 0;
+    if (!hasAny) {
+      if (initialNodes || initialEdges) {
+        replaceAll({ nodes: initialNodes, edges: initialEdges });
+      } else if (content) {
+        replaceAll({ nodes: content.nodes ?? [], edges: content.edges ?? [] });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const save = useDebouncedCallback(async () => {
     if (saveState.isSaving || !project?.userId || !project?.id) {
@@ -111,12 +118,9 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     (changes) => {
       // Local-only mode
 
-      setNodes((current) => {
-        const updated = applyNodeChanges(changes, current);
-        save();
-        onNodesChange?.(changes);
-        return updated;
-      });
+      setNodes((current: Node[]) => applyNodeChanges(changes, current));
+      save();
+      onNodesChange?.(changes);
     },
     [save, onNodesChange]
   );
@@ -125,12 +129,9 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     (changes) => {
       // Local-only mode
 
-      setEdges((current) => {
-        const updated = applyEdgeChanges(changes, current);
-        save();
-        onEdgesChange?.(changes);
-        return updated;
-      });
+      setEdges((current: Edge[]) => applyEdgeChanges(changes, current));
+      save();
+      onEdgesChange?.(changes);
     },
     [save, onEdgesChange]
   );
@@ -313,9 +314,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   );
 
   const handleSelectAll = useCallback(() => {
-    setNodes((nodes: Node[]) =>
-      nodes.map((node: Node) => ({ ...node, selected: true }))
-    );
+    setNodes((nodes: Node[]) => nodes.map((node: Node) => ({ ...node, selected: true })));
   }, []);
 
   const handleCopy = useCallback(() => {
@@ -341,12 +340,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     }));
 
     // Unselect all existing nodes
-    setNodes((nodes: Node[]) =>
-      nodes.map((node: Node) => ({
-        ...node,
-        selected: false,
-      }))
-    );
+    setNodes((nodes: Node[]) => nodes.map((node: Node) => ({ ...node, selected: false })));
 
     // Add new nodes
     setNodes((nodes: Node[]) => [...nodes, ...newNodes]);
@@ -416,7 +410,6 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               {...rest}
             >
               <Background />
-              <RoomAvatars />
               {children}
             </ReactFlow>
           </ContextMenuTrigger>

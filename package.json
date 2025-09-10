@@ -29,7 +29,6 @@
     "@liveblocks/client": "^3.6.1",
     "@liveblocks/node": "^3.6.1",
     "@liveblocks/react": "^3.6.1",
-    
     "@marsidev/react-turnstile": "^1.1.0",
     "@monaco-editor/react": "4.7.0",
     "@number-flow/react": "^0.5.10",
@@ -142,8 +141,8 @@
     "use-debounce": "^10.0.5",
     "use-stick-to-bottom": "^1.1.1",
     "vaul": "^1.1.2",
-    
-    "zod": "^3.25.64"
+    "zod": "^3.25.64",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@auto-it/first-time-contributor": "^11.3.0",

@@ -62,14 +62,14 @@ const Project = async ({ params }: ProjectProps) => {
                 <CursorsLayer />
               </Canvas>
             </ProjectProvider>
+            <Suspense fallback={null}>
+              <TopLeft id={projectId} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <TopRight id={projectId} />
+            </Suspense>
           </LiveblocksRoomProvider>
         </LiveblocksClientProvider>
-        <Suspense fallback={null}>
-          <TopLeft id={projectId} />
-        </Suspense>
-        <Suspense fallback={null}>
-          <TopRight id={projectId} />
-        </Suspense>
       </div>
       <Reasoning />
     </div>
