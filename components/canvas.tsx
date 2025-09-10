@@ -8,6 +8,9 @@ import { isValidSourceTarget } from '@/lib/xyflow';
 import { NodeDropzoneProvider } from '@/providers/node-dropzone';
 import { NodeOperationsProvider } from '@/providers/node-operations';
 import { useProject } from '@/providers/project';
+import { useRoom } from '@liveblocks/react';
+import { getYjsProviderForRoom } from '@liveblocks/yjs';
+import * as Y from 'yjs';
 import {
   Background,
   type IsValidConnection,
@@ -30,10 +33,11 @@ import {
 import { BoxSelectIcon, PlusIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { MouseEvent, MouseEventHandler } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
+import { RoomAvatars } from '@/providers/liveblocks';
 import { edgeTypes } from './edges';
 import { nodeTypes } from './nodes';
 import {
@@ -45,6 +49,14 @@ import {
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
+  const room = (() => {
+    try {
+      // If not rendered under a RoomProvider, this will throw
+      return useRoom();
+    } catch {
+      return null as any;
+    }
+  })();
   const {
     onConnect,
     onConnectStart,
@@ -56,12 +68,8 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     ...rest
   } = props ?? {};
   const content = project?.content as { nodes: Node[]; edges: Edge[] };
-  const [nodes, setNodes] = useState<Node[]>(
-    initialNodes ?? content?.nodes ?? []
-  );
-  const [edges, setEdges] = useState<Edge[]>(
-    initialEdges ?? content?.edges ?? []
-  );
+  const [nodes, setNodes] = useState<Node[]>(initialNodes ?? content?.nodes ?? []);
+  const [edges, setEdges] = useState<Edge[]>(initialEdges ?? content?.edges ?? []);
   const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
   const {
     getEdges,
@@ -73,6 +81,57 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   } = useReactFlow();
   const analytics = useAnalytics();
   const [saveState, setSaveState] = useSaveProject();
+
+  // Yjs provider wiring (optional if RoomProvider exists)
+  const yProvider = (() => {
+    try {
+      return room ? getYjsProviderForRoom(room) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const ydoc = yProvider ? yProvider.getYDoc() : null;
+  const yNodes = ydoc ? (ydoc.getArray<Node>('nodes') as Y.Array<Node>) : null;
+  const yEdges = ydoc ? (ydoc.getArray<Edge>('edges') as Y.Array<Edge>) : null;
+
+  // Initialize Yjs arrays with current content on first mount if empty
+  // and subscribe to remote updates
+  if (ydoc && yNodes && yEdges) {
+    // This block executes in render, but Yjs ops are idempotent; guards prevent repeated work
+    if (yNodes.length === 0 && (content?.nodes?.length ?? 0) > 0) {
+      Y.transact(ydoc, () => {
+        yNodes.insert(0, content.nodes);
+      });
+    }
+    if (yEdges.length === 0 && (content?.edges?.length ?? 0) > 0) {
+      Y.transact(ydoc, () => {
+        yEdges.insert(0, content.edges);
+      });
+    }
+  }
+
+  // Subscribe to Yjs updates → React state
+  // Note: effects depend on yNodes/yEdges existence
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!yNodes || !yEdges || !ydoc) return;
+
+    const sync = () => {
+      setNodes(yNodes.toJSON() as Node[]);
+      setEdges(yEdges.toJSON() as Edge[]);
+      save();
+    };
+
+    // Prime state
+    sync();
+    yNodes.observe(sync);
+    yEdges.observe(sync);
+    return () => {
+      yNodes.unobserve(sync);
+      yEdges.unobserve(sync);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yNodes, yEdges, ydoc]);
 
   const save = useDebouncedCallback(async () => {
     if (saveState.isSaving || !project?.userId || !project?.id) {
@@ -100,6 +159,17 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   const handleNodesChange = useCallback<OnNodesChange>(
     (changes) => {
+      if (yNodes && ydoc) {
+        const next = applyNodeChanges(changes, yNodes.toJSON() as Node[]);
+        Y.transact(ydoc, () => {
+          yNodes.delete(0, yNodes.length);
+          yNodes.insert(0, next);
+        });
+        save();
+        onNodesChange?.(changes);
+        return;
+      }
+
       setNodes((current) => {
         const updated = applyNodeChanges(changes, current);
         save();
@@ -107,11 +177,22 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         return updated;
       });
     },
-    [save, onNodesChange]
+    [save, onNodesChange, yNodes, ydoc]
   );
 
   const handleEdgesChange = useCallback<OnEdgesChange>(
     (changes) => {
+      if (yEdges && ydoc) {
+        const next = applyEdgeChanges(changes, yEdges.toJSON() as Edge[]);
+        Y.transact(ydoc, () => {
+          yEdges.delete(0, yEdges.length);
+          yEdges.insert(0, next);
+        });
+        save();
+        onEdgesChange?.(changes);
+        return;
+      }
+
       setEdges((current) => {
         const updated = applyEdgeChanges(changes, current);
         save();
@@ -119,11 +200,22 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         return updated;
       });
     },
-    [save, onEdgesChange]
+    [save, onEdgesChange, yEdges, ydoc]
   );
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {
+      if (yEdges && ydoc) {
+        const next = addEdge(connection, yEdges.toJSON() as Edge[]);
+        Y.transact(ydoc, () => {
+          yEdges.delete(0, yEdges.length);
+          yEdges.insert(0, next as Edge[]);
+        });
+        save();
+        onConnect?.(connection);
+        return;
+      }
+
       const newEdge: Edge = {
         id: nanoid(),
         type: 'animated',
@@ -133,7 +225,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       save();
       onConnect?.(connection);
     },
-    [save, onConnect]
+    [save, onConnect, yEdges, ydoc]
   );
 
   const addNode = useCallback(
@@ -401,6 +493,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               {...rest}
             >
               <Background />
+              <RoomAvatars />
               {children}
             </ReactFlow>
           </ContextMenuTrigger>
