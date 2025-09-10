@@ -9,8 +9,6 @@ import { NodeDropzoneProvider } from '@/providers/node-dropzone';
 import { NodeOperationsProvider } from '@/providers/node-operations';
 import { useProject } from '@/providers/project';
 import { useRoom } from '@liveblocks/react';
-import { getYjsProviderForRoom } from '@liveblocks/yjs';
-import * as Y from 'yjs';
 import {
   Background,
   type IsValidConnection,
@@ -83,50 +81,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const analytics = useAnalytics();
   const [saveState, setSaveState] = useSaveProject();
 
-  // Yjs provider wiring (optional if RoomProvider exists)
-  const yProvider = (() => {
-    try {
-      return room ? getYjsProviderForRoom(room) : null;
-    } catch {
-      return null;
-    }
-  })();
-  const ydoc = yProvider ? yProvider.getYDoc() : null;
-  const yNodesMap = ydoc ? (ydoc.getMap<Node>('nodesMap') as Y.Map<Node>) : null;
-  const yEdgesMap = ydoc ? (ydoc.getMap<Edge>('edgesMap') as Y.Map<Edge>) : null;
-
-  // Seed Yjs maps once with current content if empty
-  if (ydoc && yNodesMap && yEdgesMap) {
-    if (yNodesMap.size === 0 && (content?.nodes?.length ?? 0) > 0) {
-      Y.transact(ydoc, () => {
-        for (const n of content.nodes) yNodesMap.set(n.id, n);
-      });
-    }
-    if (yEdgesMap.size === 0 && (content?.edges?.length ?? 0) > 0) {
-      Y.transact(ydoc, () => {
-        for (const e of content.edges) yEdgesMap.set(e.id, e);
-      });
-    }
-  }
-
-  // Subscribe to Yjs updates → React state
-  // Note: effects depend on yNodes/yEdges existence
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    if (!yNodesMap || !yEdgesMap || !ydoc) return;
-
-    const syncNodes = () => setNodes(Array.from(yNodesMap.values()) as Node[]);
-    const syncEdges = () => setEdges(Array.from(yEdgesMap.values()) as Edge[]);
-
-    syncNodes();
-    syncEdges();
-    yNodesMap.observe(syncNodes);
-    yEdgesMap.observe(syncEdges);
-    return () => {
-      yNodesMap.unobserve(syncNodes);
-      yEdgesMap.unobserve(syncEdges);
-    };
-  }, [yNodesMap, yEdgesMap, ydoc]);
+  // Yjs temporarily disabled: operate in local state only; presence remains via Liveblocks
 
   const save = useDebouncedCallback(async () => {
     if (saveState.isSaving || !project?.userId || !project?.id) {
@@ -154,22 +109,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   const handleNodesChange = useCallback<OnNodesChange>(
     (changes) => {
-      if (yNodesMap && ydoc) {
-        const prev = Array.from(yNodesMap.values()) as Node[];
-        const next = applyNodeChanges(changes, prev);
-        Y.transact(ydoc, () => {
-          const nextById = new Map(next.map((n) => [n.id, n] as const));
-          // Deletes
-          for (const [id] of Array.from(yNodesMap.entries())) {
-            if (!nextById.has(id)) yNodesMap.delete(id);
-          }
-          // Upserts
-          for (const n of next) yNodesMap.set(n.id, n);
-        });
-        save();
-        onNodesChange?.(changes);
-        return;
-      }
+      // Local-only mode
 
       setNodes((current) => {
         const updated = applyNodeChanges(changes, current);
@@ -178,25 +118,12 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         return updated;
       });
     },
-    [save, onNodesChange, yNodesMap, ydoc]
+    [save, onNodesChange]
   );
 
   const handleEdgesChange = useCallback<OnEdgesChange>(
     (changes) => {
-      if (yEdgesMap && ydoc) {
-        const prev = Array.from(yEdgesMap.values()) as Edge[];
-        const next = applyEdgeChanges(changes, prev);
-        Y.transact(ydoc, () => {
-          const nextById = new Map(next.map((e) => [e.id, e] as const));
-          for (const [id] of Array.from(yEdgesMap.entries())) {
-            if (!nextById.has(id)) yEdgesMap.delete(id);
-          }
-          for (const e of next) yEdgesMap.set(e.id, e);
-        });
-        save();
-        onEdgesChange?.(changes);
-        return;
-      }
+      // Local-only mode
 
       setEdges((current) => {
         const updated = applyEdgeChanges(changes, current);
@@ -205,25 +132,12 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         return updated;
       });
     },
-    [save, onEdgesChange, yEdgesMap, ydoc]
+    [save, onEdgesChange]
   );
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {
-      if (yEdgesMap && ydoc) {
-        const next = addEdge(connection, Array.from(yEdgesMap.values()) as Edge[]);
-        Y.transact(ydoc, () => {
-          // Rebuild as map from next list
-          const nextById = new Map((next as Edge[]).map((e) => [e.id, e] as const));
-          for (const [id] of Array.from(yEdgesMap.entries())) {
-            if (!nextById.has(id)) yEdgesMap.delete(id);
-          }
-          for (const e of next as Edge[]) yEdgesMap.set(e.id, e);
-        });
-        save();
-        onConnect?.(connection);
-        return;
-      }
+      // Local-only mode
 
       const newEdge: Edge = {
         id: nanoid(),
@@ -234,7 +148,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       save();
       onConnect?.(connection);
     },
-    [save, onConnect, yEdgesMap, ydoc]
+    [save, onConnect]
   );
 
   const addNode = useCallback(
@@ -251,15 +165,8 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         ...rest,
       };
 
-      if (yNodesMap && ydoc) {
-        Y.transact(ydoc, () => {
-          yNodesMap.set(newNode.id, newNode);
-        });
-        save();
-      } else {
-        setNodes((nds: Node[]) => nds.concat(newNode));
-        save();
-      }
+      setNodes((nds: Node[]) => nds.concat(newNode));
+      save();
 
       analytics.track('toolbar', 'node', 'added', {
         type,
@@ -509,7 +416,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               {...rest}
             >
               <Background />
-              {yProvider ? <RoomAvatars /> : null}
+              <RoomAvatars />
               {children}
             </ReactFlow>
           </ContextMenuTrigger>

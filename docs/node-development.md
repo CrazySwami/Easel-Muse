@@ -1111,6 +1111,12 @@ sequenceDiagram
 - Graph `{ nodes, edges }` serialized in the project’s content.
 - Images/videos stored in Supabase `files` bucket (public); URLs referenced in node data.
 
+### Realtime collaboration (Liveblocks)
+- Yjs sync is temporarily disabled while we iterate on the CRDT design.
+- Liveblocks presence remains enabled for cursors, names, and avatars.
+- Graph changes currently update local React state and persist to the project document on debounce.
+- When CRDT sync returns, this section will be updated with the new storage model and conflict strategy.
+
 ## Extending the System
 
 ### Add a Model

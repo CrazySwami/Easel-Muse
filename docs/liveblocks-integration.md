@@ -2,6 +2,8 @@
 
 This document captures how we added Liveblocks to the canvas (presence + live cursors) and sharing functionality. Future phases will add collaborative text‑editor nodes.
 
+Note: CRDT-based canvas sync is temporarily disabled while we rethink the approach. Presence (cursors/avatars) remains 100% Liveblocks. Canvas edits currently persist via local state → project save. We’ll revisit collaborative storage in a future iteration.
+
 ## Table of contents
 - Why Liveblocks
 - Packages and environment
@@ -66,7 +68,7 @@ At the canvas root:
 
 ## Collaborative text‑editor node (Tiptap) — plan
 Phase 2 adds a node that mounts a Tiptap editor with Liveblocks storage:
-- Use `useLiveblocksExtension` from `@liveblocks/react-tiptap` to bind the editor to Storage (shared Yjs under the hood; example: [Tiptap advanced](https://liveblocks.io/examples/collaborative-text-editor-advanced/nextjs-tiptap-advanced)).
+- Use `useLiveblocksExtension` from `@liveblocks/react-tiptap` to bind the editor to Liveblocks Storage (example: [Tiptap advanced](https://liveblocks.io/examples/collaborative-text-editor-advanced/nextjs-tiptap-advanced)).
 - Presence in the editor (selection cursors) comes for free via the extension.
 - Node data keeps local metadata (e.g., last updated), while content lives in Liveblocks Storage for true multi‑user edits.
 
