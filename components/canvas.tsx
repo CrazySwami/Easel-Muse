@@ -29,6 +29,7 @@ import {
   type Node,
   applyEdgeChanges,
   applyNodeChanges,
+  addEdge,
 } from '@xyflow/react';
 import { BoxSelectIcon, PlusIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -91,21 +92,19 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     }
   })();
   const ydoc = yProvider ? yProvider.getYDoc() : null;
-  const yNodes = ydoc ? (ydoc.getArray<Node>('nodes') as Y.Array<Node>) : null;
-  const yEdges = ydoc ? (ydoc.getArray<Edge>('edges') as Y.Array<Edge>) : null;
+  const yNodesMap = ydoc ? (ydoc.getMap<Node>('nodesMap') as Y.Map<Node>) : null;
+  const yEdgesMap = ydoc ? (ydoc.getMap<Edge>('edgesMap') as Y.Map<Edge>) : null;
 
-  // Initialize Yjs arrays with current content on first mount if empty
-  // and subscribe to remote updates
-  if (ydoc && yNodes && yEdges) {
-    // This block executes in render, but Yjs ops are idempotent; guards prevent repeated work
-    if (yNodes.length === 0 && (content?.nodes?.length ?? 0) > 0) {
+  // Seed Yjs maps once with current content if empty
+  if (ydoc && yNodesMap && yEdgesMap) {
+    if (yNodesMap.size === 0 && (content?.nodes?.length ?? 0) > 0) {
       Y.transact(ydoc, () => {
-        yNodes.insert(0, content.nodes);
+        for (const n of content.nodes) yNodesMap.set(n.id, n);
       });
     }
-    if (yEdges.length === 0 && (content?.edges?.length ?? 0) > 0) {
+    if (yEdgesMap.size === 0 && (content?.edges?.length ?? 0) > 0) {
       Y.transact(ydoc, () => {
-        yEdges.insert(0, content.edges);
+        for (const e of content.edges) yEdgesMap.set(e.id, e);
       });
     }
   }
@@ -114,24 +113,20 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   // Note: effects depend on yNodes/yEdges existence
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    if (!yNodes || !yEdges || !ydoc) return;
+    if (!yNodesMap || !yEdgesMap || !ydoc) return;
 
-    const sync = () => {
-      setNodes(yNodes.toJSON() as Node[]);
-      setEdges(yEdges.toJSON() as Edge[]);
-      save();
-    };
+    const syncNodes = () => setNodes(Array.from(yNodesMap.values()) as Node[]);
+    const syncEdges = () => setEdges(Array.from(yEdgesMap.values()) as Edge[]);
 
-    // Prime state
-    sync();
-    yNodes.observe(sync);
-    yEdges.observe(sync);
+    syncNodes();
+    syncEdges();
+    yNodesMap.observe(syncNodes);
+    yEdgesMap.observe(syncEdges);
     return () => {
-      yNodes.unobserve(sync);
-      yEdges.unobserve(sync);
+      yNodesMap.unobserve(syncNodes);
+      yEdgesMap.unobserve(syncEdges);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yNodes, yEdges, ydoc]);
+  }, [yNodesMap, yEdgesMap, ydoc]);
 
   const save = useDebouncedCallback(async () => {
     if (saveState.isSaving || !project?.userId || !project?.id) {
@@ -159,41 +154,17 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   const handleNodesChange = useCallback<OnNodesChange>(
     (changes) => {
-      if (yNodes && ydoc) {
-        const prev = yNodes.toJSON() as Node[];
+      if (yNodesMap && ydoc) {
+        const prev = Array.from(yNodesMap.values()) as Node[];
         const next = applyNodeChanges(changes, prev);
-        // Minimal diff: replace/remove/add by id, keep stable ordering from next
         Y.transact(ydoc, () => {
-          // Build maps
           const nextById = new Map(next.map((n) => [n.id, n] as const));
-          // Remove items not in next
-          for (let i = yNodes.length - 1; i >= 0; i -= 1) {
-            const n = yNodes.get(i) as unknown as Node;
-            if (!nextById.has(n.id)) {
-              yNodes.delete(i, 1);
-            }
+          // Deletes
+          for (const [id] of Array.from(yNodesMap.entries())) {
+            if (!nextById.has(id)) yNodesMap.delete(id);
           }
-          // Ensure order and replace changed entries
-          let i = 0;
-          for (const n of next) {
-            // If index out of range or id mismatch, insert here
-            const at = (yNodes.get(i) as unknown as Node | undefined);
-            if (!at || at.id !== n.id) {
-              yNodes.insert(i, [n as unknown as Node]);
-            } else {
-              // Replace if changed (shallow compare on key fields)
-              const changed =
-                at.type !== n.type ||
-                at.position?.x !== n.position?.x ||
-                at.position?.y !== n.position?.y ||
-                JSON.stringify(at.data) !== JSON.stringify(n.data);
-              if (changed) {
-                yNodes.delete(i, 1);
-                yNodes.insert(i, [n as unknown as Node]);
-              }
-            }
-            i += 1;
-          }
+          // Upserts
+          for (const n of next) yNodesMap.set(n.id, n);
         });
         save();
         onNodesChange?.(changes);
@@ -207,40 +178,20 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         return updated;
       });
     },
-    [save, onNodesChange, yNodes, ydoc]
+    [save, onNodesChange, yNodesMap, ydoc]
   );
 
   const handleEdgesChange = useCallback<OnEdgesChange>(
     (changes) => {
-      if (yEdges && ydoc) {
-        const prev = yEdges.toJSON() as Edge[];
+      if (yEdgesMap && ydoc) {
+        const prev = Array.from(yEdgesMap.values()) as Edge[];
         const next = applyEdgeChanges(changes, prev);
         Y.transact(ydoc, () => {
           const nextById = new Map(next.map((e) => [e.id, e] as const));
-          for (let i = yEdges.length - 1; i >= 0; i -= 1) {
-            const e = yEdges.get(i) as unknown as Edge;
-            if (!nextById.has(e.id)) {
-              yEdges.delete(i, 1);
-            }
+          for (const [id] of Array.from(yEdgesMap.entries())) {
+            if (!nextById.has(id)) yEdgesMap.delete(id);
           }
-          let i = 0;
-          for (const e of next) {
-            const at = (yEdges.get(i) as unknown as Edge | undefined);
-            if (!at || at.id !== e.id) {
-              yEdges.insert(i, [e as unknown as Edge]);
-            } else {
-              const changed =
-                at.source !== e.source ||
-                at.target !== e.target ||
-                at.type !== e.type ||
-                JSON.stringify(at.data) !== JSON.stringify(e.data);
-              if (changed) {
-                yEdges.delete(i, 1);
-                yEdges.insert(i, [e as unknown as Edge]);
-              }
-            }
-            i += 1;
-          }
+          for (const e of next) yEdgesMap.set(e.id, e);
         });
         save();
         onEdgesChange?.(changes);
@@ -254,16 +205,20 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         return updated;
       });
     },
-    [save, onEdgesChange, yEdges, ydoc]
+    [save, onEdgesChange, yEdgesMap, ydoc]
   );
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {
-      if (yEdges && ydoc) {
-        const next = addEdge(connection, yEdges.toJSON() as Edge[]);
+      if (yEdgesMap && ydoc) {
+        const next = addEdge(connection, Array.from(yEdgesMap.values()) as Edge[]);
         Y.transact(ydoc, () => {
-          yEdges.delete(0, yEdges.length);
-          yEdges.insert(0, next as Edge[]);
+          // Rebuild as map from next list
+          const nextById = new Map((next as Edge[]).map((e) => [e.id, e] as const));
+          for (const [id] of Array.from(yEdgesMap.entries())) {
+            if (!nextById.has(id)) yEdgesMap.delete(id);
+          }
+          for (const e of next as Edge[]) yEdgesMap.set(e.id, e);
         });
         save();
         onConnect?.(connection);
@@ -279,7 +234,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       save();
       onConnect?.(connection);
     },
-    [save, onConnect, yEdges, ydoc]
+    [save, onConnect, yEdgesMap, ydoc]
   );
 
   const addNode = useCallback(
@@ -296,9 +251,9 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         ...rest,
       };
 
-      if (yNodes && ydoc) {
+      if (yNodesMap && ydoc) {
         Y.transact(ydoc, () => {
-          yNodes.insert(yNodes.length, [newNode]);
+          yNodesMap.set(newNode.id, newNode);
         });
         save();
       } else {
