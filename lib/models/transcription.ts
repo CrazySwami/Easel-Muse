@@ -5,6 +5,7 @@ import { type TersaModel, type TersaProvider, providers } from '../providers';
 type TersaTranscriptionModel = TersaModel & {
   providers: (TersaProvider & {
     model: TranscriptionModel;
+    getCost: (durationSeconds: number) => number; // USD per op based on duration
   })[];
 };
 
@@ -16,6 +17,8 @@ export const transcriptionModels: Record<string, TersaTranscriptionModel> = {
       {
         ...providers.openai,
         model: openai.transcription('gpt-4o-mini-transcribe'),
+        // $0.006 per minute
+        getCost: (durationSeconds: number) => (durationSeconds / 60) * 0.006,
       },
     ],
     default: true,
@@ -27,6 +30,8 @@ export const transcriptionModels: Record<string, TersaTranscriptionModel> = {
       {
         ...providers.openai,
         model: openai.transcription('whisper-1'),
+        // $0.006 per minute
+        getCost: (durationSeconds: number) => (durationSeconds / 60) * 0.006,
       },
     ],
   },
@@ -37,6 +42,8 @@ export const transcriptionModels: Record<string, TersaTranscriptionModel> = {
       {
         ...providers.openai,
         model: openai.transcription('gpt-4o-transcribe'),
+        // $0.010 per minute
+        getCost: (durationSeconds: number) => (durationSeconds / 60) * 0.01,
       },
     ],
   },

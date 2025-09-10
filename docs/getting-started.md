@@ -2,6 +2,19 @@
 
 A concise install-and-configure guide to run locally and deploy to production.
 
+See also: [Feature & Future Enhancements Checklist](./feature-checklist.md)
+
+## Documentation Index
+- [Getting Started](./getting-started.md): Install, configure envs, run locally, deploy to production.
+- [Base Technical Foundation — Nodes, Tools, and Data Flow](./node-development.md): Architecture, node behaviors, prompt assembly, diagrams, and troubleshooting.
+- [Model Management](./model-management.md): Where models live (image/video/speech/transcription/vision), Gateway vs SDK usage, and cost→credit mapping.
+- [Billing and Usage](./billing-and-usage.md): Credits metering with Stripe, invoice preview lag, required envs, and dual line-items at checkout.
+- [Supabase Workflow](./supabase-workflow.md): Local→prod migrations, linking projects, troubleshooting schema/version drift.
+- [XYFlow Data Consumption](./xyflow-data-consumption.md): How nodes collect upstream inputs (text, images, files, transcripts, tweets) and compose prompts.
+- [Progress Tracking](./progress-tracking.md): UI patterns to reflect run state, retries, and completion.
+- [Troubleshooting Stripe](./TROUBLESHOOTING-STRIPE.md): Common pitfalls and fixes for webhooks, products, and usage prices.
+- [Feature & Future Enhancements Checklist](./feature-checklist.md): Backlog for planned improvements (batch/fan‑out node, long recording mode, validations, etc.).
+
 ## 1) Prerequisites
 - Node 20+, pnpm 10+
 - Supabase CLI
@@ -62,6 +75,17 @@ pnpm dev
   - Auth emails: use Supabase Studio “Send magic link/reset” → see POST 200 at `/api/webhooks/resend`.
   - Stripe test checkout: complete a session from the UI → see POST 200 at `/api/webhooks/stripe` and profile updated.
   - Generate an image/video → Supabase `files` shows new object; UI renders via public URL.
+
+### Recording audio in the Audio node
+1. Add an Audio node on the canvas.
+2. Click “Record” to capture mic input (MediaRecorder). Click “Stop” to finish.
+3. The clip uploads to the `files` bucket and is automatically transcribed.
+4. The transcript flows into downstream Text nodes.
+5. You can still drag-and-drop audio files (wav/mp3/m4a) if you prefer.
+
+Notes
+- Recording duration: practically bounded by browser memory and the 10 MB upload cap currently set in the node. Short clips (≤2–3 minutes) are safest. We can raise this limit if needed.
+- The Audio node now shows a transcript viewer with a Copy button.
 
 ## 6) Stripe — Test Mode
 - Create test products/prices and usage prices. Link usage prices to a Billing Meter.
