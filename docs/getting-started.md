@@ -12,6 +12,7 @@ See also: [Feature & Future Enhancements Checklist](./feature-checklist.md)
 - [Supabase Workflow](./supabase-workflow.md): Local→prod migrations, linking projects, troubleshooting schema/version drift.
 - [XYFlow Data Consumption](./xyflow-data-consumption.md): How nodes collect upstream inputs (text, images, files, transcripts, tweets) and compose prompts.
 - [Progress Tracking](./progress-tracking.md): UI patterns to reflect run state, retries, and completion.
+- [Liveblocks Integration](./liveblocks-integration.md): Realtime presence (cursors) and collaboration setup.
 - [Troubleshooting Stripe](./TROUBLESHOOTING-STRIPE.md): Common pitfalls and fixes for webhooks, products, and usage prices.
 - [Feature & Future Enhancements Checklist](./feature-checklist.md): Backlog for planned improvements (batch/fan‑out node, long recording mode, validations, etc.).
 

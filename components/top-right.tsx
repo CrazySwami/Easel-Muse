@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { CreditCounter } from './credits-counter';
 import { Menu } from './menu';
+import { ShareDialog } from './share-dialog';
 import { Button } from './ui/button';
 
 type TopRightProps = {
@@ -41,8 +42,11 @@ export const TopRight = async ({ id }: TopRightProps) => {
           </Button>
         </div>
       )}
-      <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
-        <Menu />
+      <div className="flex items-center gap-2">
+        <ShareDialog projectId={id} />
+        <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
+          <Menu />
+        </div>
       </div>
     </div>
   );

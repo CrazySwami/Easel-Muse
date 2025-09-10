@@ -14,9 +14,9 @@
     "generate": "npx -y openapi-typescript@latest https://api.us1.bfl.ai/openapi.json -o ./openapi/bfl.d.ts"
   },
   "dependencies": {
-    "@ai-sdk/google": "^1.2.22",
     "@ai-sdk/amazon-bedrock": "^3.0.9",
     "@ai-sdk/gateway": "^1.0.8",
+    "@ai-sdk/google": "^1.2.22",
     "@ai-sdk/hume": "^1.0.4",
     "@ai-sdk/lmnt": "^1.0.4",
     "@ai-sdk/luma": "^1.0.4",
@@ -26,6 +26,9 @@
     "@ai-sdk/xai": "^2.0.10",
     "@hookform/resolvers": "^5.1.1",
     "@icons-pack/react-simple-icons": "^13.1.0",
+    "@liveblocks/client": "^3.6.1",
+    "@liveblocks/node": "^3.6.1",
+    "@liveblocks/react": "^3.6.1",
     "@marsidev/react-turnstile": "^1.1.0",
     "@monaco-editor/react": "4.7.0",
     "@number-flow/react": "^0.5.10",

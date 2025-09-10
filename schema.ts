@@ -22,6 +22,8 @@ export const projects = pgTable('project', {
   image: varchar('image'),
   members: text('members').array(),
   welcomeProject: boolean('demo_project').notNull().default(false),
+  readOnlyToken: text('read_only_token'),
+  inviteToken: text('invite_token'),
 });
 
 export const profile = pgTable('profile', {

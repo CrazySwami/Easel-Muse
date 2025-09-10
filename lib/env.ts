@@ -51,6 +51,8 @@ export const env = createEnv({
 
     // Vercel AI Gateway
     AI_GATEWAY_API_KEY: z.string().min(1),
+    // Liveblocks
+    LIVEBLOCKS_SECRET_KEY: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1),
@@ -98,6 +100,7 @@ export const env = createEnv({
     LMNT_API_KEY: process.env.LMNT_API_KEY,
     BF_API_KEY: process.env.BF_API_KEY,
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    LIVEBLOCKS_SECRET_KEY: process.env.LIVEBLOCKS_SECRET_KEY,
     GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
 });

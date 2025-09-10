@@ -8,6 +8,8 @@ import { TopRight } from '@/components/top-right';
 import { currentUserProfile } from '@/lib/auth';
 import { database } from '@/lib/database';
 import { ProjectProvider } from '@/providers/project';
+import { CursorsLayer, LiveblocksRoomProvider } from '@/providers/liveblocks';
+import { LiveblocksClientProvider } from '@/providers/liveblocks-provider';
 import { projects } from '@/schema';
 import { eq } from 'drizzle-orm';
 import type { Metadata } from 'next';
@@ -50,13 +52,18 @@ const Project = async ({ params }: ProjectProps) => {
   return (
     <div className="flex h-screen w-screen items-stretch overflow-hidden">
       <div className="relative flex-1">
-        <ProjectProvider data={project}>
-          <Canvas>
-            <Controls />
-            <Toolbar />
-            <SaveIndicator />
-          </Canvas>
-        </ProjectProvider>
+        <LiveblocksClientProvider>
+          <LiveblocksRoomProvider projectId={projectId}>
+            <ProjectProvider data={project}>
+              <Canvas>
+                <Controls />
+                <Toolbar />
+                <SaveIndicator />
+                <CursorsLayer />
+              </Canvas>
+            </ProjectProvider>
+          </LiveblocksRoomProvider>
+        </LiveblocksClientProvider>
         <Suspense fallback={null}>
           <TopLeft id={projectId} />
         </Suspense>
