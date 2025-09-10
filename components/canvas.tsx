@@ -49,7 +49,14 @@ import {
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
-  const room = useRoom();
+  const room = (() => {
+    try {
+      // If not rendered under a RoomProvider, this will throw
+      return useRoom();
+    } catch {
+      return null as any;
+    }
+  })();
   const {
     onConnect,
     onConnectStart,
@@ -153,10 +160,40 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const handleNodesChange = useCallback<OnNodesChange>(
     (changes) => {
       if (yNodes && ydoc) {
-        const next = applyNodeChanges(changes, yNodes.toJSON() as Node[]);
+        const prev = yNodes.toJSON() as Node[];
+        const next = applyNodeChanges(changes, prev);
+        // Minimal diff: replace/remove/add by id, keep stable ordering from next
         Y.transact(ydoc, () => {
-          yNodes.delete(0, yNodes.length);
-          yNodes.insert(0, next);
+          // Build maps
+          const nextById = new Map(next.map((n) => [n.id, n] as const));
+          // Remove items not in next
+          for (let i = yNodes.length - 1; i >= 0; i -= 1) {
+            const n = yNodes.get(i) as unknown as Node;
+            if (!nextById.has(n.id)) {
+              yNodes.delete(i, 1);
+            }
+          }
+          // Ensure order and replace changed entries
+          let i = 0;
+          for (const n of next) {
+            // If index out of range or id mismatch, insert here
+            const at = (yNodes.get(i) as unknown as Node | undefined);
+            if (!at || at.id !== n.id) {
+              yNodes.insert(i, [n as unknown as Node]);
+            } else {
+              // Replace if changed (shallow compare on key fields)
+              const changed =
+                at.type !== n.type ||
+                at.position?.x !== n.position?.x ||
+                at.position?.y !== n.position?.y ||
+                JSON.stringify(at.data) !== JSON.stringify(n.data);
+              if (changed) {
+                yNodes.delete(i, 1);
+                yNodes.insert(i, [n as unknown as Node]);
+              }
+            }
+            i += 1;
+          }
         });
         save();
         onNodesChange?.(changes);
@@ -176,10 +213,34 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const handleEdgesChange = useCallback<OnEdgesChange>(
     (changes) => {
       if (yEdges && ydoc) {
-        const next = applyEdgeChanges(changes, yEdges.toJSON() as Edge[]);
+        const prev = yEdges.toJSON() as Edge[];
+        const next = applyEdgeChanges(changes, prev);
         Y.transact(ydoc, () => {
-          yEdges.delete(0, yEdges.length);
-          yEdges.insert(0, next);
+          const nextById = new Map(next.map((e) => [e.id, e] as const));
+          for (let i = yEdges.length - 1; i >= 0; i -= 1) {
+            const e = yEdges.get(i) as unknown as Edge;
+            if (!nextById.has(e.id)) {
+              yEdges.delete(i, 1);
+            }
+          }
+          let i = 0;
+          for (const e of next) {
+            const at = (yEdges.get(i) as unknown as Edge | undefined);
+            if (!at || at.id !== e.id) {
+              yEdges.insert(i, [e as unknown as Edge]);
+            } else {
+              const changed =
+                at.source !== e.source ||
+                at.target !== e.target ||
+                at.type !== e.type ||
+                JSON.stringify(at.data) !== JSON.stringify(e.data);
+              if (changed) {
+                yEdges.delete(i, 1);
+                yEdges.insert(i, [e as unknown as Edge]);
+              }
+            }
+            i += 1;
+          }
         });
         save();
         onEdgesChange?.(changes);
@@ -235,8 +296,15 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         ...rest,
       };
 
-      setNodes((nds: Node[]) => nds.concat(newNode));
-      save();
+      if (yNodes && ydoc) {
+        Y.transact(ydoc, () => {
+          yNodes.insert(yNodes.length, [newNode]);
+        });
+        save();
+      } else {
+        setNodes((nds: Node[]) => nds.concat(newNode));
+        save();
+      }
 
       analytics.track('toolbar', 'node', 'added', {
         type,
@@ -486,7 +554,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               {...rest}
             >
               <Background />
-              <RoomAvatars />
+              {yProvider ? <RoomAvatars /> : null}
               {children}
             </ReactFlow>
           </ContextMenuTrigger>
