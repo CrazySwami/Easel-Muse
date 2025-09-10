@@ -1,4 +1,4 @@
-import { currentUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { database } from '@/lib/database';
 import { projects } from '@/schema';
 import { eq } from 'drizzle-orm';
@@ -13,7 +13,11 @@ export async function GET(request: Request) {
       return new Response('Missing params', { status: 400 });
     }
 
-    const user = await currentUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) {
       return new Response('Unauthorized', { status: 401 });
     }

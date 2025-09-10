@@ -1,6 +1,6 @@
 'use server';
 
-import { currentUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { database } from '@/lib/database';
 import { parseError } from '@/lib/error/parse';
 import { projects } from '@/schema';
@@ -12,7 +12,11 @@ export async function generateShareLinks(projectId: string): Promise<
   | { error: string }
 > {
   try {
-    const user = await currentUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) throw new Error('Unauthorized');
 
     const readOnlyToken = nanoid();
