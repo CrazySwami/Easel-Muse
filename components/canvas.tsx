@@ -49,14 +49,7 @@ import {
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
-  const room = (() => {
-    try {
-      // If not rendered under a RoomProvider, this will throw
-      return useRoom();
-    } catch {
-      return null as any;
-    }
-  })();
+  const room = useRoom();
   const {
     onConnect,
     onConnectStart,

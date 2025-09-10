@@ -8,8 +8,10 @@ This document captures how we added Liveblocks to the canvas (presence + live cu
 - Server auth endpoint
 - Client providers and joining rooms
 - Presence model and live cursors on the canvas
+- Presence avatars & viewers
+- Yjs collaboration for nodes/edges (React Flow)
 - Sharing functionality
-- Collaborative text‑editor node (Tiptap) — plan
+- Persistence (Liveblocks → Supabase)
 - Storage & permissions
 - Limits & troubleshooting
 - References
@@ -23,18 +25,21 @@ References: Liveblocks docs and examples: [Docs](https://liveblocks.io/docs), [A
 
 ## Packages and environment
 - Install:
-  - `@liveblocks/client @liveblocks/react`
+  - `@liveblocks/client @liveblocks/react @liveblocks/yjs yjs`
   - `@liveblocks/react-tiptap @tiptap/react @tiptap/starter-kit` (for the editor phase)
 - Env (server):
   - `LIVEBLOCKS_SECRET_KEY` from your Liveblocks dashboard (Project → API keys)
+  - Optional: `LIVEBLOCKS_WEBHOOK_SECRET` (for ydocUpdated webhook)
+  - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 ## Server auth endpoint
-Create `/api/liveblocks-auth` (server only) that validates the current user, then calls Liveblocks to issue an ID token for the requested room.
-- Use `@liveblocks/node` or REST per docs ([authorization](https://liveblocks.io/llms-full.txt#authorize-endpoint)).
-- Required fields:
-  - `room`: we’ll use `projectId` as `roomId`.
-  - `userId`: stable unique user id (Supabase auth id).
-  - `userInfo`: name/color (optional; used for UI labels).
+`/api/liveblocks-auth` (server only) validates the current user via Supabase, then issues an access token for the requested room using `@liveblocks/node`.
+
+We attach useful `userInfo` for presence UI:
+- `name` (from `full_name`/`name`, fallback to email local‑part)
+- `email`
+- `avatar` (`avatar_url`/`picture` if present)
+- `color` (stable hash of userId → palette)
 
 ## Client providers and joining rooms
 At the canvas root:
@@ -42,43 +47,67 @@ At the canvas root:
 - `RoomProvider` options:
   - `id: projectId`
   - `authEndpoint: '/api/liveblocks-auth'`
-  - `initialPresence: { cursor: null, color, name }` (presence is explicitly required; see [upgrade note](https://liveblocks.io/llms-full.txt#upgrade-steps))
+  - `initialPresence: { cursor: null }` (presence is explicitly required; see upgrade notes)
 
 ## Presence model and live cursors on the canvas
 - Presence shape: `{ cursor: { x, y } | null, color: string, name: string }`.
-- On pointer move: translate screen → canvas coords with XYFlow viewport; throttle to ~16–30ms; `setMyPresence({ cursor: { x, y } })`.
-- On pointer up/leave: `setMyPresence({ cursor: null })`.
-- Render: a `CursorsLayer` maps `useOthers()` presence to absolutely positioned cursors; fade if idle.
+- Pointer move → presence: convert screen → flow coords with XYFlow `screenToFlowPosition`, publish with `requestAnimationFrame` for smoothness.
+- Pointer up/leave: `setMyPresence({ cursor: null })`.
+- Render: a `CursorsLayer` reads `useOthers()` and converts flow → screen using React Flow store `transform` plus pane `getBoundingClientRect()` to remain aligned under pan/zoom.
 
-## Canvas drops and room scoping
-- Users in the same project (room) see each other immediately.
-- Room id = `projectId`, so reloading keeps everyone in the same space.
+## Presence avatars & viewers
+- A compact avatar stack renders in the canvas bottom‑right (inside the `RoomProvider`).
+- Hover on a dot shows the user’s name (fallback: email). Clicking toggles a list with avatar or colored dot.
+- Names/colors/avatars come from `userInfo` populated in the auth route.
+
+## Yjs collaboration for nodes/edges (React Flow)
+- Bind React Flow nodes/edges to a Yjs document using `@liveblocks/yjs`:
+  - `const provider = getYjsProviderForRoom(room)`
+  - `const ydoc = provider.getYDoc()`
+  - `const yNodes = ydoc.getArray('nodes')`, `const yEdges = ydoc.getArray('edges')`
+- Remote → React: observe arrays and `setNodes/setEdges` on change.
+- Local → Remote: on React Flow `onNodesChange/onEdgesChange/onConnect`, compute next arrays and:
+  ```ts
+  Y.transact(ydoc, () => {
+    yNodes.delete(0, yNodes.length);
+    yNodes.insert(0, nextNodes);
+  });
+  ```
+- UI‑only flags (selected/dragging) stay in presence, not in Yjs.
+- Optional: `new Y.UndoManager([yNodes, yEdges])` for per‑user undo/redo.
 
 ## Sharing functionality
 - **Share Dialog**: Added to top-right corner with "Share" button.
-- **Read-only links**: Generated with `?ro={token}` parameter for view-only access.
-- **Invite links**: Generated with `/api/accept-invite?projectId={id}&invite={token}` for adding collaborators.
+- **Read-only links**: `?ro={token}` parameter for view-only access.
+- **Invite links**: `/api/accept-invite?projectId={id}&invite={token}` for adding collaborators.
 - **Access control**: 
   - Project owner and `project.members` get full edit access
   - Read-only token holders get presence-only access (can see cursors but cannot edit)
-- **Database schema**: Added `readOnlyToken` and `inviteToken` columns to `projects` table.
-- **Server actions**: `generateShareLinks()` creates both link types with unique tokens.
+- **Database schema**: `readOnlyToken` and `inviteToken` on `projects`.
 
-## Collaborative text‑editor node (Tiptap) — plan
-Phase 2 adds a node that mounts a Tiptap editor with Liveblocks storage:
-- Use `useLiveblocksExtension` from `@liveblocks/react-tiptap` to bind the editor to Storage (shared Yjs under the hood; example: [Tiptap advanced](https://liveblocks.io/examples/collaborative-text-editor-advanced/nextjs-tiptap-advanced)).
-- Presence in the editor (selection cursors) comes for free via the extension.
-- Node data keeps local metadata (e.g., last updated), while content lives in Liveblocks Storage for true multi‑user edits.
+## Persistence (Liveblocks → Supabase)
+- Table:
+  ```sql
+  create table if not exists flow_docs (
+    room_id text primary key,
+    ydoc_json text not null,
+    updated_at timestamptz default now()
+  );
+  ```
+- Webhook route receives `ydocUpdated`, fetches the current Y doc via Liveblocks REST (`/v2/rooms/:roomId/ydoc`) and upserts to `flow_docs`.
+- Webhook is throttled (~60s) by Liveblocks; no additional debounce needed.
 
 ## Storage & permissions
-- Create the room dynamically (or rely on implicit creation) and assign room permissions server‑side using the REST API if needed. See [ID tokens & permissions](https://liveblocks.io/llms-full.txt#upgrade-to-id-tokens).
+- Create the room dynamically (or rely on implicit creation) and assign room permissions server‑side using the REST API if needed.
 - Use `userId` in the auth endpoint to match MAU requirements and control access.
+- Avatars (optional): create a Supabase Storage bucket `avatars` (public), and allow authenticated writes to `auth.uid()/*`. The UI falls back to colored dots if no avatar is set.
 
 ## Limits & troubleshooting
 - Always set `initialPresence` when joining a room.
 - Presence is ephemeral; Storage is for persisted shared state.
 - If cursors don’t appear: verify the room join succeeded (no auth error) and pointer events are throttled/converted to canvas coords.
-- For Tiptap: ensure all `@liveblocks/*` and `@tiptap/*` packages use compatible versions; see Quickstart in [docs](https://liveblocks.io/llms-full.txt#quickstart).
+- Cursor drift: ensure flow→screen uses React Flow store `transform` and pane `getBoundingClientRect()`; publish pointer updates with rAF.
+- Ensure `@liveblocks/*`, `@xyflow/react`, and `yjs` versions are compatible.
 
 ## References
 - Liveblocks docs: <https://liveblocks.io/docs>
