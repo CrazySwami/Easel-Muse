@@ -39,10 +39,28 @@ export const transcribeAction = async (
     }
 
     const provider = model.providers[0];
-    const transcript = await transcribe({
-      model: provider.model,
-      audio: new URL(url),
-    });
+    // Always send bytes so providers never need to fetch our URL
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch audio for transcription: ${res.status}`);
+    }
+    const ab = await res.arrayBuffer();
+    const bytes = new Uint8Array(ab);
+
+    let transcript;
+    try {
+      transcript = await transcribe({ model: provider.model, audio: bytes });
+    } catch (err) {
+      const msg = String(err instanceof Error ? err.message : err);
+      const unsupported = /not support(ed)? the format|unsupported/i.test(msg);
+      // Fallback to whisper-1 for broader codec tolerance
+      const fallback = transcriptionModels['whisper-1']?.providers[0];
+      if (fallback && unsupported) {
+        transcript = await transcribe({ model: fallback.model, audio: bytes });
+      } else {
+        throw err;
+      }
+    }
 
     // Track credits if duration is available
     if (typeof durationSeconds === 'number' && !Number.isNaN(durationSeconds)) {

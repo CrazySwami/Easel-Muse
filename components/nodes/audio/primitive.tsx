@@ -30,6 +30,7 @@ export const AudioPrimitive = ({
   const [files, setFiles] = useState<File[] | undefined>();
   const project = useProject();
   const [isUploading, setIsUploading] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -73,9 +74,10 @@ export const AudioPrimitive = ({
           });
 
           // Use the live timer as duration (seconds). If zero, omit billing.
+          setIsTranscribing(true);
           const response = await transcribeAction(
             url,
-            project?.id,
+            project?.id ?? '',
             elapsedSeconds > 0 ? elapsedSeconds : undefined
           );
           if ('error' in response) throw new Error(response.error);
@@ -84,6 +86,7 @@ export const AudioPrimitive = ({
           handleError('Error recording audio', error);
         } finally {
           setIsUploading(false);
+          setIsTranscribing(false);
           setIsRecording(false);
           mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
           mediaRecorderRef.current = null;
@@ -166,6 +169,14 @@ export const AudioPrimitive = ({
       setFiles(files);
       const [file] = files;
 
+      // Enforce explicit upload size limit (matches Dropzone maxSize)
+      const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+      if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error(
+          `Audio file is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Max size is 10 MB.`
+        );
+      }
+
       const { url, type } = await uploadFile(file, 'files');
 
       updateNodeData(id, {
@@ -175,6 +186,7 @@ export const AudioPrimitive = ({
         },
       });
 
+      setIsTranscribing(true);
       const response = await transcribeAction(url, project?.id, undefined);
 
       if ('error' in response) {
@@ -188,6 +200,7 @@ export const AudioPrimitive = ({
       handleError('Error uploading video', error);
     } finally {
       setIsUploading(false);
+      setIsTranscribing(false);
     }
   };
 
@@ -195,7 +208,7 @@ export const AudioPrimitive = ({
     <NodeLayout id={id} data={data} type={type} title={title}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {!isRecording && (
-          <Button size="sm" onClick={startRecording} disabled={isUploading} className="rounded-full">
+          <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
             <MicIcon className="mr-1" size={14} /> Record
           </Button>
         )}
@@ -217,6 +230,12 @@ export const AudioPrimitive = ({
         <span className="text-xs text-muted-foreground">
           {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
         </span>
+        {(isTranscribing || (data as any)?.transcribing) && (
+          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+            <Loader2Icon className="size-3 animate-spin" />
+            Transcribing…
+          </span>
+        )}
       </div>
       {isUploading && (
         <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
@@ -227,12 +246,21 @@ export const AudioPrimitive = ({
         </Skeleton>
       )}
       {!isUploading && data.content && (
-        // biome-ignore lint/a11y/useMediaCaption: <explanation>
-        <audio
-          src={data.content.url}
-          controls
-          className="w-full rounded-none"
-        />
+        <div
+          className="nodrag nopan nowheel"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onPointerMove={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* biome-ignore lint/a11y/useMediaCaption: native controls */}
+          <audio
+            src={data.content.url}
+            controls
+            draggable={false}
+            className="w-full rounded-none"
+          />
+        </div>
       )}
       {!isUploading && data.transcript && (
         <div className="mt-2 flex flex-col gap-2">
@@ -263,7 +291,17 @@ export const AudioPrimitive = ({
           }}
           onDrop={handleDrop}
           src={files}
-          onError={console.error}
+          onError={(errors) => {
+            let message = 'Audio file rejected.';
+            if (Array.isArray(errors) && errors.length) {
+              message = errors[0]?.message ?? message;
+              // Tweak message for oversize
+              if (/File is larger than/.test(message)) {
+                message = 'Audio file is too large. Max size is 10 MB.';
+              }
+            }
+            handleError('Error uploading audio', message);
+          }}
           className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
         >
           <DropzoneEmptyState />

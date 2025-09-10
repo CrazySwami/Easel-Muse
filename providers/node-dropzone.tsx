@@ -1,6 +1,7 @@
 'use client';
 
 import { uploadFile } from '@/lib/upload';
+import { transcribeAction } from '@/app/actions/speech/transcribe';
 import { cn } from '@/lib/utils';
 import { useReactFlow } from '@xyflow/react';
 import { FileIcon, ImageIcon, VideoIcon } from 'lucide-react';
@@ -16,7 +17,7 @@ type NodeDropzoneProviderProps = {
 export const NodeDropzoneProvider = ({
   children,
 }: NodeDropzoneProviderProps) => {
-  const { getViewport } = useReactFlow();
+  const { getViewport, setNodes } = useReactFlow();
   const { addNode } = useNodeOperations();
   const project = useProject();
   const dropzone = useDropzone({
@@ -52,19 +53,72 @@ export const NodeDropzoneProvider = ({
           nodeType = 'audio';
         }
 
-        addNode(nodeType, {
+        const newId = addNode(nodeType, {
           data: {
             content: {
               url: data.url,
               type: data.type,
               name,
             },
+            // flag used by the Audio node to render a loading state
+            ...(nodeType === 'audio' ? { transcribing: true } : {}),
           },
           position: {
             x: centerX,
             y: centerY,
           },
         });
+
+        // Auto-transcribe audio drops
+        if (nodeType === 'audio' && project?.id) {
+          try {
+            // ensure loading state is visible even if transcription takes time
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === newId
+                  ? { ...n, data: { ...(n.data as any), transcribing: true } }
+                  : n
+              )
+            );
+            const result = await transcribeAction(data.url, project.id);
+            if ('transcript' in result) {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === newId
+                    ? {
+                        ...n,
+                        data: {
+                          ...(n.data as any),
+                          transcript: result.transcript,
+                          transcribing: false,
+                        },
+                      }
+                    : n
+                )
+              );
+            } else {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === newId
+                    ? {
+                        ...n,
+                        data: { ...(n.data as any), transcribing: false },
+                      }
+                    : n
+                )
+              );
+            }
+          } catch (err) {
+            console.error('Audio auto-transcribe failed:', err);
+            setNodes((nds) =>
+              nds.map((n) =>
+                n.id === newId
+                  ? { ...n, data: { ...(n.data as any), transcribing: false } }
+                  : n
+              )
+            );
+          }
+        }
       }
     },
   });
