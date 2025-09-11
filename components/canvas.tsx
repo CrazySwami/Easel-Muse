@@ -9,6 +9,9 @@ import { NodeDropzoneProvider } from '@/providers/node-dropzone';
 import { NodeOperationsProvider } from '@/providers/node-operations';
 import { useProject } from '@/providers/project';
 import { useFlowStore } from '@/lib/flow-store';
+import { useRoom } from '@liveblocks/react';
+import { getYjsProviderForRoom } from '@liveblocks/yjs';
+import * as Y from 'yjs';
 import {
   Background,
   type IsValidConnection,
@@ -47,6 +50,15 @@ import {
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
+  // Enable Yjs sync by default; can be disabled via localStorage.setItem('sync','off')
+  const enableYjs = typeof window === 'undefined' ? false : window.localStorage?.getItem('sync') !== 'off';
+  const room = (() => {
+    try {
+      return enableYjs ? useRoom() : null;
+    } catch {
+      return null as any;
+    }
+  })();
   const {
     onConnect,
     onConnectStart,
@@ -76,6 +88,17 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const [saveState, setSaveState] = useSaveProject();
 
   // Yjs temporarily disabled: operate in local state only; presence remains via Liveblocks
+  // If enabled via flag, wire Yjs arrays for cross-tab sync
+  const yProvider = (() => {
+    try {
+      return enableYjs && room ? getYjsProviderForRoom(room) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const ydoc = yProvider ? yProvider.getYDoc() : null;
+  const yNodes = ydoc ? (ydoc.getArray<Node>('nodes') as Y.Array<Node>) : null;
+  const yEdges = ydoc ? (ydoc.getArray<Edge>('edges') as Y.Array<Edge>) : null;
 
   // Seed central store from initial props or project content once
   useEffect(() => {
@@ -89,6 +112,38 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Seed Yjs arrays from initial content if empty
+  useEffect(() => {
+    if (!enableYjs || !ydoc || !yNodes || !yEdges) return;
+    const hasAny = yNodes.length > 0 || yEdges.length > 0;
+    if (!hasAny) {
+      Y.transact(ydoc, () => {
+        if (nodes?.length) yNodes.insert(0, nodes);
+        if (edges?.length) yEdges.insert(0, edges);
+      }, 'local');
+    }
+  }, [enableYjs, ydoc, yNodes, yEdges, nodes, edges]);
+
+  // Observe Yjs → update store when remote peers change
+  useEffect(() => {
+    if (!enableYjs || !ydoc || !yNodes || !yEdges) return;
+    const sync = () => {
+      const nn = (yNodes.toJSON() as Node[]) || [];
+      const ee = (yEdges.toJSON() as Edge[]) || [];
+      replaceAll({ nodes: nn, edges: ee });
+    };
+    // Prime
+    sync();
+    const onNodes = () => sync();
+    const onEdges = () => sync();
+    yNodes.observe(onNodes);
+    yEdges.observe(onEdges);
+    return () => {
+      yNodes.unobserve(onNodes);
+      yEdges.unobserve(onEdges);
+    };
+  }, [enableYjs, ydoc, yNodes, yEdges, replaceAll]);
 
   const save = useDebouncedCallback(async () => {
     if (saveState.isSaving || !project?.userId || !project?.id) {
@@ -116,40 +171,68 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   const handleNodesChange = useCallback<OnNodesChange>(
     (changes) => {
-      // Local-only mode
+      if (enableYjs && ydoc && yNodes) {
+        const prev = yNodes.toJSON() as Node[];
+        const next = applyNodeChanges(changes, prev);
+        Y.transact(ydoc, () => {
+          yNodes.delete(0, yNodes.length);
+          yNodes.insert(0, next as Node[]);
+        }, 'local');
+        save();
+        onNodesChange?.(changes);
+        return;
+      }
 
+      // Local-only mode
       setNodes((current: Node[]) => applyNodeChanges(changes, current));
       save();
       onNodesChange?.(changes);
     },
-    [save, onNodesChange]
+    [save, onNodesChange, enableYjs, ydoc, yNodes]
   );
 
   const handleEdgesChange = useCallback<OnEdgesChange>(
     (changes) => {
-      // Local-only mode
+      if (enableYjs && ydoc && yEdges) {
+        const prev = yEdges.toJSON() as Edge[];
+        const next = applyEdgeChanges(changes, prev);
+        Y.transact(ydoc, () => {
+          yEdges.delete(0, yEdges.length);
+          yEdges.insert(0, next as Edge[]);
+        }, 'local');
+        save();
+        onEdgesChange?.(changes);
+        return;
+      }
 
+      // Local-only mode
       setEdges((current: Edge[]) => applyEdgeChanges(changes, current));
       save();
       onEdgesChange?.(changes);
     },
-    [save, onEdgesChange]
+    [save, onEdgesChange, enableYjs, ydoc, yEdges]
   );
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {
-      // Local-only mode
+      if (enableYjs && ydoc && yEdges) {
+        const next = addEdge(connection, yEdges.toJSON() as Edge[]);
+        Y.transact(ydoc, () => {
+          yEdges.delete(0, yEdges.length);
+          yEdges.insert(0, next as Edge[]);
+        }, 'local');
+        save();
+        onConnect?.(connection);
+        return;
+      }
 
-      const newEdge: Edge = {
-        id: nanoid(),
-        type: 'animated',
-        ...connection,
-      };
+      // Local-only mode
+      const newEdge: Edge = { id: nanoid(), type: 'animated', ...connection };
       setEdges((eds: Edge[]) => eds.concat(newEdge));
       save();
       onConnect?.(connection);
     },
-    [save, onConnect]
+    [save, onConnect, enableYjs, ydoc, yEdges]
   );
 
   const addNode = useCallback(
@@ -166,8 +249,15 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         ...rest,
       };
 
-      setNodes((nds: Node[]) => nds.concat(newNode));
-      save();
+      if (enableYjs && ydoc && yNodes) {
+        Y.transact(ydoc, () => {
+          yNodes.insert(yNodes.length, [newNode]);
+        }, 'local');
+        save();
+      } else {
+        setNodes((nds: Node[]) => nds.concat(newNode));
+        save();
+      }
 
       analytics.track('toolbar', 'node', 'added', {
         type,
