@@ -35,7 +35,7 @@ import {
 import { BoxSelectIcon, PlusIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { MouseEvent, MouseEventHandler } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
@@ -87,6 +87,8 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   } = useReactFlow();
   const analytics = useAnalytics();
   const [saveState, setSaveState] = useSaveProject();
+  const rAFRef = useRef<number | null>(null);
+  const pendingNodeChangesRef = useRef<Parameters<OnNodesChange>[0] | null>(null);
 
   // Yjs temporarily disabled: operate in local state only; presence remains via Liveblocks
   // If enabled via flag, wire Yjs arrays for cross-tab sync
@@ -98,8 +100,10 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     }
   })();
   const ydoc = yProvider ? yProvider.getYDoc() : null;
-  const yNodes = ydoc ? (ydoc.getArray<Node>('nodes') as Y.Array<Node>) : null;
-  const yEdges = ydoc ? (ydoc.getArray<Edge>('edges') as Y.Array<Edge>) : null;
+  const yNodesMap = ydoc ? (ydoc.getMap<Node>('nodesMap') as Y.Map<Node>) : null;
+  const yNodesOrder = ydoc ? (ydoc.getArray<string>('nodesOrder') as Y.Array<string>) : null;
+  const yEdgesMap = ydoc ? (ydoc.getMap<Edge>('edgesMap') as Y.Map<Edge>) : null;
+  const yEdgesOrder = ydoc ? (ydoc.getArray<string>('edgesOrder') as Y.Array<string>) : null;
 
   // Seed central store from initial props or project content once
   useEffect(() => {
@@ -114,17 +118,27 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Seed Yjs arrays from initial content if empty
+  // Seed Yjs maps & order arrays from initial content if empty
   useEffect(() => {
-    if (!enableYjs || !ydoc || !yNodes || !yEdges) return;
-    const hasAny = yNodes.length > 0 || yEdges.length > 0;
+    if (!enableYjs || !ydoc || !yNodesMap || !yNodesOrder || !yEdgesMap || !yEdgesOrder) return;
+    const hasAny = yNodesOrder.length > 0 || yEdgesOrder.length > 0;
     if (!hasAny) {
       Y.transact(ydoc, () => {
-        if (nodes?.length) yNodes.insert(0, nodes);
-        if (edges?.length) yEdges.insert(0, edges);
+        if (nodes?.length) {
+          for (const n of nodes) {
+            yNodesMap.set(n.id, n);
+          }
+          yNodesOrder.insert(0, nodes.map((n) => n.id));
+        }
+        if (edges?.length) {
+          for (const e of edges) {
+            yEdgesMap.set(e.id, e);
+          }
+          yEdgesOrder.insert(0, edges.map((e) => e.id));
+        }
       }, 'local');
     }
-  }, [enableYjs, ydoc, yNodes, yEdges, nodes, edges]);
+  }, [enableYjs, ydoc, yNodesMap, yNodesOrder, yEdgesMap, yEdgesOrder, nodes, edges]);
 
   // Reset graph when switching projects to avoid leaking state across rooms
   useEffect(() => {
@@ -136,12 +150,22 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     replaceAll({ nodes: nextNodes, edges: nextEdges });
 
     // Reset shared Y.Doc for the new room
-    if (enableYjs && ydoc && yNodes && yEdges) {
+    if (enableYjs && ydoc && yNodesMap && yNodesOrder && yEdgesMap && yEdgesOrder) {
       Y.transact(ydoc, () => {
-        yNodes.delete(0, yNodes.length);
-        yEdges.delete(0, yEdges.length);
-        if (nextNodes.length) yNodes.insert(0, nextNodes as Node[]);
-        if (nextEdges.length) yEdges.insert(0, nextEdges as Edge[]);
+        // Clear
+        for (const key of Array.from(yNodesMap.keys())) yNodesMap.delete(key);
+        for (const key of Array.from(yEdgesMap.keys())) yEdgesMap.delete(key);
+        if (yNodesOrder.length) yNodesOrder.delete(0, yNodesOrder.length);
+        if (yEdgesOrder.length) yEdgesOrder.delete(0, yEdgesOrder.length);
+        // Seed
+        for (const n of nextNodes) {
+          yNodesMap.set(n.id, n);
+        }
+        if (nextNodes.length) yNodesOrder.insert(0, nextNodes.map((n) => n.id));
+        for (const e of nextEdges) {
+          yEdgesMap.set(e.id, e);
+        }
+        if (nextEdges.length) yEdgesOrder.insert(0, nextEdges.map((e) => e.id));
       }, 'local');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,23 +173,37 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   // Observe Yjs → update store when remote peers change
   useEffect(() => {
-    if (!enableYjs || !ydoc || !yNodes || !yEdges) return;
-    const sync = () => {
-      const nn = (yNodes.toJSON() as Node[]) || [];
-      const ee = (yEdges.toJSON() as Edge[]) || [];
+    if (!enableYjs || !ydoc || !yNodesMap || !yNodesOrder || !yEdgesMap || !yEdgesOrder) return;
+    const build = () => {
+      const nn: Node[] = [];
+      for (const id of yNodesOrder.toArray()) {
+        const n = yNodesMap.get(id);
+        if (n) nn.push(n);
+      }
+      const ee: Edge[] = [];
+      for (const id of yEdgesOrder.toArray()) {
+        const e = yEdgesMap.get(id);
+        if (e) ee.push(e);
+      }
       replaceAll({ nodes: nn, edges: ee });
     };
     // Prime
-    sync();
-    const onNodes = () => sync();
-    const onEdges = () => sync();
-    yNodes.observe(onNodes);
-    yEdges.observe(onEdges);
+    build();
+    const onNodesMap = () => build();
+    const onNodesOrder = () => build();
+    const onEdgesMap = () => build();
+    const onEdgesOrder = () => build();
+    yNodesMap.observe(onNodesMap);
+    yNodesOrder.observe(onNodesOrder);
+    yEdgesMap.observe(onEdgesMap);
+    yEdgesOrder.observe(onEdgesOrder);
     return () => {
-      yNodes.unobserve(onNodes);
-      yEdges.unobserve(onEdges);
+      yNodesMap.unobserve(onNodesMap);
+      yNodesOrder.unobserve(onNodesOrder);
+      yEdgesMap.unobserve(onEdgesMap);
+      yEdgesOrder.unobserve(onEdgesOrder);
     };
-  }, [enableYjs, ydoc, yNodes, yEdges, replaceAll]);
+  }, [enableYjs, ydoc, yNodesMap, yNodesOrder, yEdgesMap, yEdgesOrder, replaceAll]);
 
   const save = useDebouncedCallback(async () => {
     if (saveState.isSaving || !project?.userId || !project?.id) {
@@ -191,57 +229,122 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     }
   }, 1000);
 
-  const handleNodesChange = useCallback<OnNodesChange>(
-    (changes) => {
-      if (enableYjs && ydoc && yNodes) {
-        const prev = yNodes.toJSON() as Node[];
-        const next = applyNodeChanges(changes, prev);
-        Y.transact(ydoc, () => {
-          yNodes.delete(0, yNodes.length);
-          yNodes.insert(0, next as Node[]);
-        }, 'local');
-        save();
-        onNodesChange?.(changes);
-        return;
-      }
+  const flushPendingNodeChanges = useCallback(() => {
+    const pending = pendingNodeChangesRef.current;
+    pendingNodeChangesRef.current = null;
+    if (!pending || pending.length === 0) return;
 
-      // Local-only mode
-      setNodes((current: Node[]) => applyNodeChanges(changes, current));
+    if (enableYjs && ydoc && yNodesMap && yNodesOrder) {
+      const hasStructural = pending.some((c) => c.type === 'add' || c.type === 'remove');
+      const prevOrder = yNodesOrder.toArray();
+      const prevMap = new Map<string, Node>();
+      for (const id of prevOrder) {
+        const n = yNodesMap.get(id);
+        if (n) prevMap.set(id, n);
+      }
+      const prevArr = prevOrder.map((id) => prevMap.get(id)!).filter(Boolean) as Node[];
+      const nextArr = applyNodeChanges(pending, prevArr);
+
+      const nextOrder = nextArr.map((n) => n.id);
+
+      Y.transact(ydoc, () => {
+        if (hasStructural || nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i])) {
+          if (yNodesOrder.length) yNodesOrder.delete(0, yNodesOrder.length);
+          if (nextOrder.length) yNodesOrder.insert(0, nextOrder);
+        }
+        // Update/insert each node object
+        for (const n of nextArr) {
+          yNodesMap.set(n.id, n);
+        }
+        // Remove deleted nodes from map
+        for (const id of prevOrder) {
+          if (!nextOrder.includes(id)) yNodesMap.delete(id);
+        }
+      }, 'local');
       save();
-      onNodesChange?.(changes);
-    },
-    [save, onNodesChange, enableYjs, ydoc, yNodes]
-  );
+      onNodesChange?.(pending);
+      return;
+    }
 
-  const handleEdgesChange = useCallback<OnEdgesChange>(
-    (changes) => {
-      if (enableYjs && ydoc && yEdges) {
-        const prev = yEdges.toJSON() as Edge[];
-        const next = applyEdgeChanges(changes, prev);
-        Y.transact(ydoc, () => {
-          yEdges.delete(0, yEdges.length);
-          yEdges.insert(0, next as Edge[]);
-        }, 'local');
-        save();
-        onEdgesChange?.(changes);
-        return;
+    // Local-only mode
+    setNodes((current: Node[]) => applyNodeChanges(pending, current));
+    save();
+    onNodesChange?.(pending);
+  }, [enableYjs, ydoc, yNodesMap, yNodesOrder, onNodesChange, save, setNodes]);
+
+  const handleNodesChange = useCallback<OnNodesChange>((changes) => {
+    // Accumulate changes and flush once per animation frame
+    if (pendingNodeChangesRef.current) {
+      pendingNodeChangesRef.current = [...pendingNodeChangesRef.current, ...changes];
+    } else {
+      pendingNodeChangesRef.current = changes;
+    }
+
+    if (rAFRef.current == null) {
+      rAFRef.current = requestAnimationFrame(() => {
+        rAFRef.current = null;
+        flushPendingNodeChanges();
+      });
+    }
+  }, [flushPendingNodeChanges]);
+
+  const handleEdgesChange = useCallback<OnEdgesChange>((changes) => {
+    if (enableYjs && ydoc && yEdgesMap && yEdgesOrder) {
+      const prevOrder = yEdgesOrder.toArray();
+      const prevMap = new Map<string, Edge>();
+      for (const id of prevOrder) {
+        const e = yEdgesMap.get(id);
+        if (e) prevMap.set(id, e);
       }
+      const prevArr = prevOrder.map((id) => prevMap.get(id)!).filter(Boolean) as Edge[];
+      const nextArr = applyEdgeChanges(changes, prevArr);
 
-      // Local-only mode
-      setEdges((current: Edge[]) => applyEdgeChanges(changes, current));
+      const nextOrder = nextArr.map((e) => e.id);
+      const hasStructural = nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i]);
+
+      Y.transact(ydoc, () => {
+        if (hasStructural) {
+          if (yEdgesOrder.length) yEdgesOrder.delete(0, yEdgesOrder.length);
+          if (nextOrder.length) yEdgesOrder.insert(0, nextOrder);
+        }
+        // Update/insert each edge object
+        for (const e of nextArr) {
+          yEdgesMap.set(e.id, e);
+        }
+        // Remove deleted edges from map
+        for (const id of prevOrder) {
+          if (!nextOrder.includes(id)) yEdgesMap.delete(id);
+        }
+      }, 'local');
+
       save();
       onEdgesChange?.(changes);
-    },
-    [save, onEdgesChange, enableYjs, ydoc, yEdges]
-  );
+      return;
+    }
+
+    // Local-only mode
+    setEdges((current: Edge[]) => applyEdgeChanges(changes, current));
+    save();
+    onEdgesChange?.(changes);
+  }, [enableYjs, ydoc, yEdgesMap, yEdgesOrder, onEdgesChange, save, setEdges]);
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {
-      if (enableYjs && ydoc && yEdges) {
-        const next = addEdge(connection, yEdges.toJSON() as Edge[]);
+      if (enableYjs && ydoc && yEdgesMap && yEdgesOrder) {
+        const prevOrder = yEdgesOrder.toArray();
+        const prevMap = new Map<string, Edge>();
+        for (const id of prevOrder) {
+          const e = yEdgesMap.get(id);
+          if (e) prevMap.set(id, e);
+        }
+        const prevArr = prevOrder.map((id) => prevMap.get(id)!).filter(Boolean) as Edge[];
+        const nextArr = addEdge(connection, prevArr);
+        const nextOrder = nextArr.map((e) => e.id);
+
         Y.transact(ydoc, () => {
-          yEdges.delete(0, yEdges.length);
-          yEdges.insert(0, next as Edge[]);
+          if (yEdgesOrder.length) yEdgesOrder.delete(0, yEdgesOrder.length);
+          if (nextOrder.length) yEdgesOrder.insert(0, nextOrder);
+          for (const e of nextArr) yEdgesMap.set(e.id, e);
         }, 'local');
         save();
         onConnect?.(connection);
@@ -254,7 +357,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       save();
       onConnect?.(connection);
     },
-    [save, onConnect, enableYjs, ydoc, yEdges]
+    [save, onConnect, enableYjs, ydoc, yEdgesMap, yEdgesOrder]
   );
 
   const addNode = useCallback(
@@ -271,9 +374,10 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         ...rest,
       };
 
-      if (enableYjs && ydoc && yNodes) {
+      if (enableYjs && ydoc && yNodesMap && yNodesOrder) {
         Y.transact(ydoc, () => {
-          yNodes.insert(yNodes.length, [newNode]);
+          yNodesMap.set(newNode.id, newNode);
+          yNodesOrder.insert(yNodesOrder.length, [newNode.id]);
         }, 'local');
         save();
       } else {
