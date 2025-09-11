@@ -50,6 +50,7 @@ import {
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
+  const projectId = (project as any)?.id as string | undefined;
   // Enable Yjs sync by default; can be disabled via localStorage.setItem('sync','off')
   const enableYjs = typeof window === 'undefined' ? false : window.localStorage?.getItem('sync') !== 'off';
   const room = (() => {
@@ -124,6 +125,27 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       }, 'local');
     }
   }, [enableYjs, ydoc, yNodes, yEdges, nodes, edges]);
+
+  // Reset graph when switching projects to avoid leaking state across rooms
+  useEffect(() => {
+    if (!projectId) return;
+    const nextNodes = content?.nodes ?? [];
+    const nextEdges = content?.edges ?? [];
+
+    // Replace local store with the project's content
+    replaceAll({ nodes: nextNodes, edges: nextEdges });
+
+    // Reset shared Y.Doc for the new room
+    if (enableYjs && ydoc && yNodes && yEdges) {
+      Y.transact(ydoc, () => {
+        yNodes.delete(0, yNodes.length);
+        yEdges.delete(0, yEdges.length);
+        if (nextNodes.length) yNodes.insert(0, nextNodes as Node[]);
+        if (nextEdges.length) yEdges.insert(0, nextEdges as Edge[]);
+      }, 'local');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   // Observe Yjs → update store when remote peers change
   useEffect(() => {

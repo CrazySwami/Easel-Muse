@@ -18,8 +18,7 @@ export const PostHogProvider = ({ children }: PostHogProviderProps) => {
     }
 
     posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
-      api_host: '/ingest',
-      ui_host: 'https://us.posthog.com',
+      api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
       capture_pageview: false, // We capture pageviews manually
       capture_pageleave: true, // Enable pageleave capture
     });
