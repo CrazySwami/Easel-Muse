@@ -1,6 +1,7 @@
 'use client';
 
 import { RoomProvider, ClientSideSuspense, useMyPresence, useOthers, useSelf, useRoom } from '@liveblocks/react';
+import { useReactFlow } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -152,6 +153,227 @@ export const RoomCapNotice = () => {
   return (
     <div className="rounded-full border bg-card/90 px-2 py-1 text-xs text-muted-foreground drop-shadow-xs backdrop-blur-sm" title="Room cap is 5 for now">
       Room full (5)
+    </div>
+  );
+};
+
+// Debug panel (toggle via ?debug=1 or localStorage.lbDebug='1')
+export const DebugPanel = ({ projectId }: { projectId: string }) => {
+  const room = useRoom();
+  const me = useSelf();
+  const others = useOthers();
+  const rf = useReactFlow();
+  const [fps, setFps] = useState<number | null>(null);
+  const [heapMb, setHeapMb] = useState<number | null>(null);
+  const [authMs, setAuthMs] = useState<number | null>(null);
+  const [resetting, setResetting] = useState<boolean>(false);
+  const [yjsOptIn, setYjsOptIn] = useState<boolean>(false);
+  const [reachability, setReachability] = useState<'unknown'|'ok'|'blocked'>('unknown');
+  const [lastNote, setLastNote] = useState<string | null>(null);
+  const [serverGate, setServerGate] = useState<'unknown'|'allowed'|'blocked'>('unknown');
+
+  // gate
+  const show = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const q = new URLSearchParams(window.location.search).get('debug');
+    if (localStorage.getItem('lbDebug') === '1') return true;
+    if (!q) return false;
+    const s = String(q).toLowerCase();
+    return !(s === '' || s === '0' || s === 'false');
+  }, []);
+  if (!show) return null as any;
+
+  useEffect(() => {
+    // FPS sampler
+    let frame = 0;
+    let last = performance.now();
+    let raf = 0;
+    const loop = () => {
+      const now = performance.now();
+      if (now - last >= 1000) {
+        setFps(frame);
+        frame = 0;
+        last = now;
+      } else {
+        frame++;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    // Heap snapshot (Chrome)
+    const m: any = (performance as any).memory;
+    if (m) setHeapMb(Math.round(m.usedJSHeapSize / 1e6));
+  }, []);
+
+  useEffect(() => {
+    // Quick auth latency probe
+    (async () => {
+      try {
+        const t0 = performance.now();
+        const res = await fetch('/api/liveblocks-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+        if (res.ok) setAuthMs(Math.round(performance.now() - t0));
+      } catch {}
+    })();
+  }, [projectId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setYjsOptIn(localStorage.getItem('yjs') === 'on');
+  }, []);
+
+  const reconnect = () => {
+    try {
+      (room as any).leave?.();
+      setTimeout(() => (room as any).enter?.(), 150);
+    } catch {}
+  };
+
+  const resetDoc = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try {
+      await fetch('/api/liveblocks/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+      reconnect();
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Rough graph size estimate to spot large canvases
+  const graphSizeKb = useMemo(() => {
+    try {
+      const obj = rf.toObject?.();
+      if (!obj) return null;
+      const bytes = new TextEncoder().encode(JSON.stringify({ nodes: obj.nodes, edges: obj.edges })).length;
+      return Math.round(bytes / 1000);
+    } catch { return null; }
+  }, [rf]);
+
+  const status = room.getStatus?.() ?? 'unknown';
+  const yjsAllowed = typeof graphSizeKb === 'number' ? graphSizeKb <= 400 : false;
+  // Auto-fallback: if reconnecting too long, flip Yjs off and prompt user
+  useEffect(() => {
+    const ev: any = (room as any).events;
+    const onLost = () => {
+      try {
+        if (typeof window === 'undefined') return;
+        if (localStorage.getItem('yjs') === 'on') {
+          localStorage.removeItem('yjs');
+          // eslint-disable-next-line no-alert
+          const msg = 'Liveblocks: long reconnect — disabling Yjs (presence-only)';
+          console.warn(msg);
+          setLastNote(msg);
+        }
+      } catch {}
+    };
+    ev?.on?.('lost-connection', onLost);
+    return () => ev?.off?.('lost-connection', onLost);
+  }, [room]);
+
+  // Reachability test (HTTP probe, coarse)
+  const testReachability = async () => {
+    try {
+      await fetch('https://api.liveblocks.io/v7', { mode: 'no-cors' });
+      setReachability('ok');
+    } catch {
+      setReachability('blocked');
+    }
+  };
+  useEffect(() => { testReachability(); }, []);
+
+  // Server size gate probe
+  const probeServerGate = async () => {
+    try {
+      const res = await fetch('/api/liveblocks/ydoc-size', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+      if (!res.ok) { setServerGate('unknown'); return; }
+      const json = await res.json();
+      setServerGate(json.allowed ? 'allowed' : 'blocked');
+      if (!json.allowed && localStorage.getItem('yjs') === 'on') {
+        localStorage.removeItem('yjs');
+        setLastNote('Server gate: Yjs blocked due to large doc; presence-only');
+      }
+    } catch { setServerGate('unknown'); }
+  };
+  useEffect(() => { probeServerGate(); }, [projectId]);
+
+  const dot = (color: string, title?: string) => (
+    <span
+      className="inline-block h-2 w-2 rounded-full"
+      style={{ background: color }}
+      title={title}
+    />
+  );
+
+  return (
+    <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 60 }} className="rounded-md border bg-card/95 px-3 py-2 text-xs drop-shadow-xs backdrop-blur-sm">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="flex items-center gap-1">
+          {dot(status === 'connected' ? '#22c55e' : status === 'connecting' ? '#eab308' : status === 'reconnecting' ? '#f97316' : '#ef4444', 'Room status')}
+          <strong>Status:</strong> {String(status)}
+        </span>
+        <span><strong>Users:</strong> {(me ? 1 : 0) + others.length}</span>
+        {typeof fps === 'number' ? <span><strong>FPS:</strong> {fps}</span> : null}
+        {typeof heapMb === 'number' ? <span><strong>Heap:</strong> {heapMb}MB</span> : null}
+        {typeof authMs === 'number' ? <span><strong>Auth:</strong> {authMs}ms</span> : null}
+        {typeof graphSizeKb === 'number' ? (
+          <span className="flex items-center gap-1">
+            {dot(graphSizeKb <= 300 ? '#22c55e' : graphSizeKb <= 400 ? '#eab308' : '#ef4444', 'Graph size')}
+            <strong>Graph:</strong> {graphSizeKb}KB
+          </span>
+        ) : null}
+        <span className="flex items-center gap-1">
+          {dot(serverGate === 'allowed' ? '#22c55e' : serverGate === 'blocked' ? '#ef4444' : '#9ca3af', 'Server Yjs gate')}
+          <strong>Gate:</strong> {serverGate}
+        </span>
+        <button type="button" onClick={probeServerGate} className="rounded border px-2 py-0.5">Gate probe</button>
+        <span className="flex items-center gap-1">
+          {dot(reachability === 'ok' ? '#22c55e' : reachability === 'blocked' ? '#ef4444' : '#9ca3af', 'WS reachability (coarse)')}
+          <strong>WS:</strong> {reachability}
+        </span>
+        <button type="button" onClick={testReachability} className="rounded border px-2 py-0.5">Probe</button>
+        <button type="button" onClick={reconnect} className="rounded border px-2 py-0.5">Reconnect</button>
+        <button type="button" disabled={resetting} onClick={resetDoc} className="rounded border px-2 py-0.5">{resetting ? 'Resetting…' : 'Reset doc'}</button>
+        {/* Toggles */}
+        <span className="mx-1 opacity-50">|</span>
+        <span className="flex items-center gap-1">
+          {dot(yjsOptIn && yjsAllowed ? '#22c55e' : yjsOptIn && !yjsAllowed ? '#ef4444' : '#9ca3af', 'Yjs state')}
+          <strong>Yjs:</strong> {yjsOptIn ? (yjsAllowed ? 'on' : 'blocked (>400KB)') : 'off'}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window === 'undefined') return;
+            if (yjsOptIn) localStorage.removeItem('yjs'); else localStorage.setItem('yjs','on');
+            location.reload();
+          }}
+          className="rounded border px-2 py-0.5"
+        >{yjsOptIn ? 'Disable Yjs' : 'Enable Yjs'}</button>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window === 'undefined') return;
+            const v = localStorage.getItem('lbDebug') === '1' ? '0' : '1';
+            localStorage.setItem('lbDebug', v);
+            location.reload();
+          }}
+          className="rounded border px-2 py-0.5"
+        >Toggle Debug</button>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window === 'undefined') return;
+            const v = localStorage.getItem('lbGate') === '1' ? '0' : '1';
+            localStorage.setItem('lbGate', v);
+            location.reload();
+          }}
+          className="rounded border px-2 py-0.5"
+        >Toggle Gate</button>
+        {lastNote ? <span className="text-muted-foreground">{lastNote}</span> : null}
+      </div>
     </div>
   );
 };

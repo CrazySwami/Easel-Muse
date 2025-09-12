@@ -1,4 +1,4 @@
-import { currentUser } from '@/lib/auth';
+import { currentUser, currentUserProfile } from '@/lib/auth';
 import { env } from '@/lib/env';
 import { Liveblocks } from '@liveblocks/node';
 import { database } from '@/lib/database';
@@ -47,11 +47,24 @@ export async function POST(request: Request) {
 
     const liveblocks = new Liveblocks({ secret: env.LIVEBLOCKS_SECRET_KEY });
 
+    // Pull avatar/name from profile when available
+    let name: string | undefined = user.email ?? undefined;
+    let avatar: string | undefined;
+    try {
+      const p = await currentUserProfile();
+      // If we later add columns, map them here; for now use auth metadata fallbacks
+      const meta: any = user.user_metadata ?? {};
+      name = meta.full_name ?? meta.name ?? name;
+      avatar = meta.avatar_url ?? meta.picture ?? undefined;
+    } catch {}
+
     const session = liveblocks.prepareSession(user.id, {
       userInfo: {
-        name: user.email ?? 'Anonymous',
+        name: name ?? 'Anonymous',
+        email: user.email ?? undefined,
+        avatar,
       },
-    });
+    } as any);
 
     session.allow(room, session.FULL_ACCESS);
 

@@ -26,9 +26,10 @@
     "@ai-sdk/xai": "^2.0.10",
     "@hookform/resolvers": "^5.1.1",
     "@icons-pack/react-simple-icons": "^13.1.0",
-    "@liveblocks/client": "^3.6.1",
-    "@liveblocks/node": "^3.6.1",
-    "@liveblocks/react": "^3.6.1",
+    "@liveblocks/client": "3.6.2",
+    "@liveblocks/node": "3.6.2",
+    "@liveblocks/react": "3.6.2",
+    "@liveblocks/yjs": "3.6.2",
     "@marsidev/react-turnstile": "^1.1.0",
     "@monaco-editor/react": "4.7.0",
     "@number-flow/react": "^0.5.10",
@@ -141,6 +142,7 @@
     "use-debounce": "^10.0.5",
     "use-stick-to-bottom": "^1.1.1",
     "vaul": "^1.1.2",
+    "yjs": "13.6.27",
     "zod": "^3.25.64"
   },
   "devDependencies": {

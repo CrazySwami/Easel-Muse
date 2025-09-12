@@ -8,7 +8,7 @@ import { TopRight } from '@/components/top-right';
 import { currentUserProfile } from '@/lib/auth';
 import { database } from '@/lib/database';
 import { ProjectProvider } from '@/providers/project';
-import { CursorsLayer, LiveblocksRoomProvider } from '@/providers/liveblocks';
+import { CursorsLayer, LiveblocksRoomProvider, DebugPanel } from '@/providers/liveblocks';
 import { LiveblocksClientProvider } from '@/providers/liveblocks-provider';
 import { projects } from '@/schema';
 import { eq } from 'drizzle-orm';
@@ -61,6 +61,7 @@ const Project = async ({ params }: ProjectProps) => {
                 <SaveIndicator />
                 <CursorsLayer />
               </Canvas>
+              <DebugPanel projectId={projectId} />
               <Suspense fallback={null}>
                 <TopRight id={projectId} />
               </Suspense>
