@@ -171,6 +171,8 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
   const [reachability, setReachability] = useState<'unknown'|'ok'|'blocked'>('unknown');
   const [lastNote, setLastNote] = useState<string | null>(null);
   const [serverGate, setServerGate] = useState<'unknown'|'allowed'|'blocked'>('unknown');
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
+  const [events, setEvents] = useState<Array<{ ts: string; type: string; data?: unknown }>>([]);
 
   // gate
   const show = useMemo(() => {
@@ -229,6 +231,7 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
     try {
       (room as any).leave?.();
       setTimeout(() => (room as any).enter?.(), 150);
+      setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'reconnect' }].slice(-200));
     } catch {}
   };
 
@@ -238,6 +241,7 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
     try {
       await fetch('/api/liveblocks/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
       reconnect();
+      setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'reset', data: 'ok' }].slice(-200));
     } finally {
       setResetting(false);
     }
@@ -258,6 +262,8 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
   // Auto-fallback: if reconnecting too long, flip Yjs off and prompt user
   useEffect(() => {
     const ev: any = (room as any).events;
+    const onStatus = () => setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'status', data: room.getStatus?.() }].slice(-200));
+    ev?.on?.('status', onStatus);
     const onLost = () => {
       try {
         if (typeof window === 'undefined') return;
@@ -267,11 +273,12 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
           const msg = 'Liveblocks: long reconnect — disabling Yjs (presence-only)';
           console.warn(msg);
           setLastNote(msg);
+          setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'auto-fallback', data: msg }].slice(-200));
         }
       } catch {}
     };
     ev?.on?.('lost-connection', onLost);
-    return () => ev?.off?.('lost-connection', onLost);
+    return () => { ev?.off?.('lost-connection', onLost); ev?.off?.('status', onStatus); };
   }, [room]);
 
   // Reachability test (HTTP probe, coarse)
@@ -279,8 +286,10 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
     try {
       await fetch('https://api.liveblocks.io/v7', { mode: 'no-cors' });
       setReachability('ok');
+      setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'ws-probe', data: 'ok' }].slice(-200));
     } catch {
       setReachability('blocked');
+      setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'ws-probe', data: 'blocked' }].slice(-200));
     }
   };
   useEffect(() => { testReachability(); }, []);
@@ -292,6 +301,7 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
       if (!res.ok) { setServerGate('unknown'); return; }
       const json = await res.json();
       setServerGate(json.allowed ? 'allowed' : 'blocked');
+      setEvents((e) => [...e, { ts: new Date().toISOString(), type: 'gate', data: json }].slice(-200));
       if (!json.allowed && localStorage.getItem('yjs') === 'on') {
         localStorage.removeItem('yjs');
         setLastNote('Server gate: Yjs blocked due to large doc; presence-only');
@@ -373,7 +383,56 @@ export const DebugPanel = ({ projectId }: { projectId: string }) => {
           className="rounded border px-2 py-0.5"
         >Toggle Gate</button>
         {lastNote ? <span className="text-muted-foreground">{lastNote}</span> : null}
+        <span className="mx-1 opacity-50">|</span>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((v) => !v)}
+          className="rounded border px-2 py-0.5"
+        >{detailsOpen ? 'Hide details' : 'Show details'}</button>
+        <button
+          type="button"
+          onClick={() => {
+            const payload = {
+              ts: new Date().toISOString(),
+              projectId,
+              status,
+              users: (me ? 1 : 0) + others.length,
+              fps,
+              heapMb,
+              authMs,
+              graphSizeKb: typeof graphSizeKb === 'number' ? graphSizeKb : null,
+              ws: reachability,
+              gate: serverGate,
+              yjs: { optIn: yjsOptIn, allowed: yjsAllowed },
+              note: lastNote,
+              location: typeof window !== 'undefined' ? window.location.href : undefined,
+              events,
+            };
+            navigator.clipboard?.writeText(JSON.stringify(payload, null, 2));
+          }}
+          className="rounded border px-2 py-0.5"
+        >Copy</button>
       </div>
+      {detailsOpen ? (
+        <pre
+          style={{ marginTop: 6, maxHeight: 180, overflow: 'auto' }}
+          className="whitespace-pre-wrap"
+        >{JSON.stringify({
+            ts: new Date().toISOString(),
+            projectId,
+            status,
+            users: (me ? 1 : 0) + others.length,
+            fps,
+            heapMb,
+            authMs,
+            graphSizeKb: typeof graphSizeKb === 'number' ? graphSizeKb : null,
+            ws: reachability,
+            gate: serverGate,
+            yjs: { optIn: yjsOptIn, allowed: yjsAllowed },
+            note: lastNote,
+            events,
+          }, null, 2)}</pre>
+      ) : null}
     </div>
   );
 };
