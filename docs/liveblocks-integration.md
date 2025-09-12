@@ -1,5 +1,7 @@
 # Liveblocks Integration — Presence, Cursors, and Collaborative Editing
 
+> Branch note: This branch (`liveblocks-working-no-yjs`) runs Liveblocks presence (cursors, avatars) without Yjs graph sync. See the Yjs blueprint in `docs/liveblocks-yjs-blueprint.md` for the planned data model and performance guardrails when we re‑enable shared editing.
+
 This document captures how we added Liveblocks to the canvas (presence + live cursors) and sharing functionality. Future phases will add collaborative text‑editor nodes.
 
 ## Table of contents
@@ -43,6 +45,12 @@ At the canvas root:
   - `id: projectId`
   - `authEndpoint: '/api/liveblocks-auth'`
   - `initialPresence: { cursor: null, color, name }` (presence is explicitly required; see [upgrade note](https://liveblocks.io/llms-full.txt#upgrade-steps))
+
+Reference files in this repo (presence‑only setup):
+- `providers/liveblocks-provider.tsx` — wraps app with `LiveblocksProvider` and `authEndpoint`.
+- `providers/liveblocks.tsx` — `RoomProvider`, cursors layer, debug panel hooks.
+- `app/api/liveblocks-auth/route.ts` — server auth endpoint issuing ID tokens, Supabase‑backed access control.
+- `app/(authenticated)/projects/[projectId]/page.tsx` — provider composition around the canvas.
 
 ## Presence model and live cursors on the canvas
 - Presence shape: `{ cursor: { x, y } | null, color: string, name: string }`.
