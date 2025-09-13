@@ -1,6 +1,6 @@
 'use client';
 
-import { RoomProvider, ClientSideSuspense, useMyPresence, useOthers, useSelf } from '@liveblocks/react';
+import { RoomProvider, ClientSideSuspense, useMyPresence, useOthers, useSelf, useRoom } from '@liveblocks/react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
@@ -246,6 +246,26 @@ export const RoomAvatars = () => {
           </div>
         ))}
       </button>
+    </div>
+  );
+};
+
+// Simple connection status pill (connected / connecting / reconnecting / closed)
+export const RoomStatus = () => {
+  const room = useRoom();
+  const [status, setStatus] = useState<string>(room.getStatus?.() ?? 'unknown');
+  useEffect(() => {
+    const update = () => setStatus(room.getStatus?.() ?? 'unknown');
+    const ev: any = (room as any).events;
+    ev?.on?.('status', update);
+    const iv = setInterval(update, 1000);
+    return () => { ev?.off?.('status', update); clearInterval(iv); };
+  }, [room]);
+  const color = status === 'connected' ? '#22c55e' : status === 'connecting' ? '#eab308' : status === 'reconnecting' ? '#f97316' : '#ef4444';
+  return (
+    <div className="flex items-center gap-1 rounded-full border bg-card/90 px-2 py-1 text-xs drop-shadow-xs backdrop-blur-sm">
+      <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
+      <span className="capitalize">{String(status)}</span>
     </div>
   );
 };
