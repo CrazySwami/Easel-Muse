@@ -250,6 +250,33 @@ export const RoomAvatars = () => {
   );
 };
 
+// Inline avatar stack (top‑right usage)
+export const AvatarStack = () => {
+  const me = useSelf();
+  const others = useOthers();
+  const users = [
+    ...(me
+      ? [{ id: me.connectionId, name: (me.info as any)?.name ?? 'You', avatar: (me.info as any)?.avatar as string | undefined, color: (me.info as any)?.color ?? '#06f' }]
+      : []),
+    ...others.map((u) => ({ id: u.connectionId, name: (u.info as any)?.name ?? 'User', avatar: (u.info as any)?.avatar as string | undefined, color: (u.info as any)?.color ?? '#06f' })),
+  ];
+  return (
+    <div className="flex -space-x-2">
+      {users.slice(0, 5).map((u) => (
+        <div key={u.id} className="inline-block h-6 w-6 rounded-full ring-1 ring-white" title={u.name} style={{ background: u.avatar ? undefined : u.color }}>
+          {u.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={u.avatar} alt={u.name} className="h-6 w-6 rounded-full object-cover" />
+          ) : null}
+        </div>
+      ))}
+      {users.length > 5 ? (
+        <span className="ml-2 text-xs text-muted-foreground">+{users.length - 5}</span>
+      ) : null}
+    </div>
+  );
+};
+
 // Simple connection status pill (connected / connecting / reconnecting / closed)
 export const RoomStatus = () => {
   const room = useRoom();

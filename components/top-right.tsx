@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { CreditCounter } from './credits-counter';
-import { RoomAvatars, RoomStatus } from '@/providers/liveblocks';
+import { AvatarStack, RoomStatus } from '@/providers/liveblocks';
 import { Menu } from './menu';
 import { ShareDialog } from './share-dialog';
 import { Button } from './ui/button';
@@ -47,7 +47,7 @@ export const TopRight = async ({ id }: TopRightProps) => {
         {/* Liveblocks status + avatars */}
         <div className="flex items-center gap-2 rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
           <RoomStatus />
-          <RoomAvatars />
+          <AvatarStack />
         </div>
         <ShareDialog projectId={id} />
         <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
