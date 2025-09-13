@@ -678,13 +678,15 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               connectionLineComponent={ConnectionLine}
               panOnScroll
               fitView
+              minZoom={0.02}
+              maxZoom={2}
               zoomOnDoubleClick={false}
               panOnDrag={false}
               selectionOnDrag={false}
               onDoubleClick={addDropNode}
               {...rest}
             >
-              <Background />
+              <Background gap={28} size={2.2} />
               {children}
             </ReactFlow>
           </ContextMenuTrigger>

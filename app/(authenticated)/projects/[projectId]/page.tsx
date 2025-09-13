@@ -51,7 +51,7 @@ const Project = async ({ params }: ProjectProps) => {
 
   return (
     <div className="flex h-screen w-screen items-stretch overflow-hidden">
-      <div className="relative flex-1">
+      <div className="relative flex-1" style={{ overscrollBehaviorX: 'none' }}>
         <LiveblocksClientProvider>
           <LiveblocksRoomProvider projectId={projectId}>
             <ProjectProvider data={project}>

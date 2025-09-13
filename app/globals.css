@@ -65,7 +65,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  /* Slightly softer than pure white */
+  --background: oklch(0.98 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -99,7 +100,8 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  /* Slightly darker than before for more contrast */
+  --background: oklch(0.12 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -193,7 +195,12 @@
     @apply bg-secondary! dark:bg-background!;
   }
   .react-flow__background-pattern.dots {
-    @apply fill-foreground/25!;
+    /* Darker dots in light mode */
+    @apply fill-foreground/80!;
+  }
+  .dark .react-flow__background-pattern.dots {
+    /* Brighter dots in dark mode */
+    @apply fill-foreground/90!;
   }
   .react-flow__node.selected .node-container {
     @apply ring-2! ring-[var(--cursor-color,var(--primary))]!;

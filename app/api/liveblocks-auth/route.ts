@@ -90,6 +90,8 @@ export async function POST(request: Request) {
       (user.email ? user.email.split('@')[0] : undefined) ||
       'Anonymous';
     const avatarUrl =
+      // Custom avatar uploaded via profile overrides provider defaults
+      (meta.avatar as string | undefined) ||
       (meta.avatar_url as string | undefined) ||
       (meta.picture as string | undefined) ||
       undefined;

@@ -58,14 +58,16 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
         setImage(data.user.user_metadata.avatar);
       }
 
-      // Load theme prefs from profile table
-      const { data: profileData } = await createClient()
-        .from('profile')
-        .select('light_bg, dark_bg')
-        .eq('id', data.user.id)
-        .single();
-      if (profileData?.light_bg) setLightBg(profileData.light_bg);
-      if (profileData?.dark_bg) setDarkBg(profileData.dark_bg);
+      // Load theme prefs (no-op if unavailable)
+      try {
+        const { data: profileData } = await createClient()
+          .from('profile')
+          .select('light_bg, dark_bg')
+          .eq('id', data.user.id)
+          .single();
+        if (profileData?.light_bg) setLightBg(profileData.light_bg);
+        if (profileData?.dark_bg) setDarkBg(profileData.dark_bg);
+      } catch {}
     };
 
     loadProfile();
@@ -108,11 +110,13 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
         throw new Error(response.error.message);
       }
 
-      // Persist theme prefs
-      await createClient()
-        .from('profile')
-        .update({ light_bg: lightBg || null, dark_bg: darkBg || null })
-        .eq('id', response.data.user?.id);
+      // Persist theme prefs (best-effort)
+      try {
+        await createClient()
+          .from('profile')
+          .update({ light_bg: lightBg || null, dark_bg: darkBg || null })
+          .eq('id', response.data.user?.id);
+      } catch {}
 
       toast.success('Profile updated successfully');
       setOpen(false);
@@ -204,24 +208,7 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
           className="mt-2 grid gap-4"
           aria-disabled={isUpdating}
         >
-          <div className="grid gap-2">
-            <Label>Light mode background</Label>
-            <Input
-              placeholder="#ffffff or hsl(var(--background))"
-              value={lightBg}
-              onChange={(e) => setLightBg(e.target.value)}
-              className="text-foreground"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Dark mode background</Label>
-            <Input
-              placeholder="#0b0b0b or hsl(var(--background))"
-              value={darkBg}
-              onChange={(e) => setDarkBg(e.target.value)}
-              className="text-foreground"
-            />
-          </div>
+          {/* Background color inputs temporarily removed per request */}
           <div className="grid gap-2">
             <Label htmlFor="name">Name</Label>
             <Input
