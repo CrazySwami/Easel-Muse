@@ -90,6 +90,14 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const rAFRef = useRef<number | null>(null);
   const pendingNodeChangesRef = useRef<Parameters<OnNodesChange>[0] | null>(null);
 
+  // Expose a minimal React Flow instance for debugging (graph size, etc.)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).reactFlowInstance = { toObject };
+      return () => { try { delete (window as any).reactFlowInstance; } catch {} };
+    }
+  }, [toObject]);
+
   // Yjs temporarily disabled: operate in local state only; presence remains via Liveblocks
   // If enabled via flag, wire Yjs arrays for cross-tab sync
   const yProvider = (() => {
