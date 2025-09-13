@@ -7,6 +7,7 @@ import { handleError } from '@/lib/error/handle';
 import { isValidSourceTarget } from '@/lib/xyflow';
 import { NodeDropzoneProvider } from '@/providers/node-dropzone';
 import { NodeOperationsProvider } from '@/providers/node-operations';
+import { LocksProvider, type NodeLock } from '@/providers/locks';
 import { useProject } from '@/providers/project';
 import { useFlowStore } from '@/lib/flow-store';
 import { useRoom } from '@liveblocks/react';
@@ -242,6 +243,16 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     pendingNodeChangesRef.current = null;
     if (!pending || pending.length === 0) return;
 
+    // Acquire drag locks for nodes being moved this frame
+    try {
+      const draggingIds = pending
+        .filter((c: any) => c.type === 'position' && c.dragging === true)
+        .map((c: any) => c.id as string);
+      for (const nid of draggingIds) {
+        locksApi.acquire?.(nid, 'drag', 'move');
+      }
+    } catch {}
+
     if (enableYjs && ydoc && yNodesMap && yNodesOrder) {
       const hasStructural = pending.some((c) => c.type === 'add' || c.type === 'remove' || c.type === 'dimensions' || c.type === 'select');
       const includesDragEnd = pending.some((c: any) => c.type === 'position' && c.dragging === false);
@@ -297,6 +308,13 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       }, 'local');
       if (hasStructural || includesDragEnd) {
         save();
+        // Release locks for nodes whose drag ended
+        try {
+          const ended = pending
+            .filter((c: any) => c.type === 'position' && c.dragging === false)
+            .map((c: any) => c.id as string);
+          ended.forEach((nid) => locksApi.release?.(nid));
+        } catch {}
       }
       onNodesChange?.(pending);
       return;
@@ -658,7 +676,21 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     preventDefault: true,
   });
 
+  // Minimal local locks map as a placeholder; will be backed by Yjs in a follow-up
+  const locksRef = useRef<Record<string, NodeLock>>({});
+  const locksApi = {
+    me: { userId: 'me', color: '#3b82f6' } as any,
+    locks: locksRef.current,
+    isLockedByOther: (nodeId: string) => false,
+    getLock: (nodeId: string) => locksRef.current[nodeId],
+    acquire: (nodeId: string, reason: 'drag' | 'generating' | 'manual-edit' | 'manual-move', level: 'edit' | 'move' = 'edit') => {
+      locksRef.current[nodeId] = { nodeId, userId: 'me', color: '#3b82f6', reason, level, ts: Date.now() } as NodeLock;
+    },
+    release: (nodeId: string) => { delete locksRef.current[nodeId]; },
+  };
+
   return (
+    <LocksProvider value={locksApi}>
     <NodeOperationsProvider addNode={addNode} duplicateNode={duplicateNode}>
       <NodeDropzoneProvider>
         <ContextMenu>
@@ -703,5 +735,6 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         </ContextMenu>
       </NodeDropzoneProvider>
     </NodeOperationsProvider>
+    </LocksProvider>
   );
 };

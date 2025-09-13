@@ -5,7 +5,7 @@ import type { PropsWithChildren } from 'react';
 
 export const LiveblocksClientProvider = ({ children }: PropsWithChildren) => {
   return (
-    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
+    <LiveblocksProvider authEndpoint="/api/liveblocks-auth" {...({ throttle: 32, largeMessageStrategy: 'upload' } as any)}>
       {children}
     </LiveblocksProvider>
   );

@@ -1,9 +1,11 @@
 'use client';
 
 import { RoomProvider, ClientSideSuspense, useMyPresence, useOthers, useSelf, useRoom } from '@liveblocks/react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { useReactFlow, useStore } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
-import { useEffect, useRef, useState } from 'react';
+// removed duplicate import
 
 type LiveblocksRoomProviderProps = PropsWithChildren & {
   projectId: string;
@@ -299,6 +301,70 @@ export const RoomStatus = () => {
     <div className="flex items-center gap-1 rounded-full border bg-card/90 px-2 py-1 text-xs drop-shadow-xs backdrop-blur-sm">
       <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
       <span className="capitalize">{String(status)}</span>
+    </div>
+  );
+};
+
+// Minimal debug panel
+export const RoomDebugPanel = ({ projectId }: { projectId: string }) => {
+  const room = useRoom();
+  const [show, setShow] = useState(false);
+  const [status, setStatus] = useState<string>(room.getStatus?.() ?? 'unknown');
+  const [ydocSize, setYdocSize] = useState<number | null>(null);
+  const [resetting, setResetting] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        // Quick client overrides
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const qp = params.get('debug');
+          if (qp && qp !== '0' && qp !== 'false') { setShow(true); return; }
+          if (localStorage.getItem('lbDebug') === '1') { setShow(true); return; }
+        }
+        const { data: { user } } = await createClient().auth.getUser();
+        if (!user) return;
+        const { data } = await createClient().from('profile').select('debug').eq('id', user.id).single();
+        setShow(Boolean(data?.debug));
+      } catch {}
+    })();
+  }, []);
+  useEffect(() => {
+    const update = () => setStatus(room.getStatus?.() ?? 'unknown');
+    const ev: any = (room as any).events;
+    ev?.on?.('status', update);
+    return () => ev?.off?.('status', update);
+  }, [room]);
+  useEffect(() => {
+    // Ask server for Yjs size (route may not exist yet; best-effort)
+    (async () => {
+      try {
+        const res = await fetch('/api/liveblocks/ydoc-size', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+        if (!res.ok) return;
+        const json = await res.json();
+        setYdocSize(Math.round((json.bytes ?? 0) / 1024));
+      } catch {}
+    })();
+  }, [projectId, status]);
+  if (!show) return null as any;
+  return (
+    <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 60 }} className="rounded-md border bg-card/95 px-3 py-2 text-xs drop-shadow-xs backdrop-blur-sm">
+      <div className="flex items-center gap-3">
+        <span><b>Status:</b> {status}</span>
+        {typeof ydocSize === 'number' ? <span><b>Yjs:</b> {ydocSize} KB</span> : null}
+        <button
+          type="button"
+          disabled={resetting}
+          onClick={async () => {
+            try {
+              setResetting(true);
+              await fetch('/api/liveblocks/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+              setTimeout(() => location.reload(), 200);
+            } finally { setResetting(false); }
+          }}
+          className="rounded border px-2 py-0.5"
+        >{resetting ? 'Resetting…' : 'Reset doc'}</button>
+      </div>
     </div>
   );
 };

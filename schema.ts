@@ -35,4 +35,5 @@ export const profile = pgTable('profile', {
   // User theme preferences
   lightBackground: text('light_bg'),
   darkBackground: text('dark_bg'),
+  debug: boolean('debug').notNull().default(false),
 });

@@ -36,6 +36,7 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
   const [password, setPassword] = useState('');
   const [lightBg, setLightBg] = useState<string>('');
   const [darkBg, setDarkBg] = useState<string>('');
+  const [debug, setDebug] = useState<boolean>(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -62,11 +63,12 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
       try {
         const { data: profileData } = await createClient()
           .from('profile')
-          .select('light_bg, dark_bg')
+          .select('light_bg, dark_bg, debug')
           .eq('id', data.user.id)
           .single();
         if (profileData?.light_bg) setLightBg(profileData.light_bg);
         if (profileData?.dark_bg) setDarkBg(profileData.dark_bg);
+        if (typeof profileData?.debug === 'boolean') setDebug(profileData.debug);
       } catch {}
     };
 
@@ -114,7 +116,7 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
       try {
         await createClient()
           .from('profile')
-          .update({ light_bg: lightBg || null, dark_bg: darkBg || null })
+          .update({ light_bg: lightBg || null, dark_bg: darkBg || null, debug })
           .eq('id', response.data.user?.id);
       } catch {}
 
@@ -208,7 +210,10 @@ export const Profile = ({ open, setOpen }: ProfileProps) => {
           className="mt-2 grid gap-4"
           aria-disabled={isUpdating}
         >
-          {/* Background color inputs temporarily removed per request */}
+          <div className="flex items-center gap-2">
+            <input id="debug" type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} />
+            <Label htmlFor="debug">Enable debug panel</Label>
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="name">Name</Label>
             <Input

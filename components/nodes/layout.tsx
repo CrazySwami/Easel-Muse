@@ -13,9 +13,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useLocks } from '@/providers/locks';
 import { useNodeOperations } from '@/providers/node-operations';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { CodeIcon, CopyIcon, EyeIcon, TrashIcon } from 'lucide-react';
+import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { NodeToolbar } from './toolbar';
 
@@ -47,6 +48,7 @@ export const NodeLayout = ({
 }: NodeLayoutProps) => {
   const { deleteElements, setCenter, getNode, updateNode } = useReactFlow();
   const { duplicateNode } = useNodeOperations();
+  const { getLock, acquire, release, me } = useLocks();
   const [showData, setShowData] = useState(false);
 
   const handleFocus = () => {
@@ -92,6 +94,11 @@ export const NodeLayout = ({
     }
   };
 
+  const lock = getLock(id);
+  const isLocked = Boolean(lock);
+  const lockedByGenerating = lock?.reason === 'generating';
+  const lockedByOther = isLocked && lock?.userId !== me?.userId;
+
   return (
     <>
       {type !== 'drop' && Boolean(toolbar?.length) && (
@@ -113,16 +120,33 @@ export const NodeLayout = ({
             <div
               className={cn(
                 'node-container flex size-full flex-col divide-y rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
+                isLocked && 'ring-2',
+                lockedByOther && 'pointer-events-none',
                 className
               )}
+              style={isLocked && lock?.color ? { boxShadow: `0 0 0 2px ${lock.color}` } : undefined}
             >
               <div className="overflow-hidden rounded-3xl bg-card">
                 {children}
               </div>
+              {isLocked && (
+                <div className="pointer-events-none absolute -top-2 -right-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-1 text-xs text-muted-foreground ring-1 ring-border">
+                  <LockIcon size={12} />
+                  {lockedByGenerating ? 'Generating…' : lockedByOther ? 'Locked' : 'Locked (you)'}
+                </div>
+              )}
             </div>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem onClick={() => acquire(id, 'manual-edit', 'move')}>
+            <LockIcon size={12} className="mr-2" />
+            <span>Lock (no move)</span>
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => release(id)}>
+            <UnlockIcon size={12} className="mr-2" />
+            <span>Unlock</span>
+          </ContextMenuItem>
           <ContextMenuItem onClick={() => duplicateNode(id)}>
             <CopyIcon size={12} />
             <span>Duplicate</span>
