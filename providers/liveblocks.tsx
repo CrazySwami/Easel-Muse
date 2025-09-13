@@ -3,7 +3,7 @@
 import { RoomProvider, ClientSideSuspense, useMyPresence, useOthers, useSelf, useRoom } from '@liveblocks/react';
 import { useReactFlow, useStore } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type LiveblocksRoomProviderProps = PropsWithChildren & {
   projectId: string;
@@ -35,19 +35,25 @@ export const CursorsLayer = () => {
   const paneRect = useStore((s) => s.domNode?.getBoundingClientRect());
 
   useEffect(() => {
+    // Publish presence at ~30–40ms, render locally per frame
     let raf = 0;
-    let lastEvent: MouseEvent | null = null;
+    let tick = 0;
+    const lastEventRef: { current: MouseEvent | null } = { current: null };
     const loop = () => {
-      if (lastEvent) {
-        const flow = screenToFlowPosition({ x: lastEvent.clientX, y: lastEvent.clientY });
-        setMyPresence({ cursor: { x: flow.x, y: flow.y } });
+      const e = lastEventRef.current;
+      if (e) {
+        if (++tick % 2 === 0) { // ~30ms on 60Hz
+          const flow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+          setMyPresence({ cursor: { x: flow.x, y: flow.y } });
+          tick = 0;
+        }
       }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
 
     const onMove = (e: MouseEvent) => {
-      lastEvent = e;
+      lastEventRef.current = e;
     };
     const onLeave = () => setMyPresence({ cursor: null });
 

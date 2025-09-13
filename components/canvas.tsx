@@ -235,7 +235,16 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     if (!pending || pending.length === 0) return;
 
     if (enableYjs && ydoc && yNodesMap && yNodesOrder) {
-      const hasStructural = pending.some((c) => c.type === 'add' || c.type === 'remove');
+      const hasStructural = pending.some((c) => c.type === 'add' || c.type === 'remove' || c.type === 'dimensions' || c.type === 'select');
+      const includesDragEnd = pending.some((c: any) => c.type === 'position' && c.dragging === false);
+      const onlyDraggingMoves = !hasStructural && !includesDragEnd && pending.every((c: any) => c.type === 'position' && c.dragging === true);
+
+      if (onlyDraggingMoves) {
+        // Presence-only drag: update local UI but do not write to Yjs or save
+        setNodes((current: Node[]) => applyNodeChanges(pending, current));
+        onNodesChange?.(pending);
+        return;
+      }
       const prevOrder = yNodesOrder.toArray();
       const prevMap = new Map<string, Node>();
       for (const id of prevOrder) {
@@ -248,7 +257,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       const nextOrder = nextArr.map((n) => n.id);
 
       Y.transact(ydoc, () => {
-        if (hasStructural || nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i])) {
+        if (hasStructural || includesDragEnd || nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i])) {
           if (yNodesOrder.length) yNodesOrder.delete(0, yNodesOrder.length);
           if (nextOrder.length) yNodesOrder.insert(0, nextOrder);
         }
@@ -261,7 +270,9 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
           if (!nextOrder.includes(id)) yNodesMap.delete(id);
         }
       }, 'local');
-      save();
+      if (hasStructural || includesDragEnd) {
+        save();
+      }
       onNodesChange?.(pending);
       return;
     }
@@ -621,7 +632,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               fitView
               zoomOnDoubleClick={false}
               panOnDrag={false}
-              selectionOnDrag={true}
+              selectionOnDrag={false}
               onDoubleClick={addDropNode}
               {...rest}
             >
