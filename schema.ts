@@ -32,4 +32,7 @@ export const profile = pgTable('profile', {
   subscriptionId: text('subscription_id'),
   productId: text('product_id'),
   onboardedAt: timestamp('onboarded_at'),
+  // User theme preferences
+  lightBackground: text('light_bg'),
+  darkBackground: text('dark_bg'),
 });
