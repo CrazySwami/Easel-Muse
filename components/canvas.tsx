@@ -246,6 +246,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       const hasStructural = pending.some((c) => c.type === 'add' || c.type === 'remove' || c.type === 'dimensions' || c.type === 'select');
       const includesDragEnd = pending.some((c: any) => c.type === 'position' && c.dragging === false);
       const onlyDraggingMoves = !hasStructural && !includesDragEnd && pending.every((c: any) => c.type === 'position' && c.dragging === true);
+      const removedIds = pending.filter((c) => c.type === 'remove').map((c: any) => c.id as string);
 
       if (onlyDraggingMoves) {
         // Presence-only drag: update local UI but do not write to Yjs or save
@@ -277,6 +278,22 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         for (const id of prevOrder) {
           if (!nextOrder.includes(id)) yNodesMap.delete(id);
         }
+        // Also prune edges that reference removed nodes
+        if (removedIds.length && yEdgesMap && yEdgesOrder) {
+          const prevEdgeOrder = yEdgesOrder.toArray();
+          const kept: Edge[] = [];
+          for (const id of prevEdgeOrder) {
+            const e = yEdgesMap.get(id);
+            if (!e) continue;
+            if (removedIds.includes(e.source as string) || removedIds.includes(e.target as string)) {
+              yEdgesMap.delete(id);
+            } else {
+              kept.push(e);
+            }
+          }
+          if (yEdgesOrder.length) yEdgesOrder.delete(0, yEdgesOrder.length);
+          if (kept.length) yEdgesOrder.insert(0, kept.map((e) => e.id));
+        }
       }, 'local');
       if (hasStructural || includesDragEnd) {
         save();
@@ -287,6 +304,10 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
     // Local-only mode
     setNodes((current: Node[]) => applyNodeChanges(pending, current));
+    const removedIdsLocal = pending.filter((c) => c.type === 'remove').map((c: any) => c.id as string);
+    if (removedIdsLocal.length) {
+      setEdges((current: Edge[]) => current.filter((e) => !removedIdsLocal.includes(e.source as string) && !removedIdsLocal.includes(e.target as string)));
+    }
     save();
     onNodesChange?.(pending);
   }, [enableYjs, ydoc, yNodesMap, yNodesOrder, onNodesChange, save, setNodes]);
@@ -346,6 +367,25 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     save();
     onEdgesChange?.(changes);
   }, [enableYjs, ydoc, yEdgesMap, yEdgesOrder, onEdgesChange, save, setEdges]);
+
+  const handleEdgeClick = useCallback((event: any, edge: Edge) => {
+    // Alt-click (or Option-click) to delete an edge quickly
+    if (!(event?.altKey || event?.metaKey || event?.ctrlKey)) return;
+    if (enableYjs && ydoc && yEdgesMap && yEdgesOrder) {
+      Y.transact(ydoc, () => {
+        yEdgesMap.delete(edge.id);
+        const order = yEdgesOrder.toArray().filter((id) => id !== edge.id);
+        if (yEdgesOrder.length) yEdgesOrder.delete(0, yEdgesOrder.length);
+        if (order.length) yEdgesOrder.insert(0, order);
+      }, 'local');
+      save();
+    } else {
+      setEdges((eds: Edge[]) => eds.filter((e) => e.id !== edge.id));
+      save();
+    }
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+  }, [enableYjs, ydoc, yEdgesMap, yEdgesOrder, save, setEdges]);
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {

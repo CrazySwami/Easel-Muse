@@ -21,7 +21,7 @@ type DropNodeProps = {
 };
 
 export const DropNode = ({ data, id }: DropNodeProps) => {
-  const { addNodes, deleteElements, getNode, addEdges, getNodeConnections } =
+  const { addNodes, deleteElements, getNode, addEdges, getEdges } =
     useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -29,9 +29,8 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
     // Get the position of the current node
     const currentNode = getNode(id);
     const position = currentNode?.position || { x: 0, y: 0 };
-    const sourceNodes = getNodeConnections({
-      nodeId: id,
-    });
+    // Find the temporary edge attached to this drop node (there should be one)
+    const temp = getEdges().find((e) => e.type === 'temporary' && (e.source === id || e.target === id));
 
     // Delete the drop node
     deleteElements({
@@ -53,11 +52,11 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
       ...rest,
     });
 
-    for (const sourceNode of sourceNodes) {
+    if (temp) {
       addEdges({
         id: nanoid(),
-        source: data.isSource ? newNodeId : sourceNode.source,
-        target: data.isSource ? sourceNode.source : newNodeId,
+        source: temp.source === id ? newNodeId : temp.source,
+        target: temp.target === id ? newNodeId : temp.target,
         type: 'animated',
       });
     }
