@@ -343,6 +343,13 @@ export const RoomDebugPanel = ({ projectId }: { projectId: string }) => {
         if (!res.ok) return;
         const json = await res.json();
         setYdocSize(Math.round((json.bytes ?? 0) / 1024));
+        // Auto-rotate compact at > 2000 KB
+        if ((json.bytes ?? 0) > 2_000_000) {
+          try {
+            await fetch('/api/liveblocks/rotate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+            setTimeout(() => location.reload(), 200);
+          } catch {}
+        }
       } catch {}
     })();
   }, [projectId, status]);
@@ -358,12 +365,12 @@ export const RoomDebugPanel = ({ projectId }: { projectId: string }) => {
           onClick={async () => {
             try {
               setResetting(true);
-              await fetch('/api/liveblocks/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
+              await fetch('/api/liveblocks/rotate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
               setTimeout(() => location.reload(), 200);
             } finally { setResetting(false); }
           }}
           className="rounded border px-2 py-0.5"
-        >{resetting ? 'Resetting…' : 'Reset doc'}</button>
+        >{resetting ? 'Compacting…' : 'Compact (rotate)'}</button>
       </div>
     </div>
   );
