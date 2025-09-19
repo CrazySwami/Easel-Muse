@@ -134,12 +134,27 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html,
+  body {
+    overscroll-behavior-x: none;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Prevent text selection application-wide while dragging a node */
+  body.react-flow-dragging {
+    user-select: none;
   }
 }
 
@@ -203,9 +218,15 @@
     /* Softer off-white canvas in light mode */
     background-color: hsl(var(--secondary)) !important;
   }
+
+  /* Disable accidental text selection on the canvas */
+  .react-flow {
+    user-select: none;
+  }
+
   .dark .react-flow__background {
     /* Dull charcoal canvas in dark mode */
-    background-color: #111315 !important;
+    background-color: #1115 !important;
   }
   /* Animated hero gradient */
   .animated-gradient {

@@ -717,7 +717,7 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
             >
               <Background gap={28} size={2.2} />
               {/* Dev-only stress utilities */}
-              {process.env.NODE_ENV !== 'production' && debug ? <StressPanel /> : null}
+              {debug ? <StressPanel /> : null}
               {children}
             </ReactFlow>
           </ContextMenuTrigger>
