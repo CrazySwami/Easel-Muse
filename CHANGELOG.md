@@ -4,6 +4,15 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
 
 ## v0.0.4 — Branding, Changelog, & Stress Testing (2025-09-18 → 2025-09-19)
 
+<iframe
+  src="https://www.loom.com/embed/4e48a23a373341468f2e4e0f331ad4da?sid=ae014432-cdbf-4c1a-b545-1635d0632dad"
+  width="100%"
+  height="450"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  allowFullScreen
+></iframe>
+
 -   **Branding & UI Updates**
     -   The project has been rebranded to ***Easel***! We've simplified and customized the home page to reflect the new branding.
 -   **Live Collaboration & Sharing**
