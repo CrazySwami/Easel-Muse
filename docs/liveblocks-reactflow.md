@@ -9,14 +9,11 @@ This doc summarizes how our collaborative canvas maps to the Liveblocks + React 
 - **Presence cursors**: We publish cursor presence and render peers’ cursors top‑level, converting screen coordinates to flow coordinates with `useReactFlow().screenToFlowPosition` to keep cursors consistent under pan/zoom.
 
 ## Our additions (beyond the example)
-- **Yjs-only data model (now default)**: We integrate `@liveblocks/yjs` for CRDT syncing of the graph with explicit Y.Maps/Y.Arrays for `nodesMap`/`nodesOrder` and `edgesMap`/`edgesOrder`. This lets us:
-  - Avoid large shared array diffs; we maintain stable order arrays and keyed maps for O(1) updates.
-  - Batch writes inside `Y.transact(…, 'local')` to minimize update storms.
-  - Gate writes: presence-only drags update local UI without CRDT writes until drag end.
-- **Local-only fallback removed**: We always run with Yjs enabled to ensure a single source of truth and parity with the example’s stability.
-- **Drop‑to‑create shortcut**: Using `onConnectStart`/`onConnectEnd`, dropping a partial connection onto the pane spawns a `drop` node and wires a temporary edge, enabling keyboard‑free authoring.
-- **Lock hints**: A minimal lock provider (`providers/locks`) currently marks nodes as locally “locked” during drag to prevent conflicting updates. This is a stub for future Yjs-backed locks.
-- **Persistence**: We debounce `toObject()` and persist the flow as project content in the DB via `updateProjectAction`.
+- **Liveblocks Storage (no Yjs for graph)**: We map `{ nodes, edges }` to Storage via the Zustand middleware so graph structure syncs automatically.
+- **Room join from canvas**: We explicitly call `enterRoom(projectId, { initialStorage: { nodes, edges } })` in the canvas to seed/attach Storage for each project.
+- **Drop‑to‑create shortcut**: Using `onConnectStart`/`onConnectEnd`, dropping a partial connection onto the pane spawns a `drop` node and wires a temporary edge.
+- **Lock hints**: A minimal local lock provider marks nodes as “locked” during drag (visual hint only).
+- **Persistence**: We debounce `toObject()` and persist to Supabase; we never write during drags.
 
 ## Key files
 - `providers/liveblocks.tsx`
@@ -77,5 +74,5 @@ export const isValidSourceTarget = (source: Node, target: Node) => {
 ## Notes
 - We use `@xyflow/react` (React Flow v12+) which is a maintained fork; APIs shown above align with the official example semantics.
 - Presence rendering is fixed‑position overlay to avoid layout reflow on the canvas while still aligning under viewport transforms.
-- Yjs is the single source of truth; DB saves are debounced and never happen during drag/connect to avoid overwrite races.
+- Liveblocks Storage is the source of truth for nodes/edges; DB saves are debounced and never happen during drag/connect.
 
