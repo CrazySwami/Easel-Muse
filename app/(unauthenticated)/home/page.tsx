@@ -27,47 +27,51 @@ const Home = () => (
   <GatewayProvider>
     <Hero
       announcement={{
-        title: `${env.NEXT_PUBLIC_APP_NAME} is now open source!`,
-        link: 'https://x.com/haydenbleasel/status/1923061663437291832',
+        title: 'Easel is now being developed by Mirror Factory',
+        link: '', // Empty string disables link behavior in Hero
       }}
       buttons={buttons}
     />
     {/* Essay-style narrative */}
-    <section className="prose prose-sm mx-auto mt-10 max-w-3xl px-4 dark:prose-invert sm:mt-16">
-      <p>
+    <section className="prose prose-sm mx-auto mt-4 max-w-3xl px-4 dark:prose-invert sm:mt-8">
+      <p className="fade-up-in" style={{ animationDelay: '500ms' }}>
         <strong>Easel</strong> is a space for teams to design with AI together. The tooling
         around models has exploded, but collaboration hasn’t caught up—work is scattered
         across chats, notebooks and ad‑hoc scripts. We’re building the missing layer:
         <em> a shared canvas and design system for AI</em>.
       </p>
-      <p>
+      <p className="fade-up-in" style={{ animationDelay: '650ms' }}>
         On Easel, flows are built with <strong>typed nodes</strong> and <strong>reusable patterns</strong> so
         experiments can become shared, dependable building blocks. Presence, comments and
         reviews keep decisions in context, so teams ship together instead of handing off.
       </p>
-      <h3>Why a design system for AI?</h3>
-      <p>
+      <h3 className="fade-up-in" style={{ animationDelay: '800ms' }}>
+        Why a design system for AI?
+      </h3>
+      <p className="fade-up-in" style={{ animationDelay: '950ms' }}>
         Prompts, tools and evaluation criteria are design materials. Treating them as
         components—versioned, documented, and composable—lets organizations <em>scale quality</em>
         without reinventing every run. Easel turns scattered experiments into
         <strong> libraries you can trust</strong>.
       </p>
-      <h3>How teams use Easel</h3>
+      <h3 className="fade-up-in" style={{ animationDelay: '1100ms' }}>
+        How teams use Easel
+      </h3>
       <ul>
-        <li>
+        <li className="fade-up-in" style={{ animationDelay: '1250ms' }}>
           <strong>Research</strong>: explore ideas together on a live canvas, annotate outcomes,
           and keep the best threads as templates.
         </li>
-        <li>
+        <li className="fade-up-in" style={{ animationDelay: '1400ms' }}>
           <strong>Product</strong>: standardize flows behind features with policies, tests and
           rollout controls.
         </li>
-        <li>
+        <li className="fade-up-in" style={{ animationDelay: '1550ms' }}>
           <strong>Design</strong>: prototype with multi‑modal nodes and ship consistent
           experiences across surfaces.
         </li>
       </ul>
-      <p>
+      <p className="fade-up-in" style={{ animationDelay: '1700ms' }}>
         Collaboration is the multiplier. Easel gives teams a <em>common language</em> to design,
         evaluate and improve AI together.
       </p>

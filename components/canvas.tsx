@@ -51,7 +51,9 @@ import {
 
 const StressPanel = dynamic(() => import('./stress-panel').then((m) => m.StressPanel), { ssr: false });
 
-export const Canvas = ({ children, ...props }: ReactFlowProps) => {
+type CanvasProps = ReactFlowProps & { debug?: boolean };
+
+export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   const project = useProject();
   const projectId = (project as any)?.id as string | undefined;
   // Collaboration disabled
@@ -715,7 +717,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
             >
               <Background gap={28} size={2.2} />
               {/* Dev-only stress utilities */}
-              {process.env.NODE_ENV !== 'production' ? <StressPanel /> : null}
+              {process.env.NODE_ENV !== 'production' && debug ? <StressPanel /> : null}
               {children}
             </ReactFlow>
           </ContextMenuTrigger>

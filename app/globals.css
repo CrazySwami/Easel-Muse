@@ -190,9 +190,18 @@
   }
 }
 
+/* Simple mode for stress tests: hide heavy internals when zoomed out */
+.easel-simple .react-flow__node .prose,
+.easel-simple .react-flow__node pre,
+.easel-simple .react-flow__node code,
+.easel-simple .react-flow__node img {
+  display: none !important;
+}
+
 @layer base {
   .react-flow__background {
-    @apply bg-secondary! dark:bg-background!;
+    /* Softer off-white canvas in light mode */
+    background-color: hsl(var(--secondary)) !important;
   }
   .dark .react-flow__background {
     /* Dull charcoal canvas in dark mode */
@@ -202,15 +211,45 @@
   .animated-gradient {
     position: absolute;
     inset: 0;
-    background: radial-gradient(1600px 800px at 0% 0%, color-mix(in oklch, var(--primary) 22%, transparent), transparent 62%),
-                radial-gradient(1500px 750px at 100% 0%, color-mix(in oklch, var(--primary) 18%, transparent), transparent 62%),
-                radial-gradient(1600px 900px at 50% 115%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 62%);
-    filter: blur(26px);
-    opacity: 0.70;
-    animation: gradient-move 12s ease-in-out infinite alternate;
+    background:
+      radial-gradient(
+        800px circle at 30% 40%,
+        color-mix(in oklch, var(--primary) 25%, transparent),
+        transparent 55%
+      ),
+      radial-gradient(
+        600px circle at 70% 50%,
+        color-mix(in oklch, var(--primary) 20%, transparent),
+        transparent 55%
+      );
+    filter: blur(30px);
+    opacity: 0.95;
+    animation: gradient-move 14s ease-in-out infinite alternate;
     will-change: transform;
   }
-  .dark .animated-gradient { opacity: 0.50; }
+  .dark .animated-gradient {
+    opacity: 0.6;
+  }
+  /* Centered gradient blob for hero text */
+  .hero-gradient-blob {
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 350px;
+    background: radial-gradient(
+      circle,
+      color-mix(in oklch, var(--primary) 15%, transparent),
+      transparent 70%
+    );
+    filter: blur(40px);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .dark .hero-gradient-blob {
+    opacity: 0.25;
+  }
   @keyframes gradient-move {
     0% {
       transform: translate3d(-3%, -1%, 0) scale(1.02);

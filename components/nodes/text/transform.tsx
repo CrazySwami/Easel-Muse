@@ -54,16 +54,11 @@ type TextTransformProps = TextNodeProps & {
   title: string;
 };
 
+const DEFAULT_TEXT_MODEL_ID = 'gpt-5-mini';
 const getDefaultModel = (models: ReturnType<typeof useGateway>['models']) => {
-  const defaultModel = Object.entries(models).find(
-    ([_, model]) => model.default
-  );
-
-  if (!defaultModel) {
-    return 'o3';
-  }
-
-  return defaultModel[0];
+  if (models[DEFAULT_TEXT_MODEL_ID]) return DEFAULT_TEXT_MODEL_ID;
+  const entry = Object.entries(models).find(([id]) => id.includes('gpt-5') || id.includes('mini'));
+  return entry?.[0] ?? Object.keys(models)[0];
 };
 
 export const TextTransform = ({

@@ -19,6 +19,7 @@ export const StressPanel = () => {
   const [lastGenMs, setLastGenMs] = useState<number | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [connectChunk, setConnectChunk] = useState(200);
+  // bulk model selection removed per request
 
   // FPS meter
   useEffect(() => {
@@ -200,6 +201,19 @@ export const StressPanel = () => {
               } catch {}
             }} />
             no-saves
+          </label>
+          <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <input type="checkbox" onChange={(e) => {
+              try {
+                if (e.target.checked) {
+                  localStorage.setItem('simpleMode', '1');
+                } else {
+                  localStorage.removeItem('simpleMode');
+                }
+                document.body.classList.toggle('easel-simple', e.target.checked);
+              } catch {}
+            }} />
+            simple
           </label>
         </div>
         <Button size="sm" variant="outline" onClick={() => addGrid(count)}>Add {count}</Button>

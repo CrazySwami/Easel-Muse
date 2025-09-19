@@ -20,24 +20,38 @@ import { useOthers, useSelf } from '@liveblocks/react';
 const ViewersList = () => {
   const others = useOthers();
   const me = useSelf();
-  const viewers = [
-    ...(me
-      ? [{
-          id: me.connectionId,
-          name: (me.info as any)?.name ?? 'You',
-          email: (me.info as any)?.email as string | undefined,
-          color: (me.info as any)?.color as string | undefined,
-          avatar: (me.info as any)?.avatar as string | undefined,
-        }]
-      : []),
-    ...others.map((u) => ({
-      id: u.connectionId,
-      name: (u.info as any)?.name ?? (u.info as any)?.email ?? 'User',
-      email: (u.info as any)?.email as string | undefined,
-      color: (u.info as any)?.color as string | undefined,
-      avatar: (u.info as any)?.avatar as string | undefined,
-    })),
-  ];
+  // Deduplicate by identity and exclude self from others
+  const viewers = (() => {
+    const result: Array<{ id: string | number; name: string; email?: string; color?: string; avatar?: string }> = [];
+    const meInfo: any = me?.info ?? {};
+    const meKey = (me as any)?.userId || meInfo.email || meInfo.name;
+    const seen = new Set<string>();
+    if (me) {
+      result.push({
+        id: me.connectionId,
+        name: 'You',
+        email: meInfo.email,
+        color: meInfo.color,
+        avatar: meInfo.avatar,
+      });
+      if (meKey) seen.add(String(meKey));
+    }
+    for (const u of others) {
+      const info: any = u.info ?? {};
+      const key = (u as any).userId || info.email || info.name || String(u.connectionId);
+      if (meKey && key === meKey) continue; // exclude self duplicates
+      if (seen.has(String(key))) continue; // collapse multiple connections
+      seen.add(String(key));
+      result.push({
+        id: u.connectionId,
+        name: info.name ?? info.email ?? 'User',
+        email: info.email,
+        color: info.color,
+        avatar: info.avatar,
+      });
+    }
+    return result;
+  })();
 
   return (
     <div className="space-y-2">

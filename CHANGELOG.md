@@ -2,19 +2,19 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
-## v0.0.4 — Live Collaboration & Enhanced Sharing (2025-09-19 → Present)
+## v0.0.4 — Branding, Changelog, & Stress Testing (2025-09-18 → 2025-09-19)
 
--   **Live Collaboration is Here**
-    -   Our new ***Liveblocks and Zustand-powered*** collaboration system is now live and undergoing quality assurance testing. This lightweight setup allows for a remarkably fluid and real-time experience.
-    -   You can now see collaborators moving nodes, typing, and viewing generation results as they happen.
--   **Enhanced Sharing with Roles**
-    -   We've improved the share and invite link system to include user roles for better collaboration control:
-        -   **View-only:** Users can interact with the canvas—moving nodes and editing content—but their changes will not be saved, providing a safe sandbox environment.
-        -   **Edit:** Users have full collaborative power. All changes are saved and synchronized in real time with everyone else in the room.
--   **Full Presence Features**
-    -   Presence is now fully enabled. You can see the avatars of all active users in the top right of the screen, as well as their cursors moving across the canvas in real time.
--   **What's Next**
-    -   We will be enhancing this new collaborative system even further in the coming weeks.
+-   **Branding & UI Updates**
+    -   The project has been rebranded to ***Easel***! We've simplified and customized the home page to reflect the new branding.
+-   **Live Collaboration & Sharing**
+    -   The new ***Liveblocks and Zustand-powered*** collaboration system is live. We're currently stress-testing the platform to ensure a fluid, real-time experience.
+    -   We've improved the share and invite link system with new roles:
+        -   **View-only:** Users can interact with the canvas, but their changes will not be saved.
+        -   **Edit:** Users have full collaborative power, and all changes are saved and synchronized in real time.
+    -   Presence is fully enabled, so you can see user avatars and cursors.
+-   **Changelog & Development**
+    -   We've added this ***new changelog*** to keep you updated on all our progress. It's connected directly to our GitHub repository to ensure transparency.
+    -   We're currently debugging a few minor issues with the new collaboration features and will be enhancing the system further.
 
 ## v0.0.3 — Auth, Permissions, Presence Polish (2025-09-12 → 2025-09-18)
 

@@ -139,7 +139,7 @@ export const Hero = ({ currentPlan, authenticated }: HeroProps) => {
           icon: LockIcon,
         },
       ],
-      ctaLink: 'https://x.com/haydenbleasel',
+      ctaLink: 'https://hustletogether.com',
       ctaText: 'Get in Touch',
       variant: 'outline',
     };
@@ -198,22 +198,33 @@ export const Hero = ({ currentPlan, authenticated }: HeroProps) => {
 
         {/* Main content */}
         <div className="flex flex-col items-center justify-center px-5 py-16">
-          <h1 className="mb-5 text-center font-medium text-4xl tracking-[-0.12rem] md:text-6xl">
-            Simple,{' '}
-            <span className="mr-1 font-semibold font-serif text-5xl italic md:text-7xl">
-              transparent
-            </span>{' '}
-            pricing
+          <div
+            className="relative inline-flex items-center justify-between gap-2 rounded-full border border-primary bg-primary/5 px-4 py-1.5 text-sm text-primary tracking-[-0.01rem] fade-up-in"
+            style={{ animationDelay: '500ms' }}
+          >
+            Pay For What You Use
+          </div>
+          <h1
+            className="font-serif mt-6 mb-5 text-center font-semibold text-4xl tracking-[-0.12rem] md:text-6xl fade-up-in"
+            style={{ animationDelay: '600ms' }}
+          >
+            Simple, Transparent Pricing
           </h1>
 
-          <p className="max-w-3xl text-center text-muted-foreground tracking-[-0.01rem] sm:text-lg">
+          <p
+            className="max-w-3xl text-center text-muted-foreground tracking-[-0.01rem] sm:text-lg fade-up-in"
+            style={{ animationDelay: '700ms' }}
+          >
             {env.NEXT_PUBLIC_APP_NAME} uses a flat fee and overage pricing model. This means you pay
             a flat monthly cost which includes a certain amount of credits. If
             you exceed your credits, you just pay for the extra usage.
           </p>
 
           {/* Pricing Toggle */}
-          <div className="mt-16 flex flex-col items-center">
+          <div
+            className="mt-16 flex flex-col items-center fade-up-in"
+            style={{ animationDelay: '800ms' }}
+          >
             <div className="flex items-center space-x-2">
               <span
                 className={`text-sm ${yearly ? 'text-muted-foreground' : 'font-medium text-primary'}`}
@@ -252,7 +263,11 @@ export const Hero = ({ currentPlan, authenticated }: HeroProps) => {
         {/* Pricing Cards */}
         <div className="grid w-full grid-cols-1 divide-x divide-dotted xl:grid-cols-3">
           {plans.map((plan, planIndex) => (
-            <div key={plan.name} className="p-12">
+            <div
+              key={plan.name}
+              className="p-12 fade-up-in"
+              style={{ animationDelay: `${900 + planIndex * 100}ms` }}
+            >
               <Card
                 key={plan.name}
                 className="h-full rounded-none border-none bg-transparent p-0 shadow-none"

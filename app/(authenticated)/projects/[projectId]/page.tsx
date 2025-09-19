@@ -54,16 +54,16 @@ const Project = async ({ params }: ProjectProps) => {
     <div className="flex h-screen w-screen items-stretch overflow-hidden">
       <div className="relative flex-1" style={{ overscrollBehaviorX: 'none' }}>
         <LiveblocksClientProvider>
-          <LiveblocksRoomProvider projectId={projectId}>
-            <ProjectProvider data={project}>
-              <Canvas>
+            <LiveblocksRoomProvider projectId={projectId}>
+              <ProjectProvider data={project}>
+                <Canvas debug={profile.debug}>
                 <Controls />
                 <Toolbar />
                 <SaveIndicator />
                 <CursorsLayer />
               </Canvas>
               {/* Debug panel toggled per profile.debug */}
-              <RoomDebugPanel projectId={projectId} />
+              {profile.debug ? <RoomDebugPanel projectId={projectId} /> : null}
             </ProjectProvider>
             <Suspense fallback={null}>
               <TopLeft id={projectId} />
