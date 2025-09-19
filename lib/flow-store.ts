@@ -22,7 +22,7 @@ type Storage = EnsureJson<{
 
 // Prefer Liveblocks-wrapped store when client is available; otherwise, fallback to plain Zustand
 const client = createClient({
-  publicApiKey: (process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY as string) || "",
+  authEndpoint: "/api/liveblocks/auth",
   throttle: 16,
 });
 

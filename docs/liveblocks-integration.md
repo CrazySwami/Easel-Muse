@@ -9,6 +9,7 @@ This document explains our current Liveblocks setup for realtime presence (curso
 - Store: Liveblocks + Zustand mapping
 - Presence model (cursors)
 - Persistence with Supabase
+- Auth & access control (Supabase)
 - Sharing (read‑only/invite)
 - Limitations & troubleshooting
 - Stress testing checklist
@@ -51,6 +52,21 @@ Effect: Any node/edge edit on one tab syncs to all other tabs connected to the s
 - Supabase stores project snapshots (for loading into a fresh room) and shares/permissions.
 - We do NOT save on every drag. We debounce save (e.g., 1s) and persist `reactFlowInstance.toObject()` to Supabase.
 - First client to open a fresh room seeds Storage from the project snapshot; subsequent clients load from Storage.
+
+## Auth & access control (Supabase)
+- Route: `app/api/liveblocks/auth/route.ts` (Node runtime)
+  - Reads `LIVEBLOCKS_SECRET_KEY`
+  - Gets the authenticated user from Supabase (server): `createSupabase().auth.getUser()`
+  - Loads project by `roomId == projectId` and determines permission:
+    - Owner or member → `FULL_ACCESS` (write)
+    - Read‑only token (`?ro=`) matches → `READ_ACCESS` (presence only)
+    - Otherwise → `READ_ACCESS`
+  - Calls `prepareSession(userId, { userInfo })` (name/email/avatar) and `session.allow(roomId, permission)`
+
+Environment & config
+- Local/prod: set only `LIVEBLOCKS_SECRET_KEY` (leave `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY` unset so the client uses the secret path)
+- Verify with: `GET /api/liveblocks/auth?room=lb-health` → 200 returns a token
+- Vercel: ensure the route is not Edge (we export `export const runtime = 'nodejs'`)
 
 ## Sharing (read‑only/invite)
 - Read‑only token holders see presence and the graph but cannot edit.
