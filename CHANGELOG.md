@@ -2,6 +2,12 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.5 — Quality of Life Improvements (2025-09-19)
+
+-   **Canvas Interaction**
+    -   Disabled the default text highlighting behavior that would occur when adding a new node, resulting in a cleaner and more focused user experience.
+    -   Removed the two-finger swipe gesture for back-and-forward page navigation to prevent accidental navigation while working on the canvas.
+
 ## v0.0.4 — Branding, Changelog, & Stress Testing (2025-09-18 → 2025-09-19)
 
 <iframe

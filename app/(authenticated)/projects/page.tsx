@@ -11,10 +11,11 @@ import { database } from '@/lib/database';
 import { env } from '@/lib/env';
 import { projects } from '@/schema';
 import { and, eq, isNull } from 'drizzle-orm';
-import { PlusIcon } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { NewProjectButton } from './components/new-project-button';
+import { ProjectList } from './components/project-list';
 
 export const metadata: Metadata = {
   title: `Projects | ${env.NEXT_PUBLIC_APP_NAME}`,
@@ -29,7 +30,7 @@ const ProjectsPage = async () => {
   }
 
   const userProjects = await database.query.projects.findMany({
-    where: and(eq(projects.ownerId, profile.id), isNull(projects.archivedAt)),
+    where: eq(projects.userId, profile.id),
     orderBy: (projects, { desc }) => [desc(projects.updatedAt)],
   });
 
@@ -44,30 +45,11 @@ const ProjectsPage = async () => {
             Here you can see and manage all of your projects.
           </p>
         </div>
-        <Button asChild>
-          <Link href={`/projects/${crypto.randomUUID()}`}>
-            <PlusIcon className="mr-2 h-4 w-4" />
-            New Project
-          </Link>
-        </Button>
+        <NewProjectButton />
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {userProjects.map((project) => (
-          <Card key={project.id}>
-            <CardHeader>
-              <CardTitle>{project.name}</CardTitle>
-              <CardDescription>
-                Last updated: {new Date(project.updatedAt).toLocaleDateString()}
-              </CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button asChild variant="secondary" className="w-full">
-                <Link href={`/projects/${project.id}`}>Open</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+      <div className="mt-8">
+        <ProjectList projects={userProjects} />
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ import { handleError } from '@/lib/error/handle';
 import { cn } from '@/lib/utils';
 import type { projects } from '@/schema';
 import Fuse from 'fuse.js';
-import { CheckIcon, PlusIcon } from 'lucide-react';
+import { CheckIcon, LayoutGridIcon, PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   type FormEventHandler,
@@ -179,6 +179,10 @@ export const ProjectSelector = ({
                 </Fragment>
               ))}
             <ComboboxGroup>
+              <ComboboxItem onSelect={() => router.push('/projects')}>
+                <LayoutGridIcon size={16} />
+                View all projects
+              </ComboboxItem>
               <ComboboxItem value="new">
                 <PlusIcon size={16} />
                 Create new project
