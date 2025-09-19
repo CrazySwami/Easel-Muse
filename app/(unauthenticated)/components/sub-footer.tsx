@@ -15,7 +15,7 @@ export const SubFooter = () => {
           <Logo className="h-6 w-auto" />
         </Link>
         <Link href="/pricing">Pricing</Link>
-        <Link href="/update-log">Changelog</Link>
+        <Link href="/changelog">Changelog</Link>
         <a
           href="https://github.com/CrazySwami/Easel-Muse/tree/main"
           target="_blank"

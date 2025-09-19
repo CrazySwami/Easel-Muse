@@ -31,7 +31,7 @@ function parseSections(md: string): Section[] {
 }
 
 export default async function UpdateLogPage() {
-  let md = '# Update log\n\n_No changelog found._';
+  let md = '# Change log\n\n_No changelog found._';
   try {
     const file = path.join(process.cwd(), 'CHANGELOG.md');
     md = await readFile(file, 'utf8');
@@ -42,7 +42,7 @@ export default async function UpdateLogPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6">
       <div className="mb-12 pt-12">
-        <h1 className="text-4xl font-semibold">Update log</h1>
+        <h1 className="text-4xl font-semibold">Change Log</h1>
         <p className="text-sm text-muted-foreground mt-1">Releases, improvements, and behind-the-scenes changes.</p>
       </div>
 

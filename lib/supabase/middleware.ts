@@ -47,7 +47,7 @@ export const updateSession = async (request: NextRequest) => {
     '/privacy',
     '/terms',
     '/acceptable-use',
-    '/update-log',
+    '/changelog',
   ];
 
   if (
