@@ -4,10 +4,11 @@ import { database } from '@/lib/database';
 import { projects } from '@/schema';
 import { eq } from 'drizzle-orm';
 import type { Metadata } from 'next';
+import { env } from '@/lib/env';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Tersa',
+  title: env.NEXT_PUBLIC_APP_NAME,
   description: 'Create and share AI workflows',
 };
 

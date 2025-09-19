@@ -1,5 +1,6 @@
 import { GatewayProvider } from '@/providers/gateway';
 import type { Metadata } from 'next';
+import { env } from '@/lib/env';
 import { Demo } from './components/demo';
 import { Features } from './components/features';
 import { Hero } from './components/hero';
@@ -7,9 +8,8 @@ import { Providers } from './components/providers';
 import { Tweets } from './components/tweets';
 
 export const metadata: Metadata = {
-  title: 'A visual AI playground | Tersa',
-  description:
-    'Tersa is an open source canvas for building AI workflows. Drag, drop connect and run nodes to build your own workflows powered by various industry-leading AI models.',
+  title: `A visual AI playground | ${env.NEXT_PUBLIC_APP_NAME}`,
+  description: `${env.NEXT_PUBLIC_APP_NAME} is an open source canvas for building AI workflows. Drag, drop connect and run nodes to build your own workflows powered by various industry-leading AI models.`,
 };
 
 const buttons = [
@@ -27,7 +27,7 @@ const Home = () => (
   <GatewayProvider>
     <Hero
       announcement={{
-        title: 'Tersa is now open source!',
+        title: `${env.NEXT_PUBLIC_APP_NAME} is now open source!`,
         link: 'https://x.com/haydenbleasel/status/1923061663437291832',
       }}
       buttons={buttons}

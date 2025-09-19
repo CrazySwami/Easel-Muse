@@ -7,16 +7,16 @@ This document outlines the billing and usage credit system, which is a combinati
 The system is designed to provide users with a monthly allowance of "credits" that are consumed by performing actions with AI models. The core components are:
 
 1.  **Stripe Products:** There are three key products configured in Stripe:
-    *   **Tersa Hobby:** A `$0/month` plan.
-    *   **Tersa Pro:** A paid plan (e.g., `$10/month`).
-    *   **Tersa Usage Credits:** A separate, dedicated product to track credit usage. It has no price itself.
+    *   **Easel Hobby:** A `$0/month` plan.
+    *   **Easel Pro:** A paid plan (e.g., `$10/month`).
+    *   **Easel Usage Credits:** A separate, dedicated product to track credit usage. It has no price itself.
 
-2.  **Stripe Prices:** The "Tersa Usage Credits" product has two **Prices** associated with it, one for each plan:
+2.  **Stripe Prices:** The "Easel Usage Credits" product has two **Prices** associated with it, one for each plan:
     *   A "Hobby" price with a tiered model providing 200 credits.
     *   A "Pro" price with a tiered model providing 1600 credits (monthly) and an optional annual variant.
     Both prices have a cost of `$0.00`, as the cost is covered by the main subscription plan.
 
-3.  **Stripe Meter:** A single **Billing Meter** (e.g., `credits_consumed`) is used to track all usage events. Both of the tiered prices for "Tersa Usage Credits" must be explicitly linked to this meter in the Stripe dashboard.
+3.  **Stripe Meter:** A single **Billing Meter** (e.g., `credits_consumed`) is used to track all usage events. Both of the tiered prices for "Easel Usage Credits" must be explicitly linked to this meter in the Stripe dashboard.
 
 4.  **Application Logic:** The application code is responsible for calculating usage and reporting it to the meter.
 

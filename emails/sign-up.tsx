@@ -1,4 +1,5 @@
 import { Head, Hr, Html, Link, Preview, Text } from '@react-email/components';
+import { env } from '@/lib/env';
 import { EmailLayout } from './layout';
 
 type SignupEmailTemplateProps = {
@@ -12,10 +13,10 @@ export const SignupEmailTemplate = ({
 }: SignupEmailTemplateProps) => (
   <Html>
     <Head />
-    <Preview>Confirm your email address to get started with Tersa</Preview>
+    <Preview>Confirm your email address to get started with {env.NEXT_PUBLIC_APP_NAME}</Preview>
     <EmailLayout>
       <Text className="text-left text-[#525f7f] text-base leading-6">
-        Thanks for signing up for Tersa! To complete your registration, please
+        Thanks for signing up for {env.NEXT_PUBLIC_APP_NAME}! To complete your registration, please
         confirm your email address.
       </Text>
       <Text className="text-left text-[#525f7f] text-base leading-6">
@@ -30,7 +31,7 @@ export const SignupEmailTemplate = ({
       </Link>
       <Hr className="my-5 border-[#e6ebf1]" />
       <Text className="text-left text-[#525f7f] text-base leading-6">
-        This link will expire in 10 minutes. If you didn't sign up for Tersa,
+        This link will expire in 10 minutes. If you didn't sign up for {env.NEXT_PUBLIC_APP_NAME},
         you can safely ignore this email.
       </Text>
       <Text className="text-left text-[#525f7f] text-base leading-6">
@@ -47,7 +48,7 @@ export const SignupEmailTemplate = ({
         reach out to our support team.
       </Text>
       <Text className="text-left text-[#525f7f] text-base leading-6">
-        — The Tersa Team
+        — The {env.NEXT_PUBLIC_APP_NAME} Team
       </Text>
       <Hr className="my-5 border-[#e6ebf1]" />
       <Text className="text-[#8898aa] text-xs leading-4">
@@ -58,7 +59,7 @@ export const SignupEmailTemplate = ({
 );
 
 SignupEmailTemplate.PreviewProps = {
-  magicLink: 'https://www.tersa.ai/sign-up',
+  magicLink: 'https://example.com/sign-up',
   email: 'test@test.com',
 } as SignupEmailTemplateProps;
 

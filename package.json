@@ -1,5 +1,5 @@
 {
-  "name": "tersa",
+  "name": "easel",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -126,6 +126,7 @@
     "react-resizable-panels": "^3.0.3",
     "react-tweet": "^3.2.2",
     "recharts": "^2.15.3",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "replicate": "^1.0.1",
     "resend": "^4.6.0",

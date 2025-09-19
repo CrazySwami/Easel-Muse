@@ -76,3 +76,13 @@ export const isValidSourceTarget = (source: Node, target: Node) => {
 - Presence rendering is fixed‑position overlay to avoid layout reflow on the canvas while still aligning under viewport transforms.
 - Liveblocks Storage is the source of truth for nodes/edges; DB saves are debounced and never happen during drag/connect.
 
+### Canvas background and dots styling
+- The dotted background is rendered by React Flow's `Background` component in `components/canvas.tsx`.
+- Colors are overridden in `app/globals.css`:
+  - Canvas background: `.react-flow__background` (light) and `.dark .react-flow__background` (dark)
+  - Dot color: `.react-flow__background-pattern.dots` and `.dark .react-flow__background-pattern.dots`
+- Current values:
+  - Light background: `oklch(0.962 0.06 80)` (more beige tone)
+  - Dark background: `oklch(0.085 0 0)` (neutral deep charcoal)
+  - Dark dots: `fill-foreground/22`
+

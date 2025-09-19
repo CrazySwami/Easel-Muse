@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRightIcon } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next/link'; 
+import { env } from '@/lib/env';
 
 type HeroProps = {
   announcement?: {
@@ -72,7 +73,7 @@ export const Hero = ({ announcement, buttons }: HeroProps) => (
         </h1>
 
         <p className="max-w-2xl text-center text-muted-foreground tracking-[-0.01rem] sm:text-lg">
-          Tersa is an open source canvas for building AI workflows. Drag, drop
+          {env.NEXT_PUBLIC_APP_NAME} is an open source canvas for building AI workflows. Drag, drop
           connect and run nodes to build your own workflows powered by various
           industry-leading AI models.
         </p>

@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { Hero } from './components/hero';
 
 export const metadata: Metadata = {
-  title: 'Tersa | Pricing',
+  title: `${env.NEXT_PUBLIC_APP_NAME} | Pricing`,
   description: 'Choose a plan to get access to all features.',
 };
 

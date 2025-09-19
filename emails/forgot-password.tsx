@@ -1,4 +1,5 @@
 import { Head, Hr, Html, Link, Preview, Text } from '@react-email/components';
+import { env } from '@/lib/env';
 import { EmailLayout } from './layout';
 
 type ForgotPasswordEmailTemplateProps = {
@@ -12,14 +13,14 @@ export const ForgotPasswordEmailTemplate = ({
 }: ForgotPasswordEmailTemplateProps) => (
   <Html>
     <Head />
-    <Preview>Reset your password for Tersa</Preview>
+    <Preview>Reset your password for {env.NEXT_PUBLIC_APP_NAME}</Preview>
     <EmailLayout>
       <Text className="text-left text-[#525f7f] text-base leading-6">
         Hello there! Someone (hopefully you) requested to reset your password
-        for Tersa.
+        for {env.NEXT_PUBLIC_APP_NAME}.
       </Text>
       <Text className="text-left text-[#525f7f] text-base leading-6">
-        Click the button below to securely reset your password for your Tersa
+        Click the button below to securely reset your password for your {env.NEXT_PUBLIC_APP_NAME}
         account.
       </Text>
       <Link
@@ -47,7 +48,7 @@ export const ForgotPasswordEmailTemplate = ({
         reach out to our support team.
       </Text>
       <Text className="text-left text-[#525f7f] text-base leading-6">
-        — The Tersa Team
+        — The {env.NEXT_PUBLIC_APP_NAME} Team
       </Text>
       <Hr className="my-5 border-[#e6ebf1]" />
       <Text className="text-[#8898aa] text-xs leading-4">
@@ -58,7 +59,7 @@ export const ForgotPasswordEmailTemplate = ({
 );
 
 ForgotPasswordEmailTemplate.PreviewProps = {
-  magicLink: 'https://www.tersa.ai/reset-password',
+  magicLink: 'https://example.com/reset-password',
   email: 'test@test.com',
 } as ForgotPasswordEmailTemplateProps;
 

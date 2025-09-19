@@ -132,11 +132,31 @@ export const CursorsLayer = () => {
 export const AvatarStack = () => {
   const me = useSelf();
   const others = useOthers();
+  // Deduplicate by userId (fallback to email/name) to avoid double avatars when
+  // Strict Mode or multiple connections for the same user are present.
+  const dedupedOthers = (() => {
+    const map = new Map<string, typeof others[number]>();
+    for (const u of others) {
+      const info = (u.info as any) ?? {};
+      const key = (u as any).userId || info.email || info.name || String(u.connectionId);
+      if (!map.has(key)) map.set(key, u);
+    }
+    // Exclude entries that match the current user's userId (or email/name) in case
+    // another connection from the same account is counted as an "other".
+    const meInfo = (me?.info as any) ?? {};
+    const meKey = (me as any)?.userId || meInfo.email || meInfo.name;
+    return Array.from(map.values()).filter((u) => {
+      const info = (u.info as any) ?? {};
+      const key = (u as any).userId || info.email || info.name;
+      return !meKey || key !== meKey;
+    });
+  })();
+
   const users = [
     ...(me
       ? [{ id: me.connectionId, name: (me.info as any)?.name ?? 'You', avatar: (me.info as any)?.avatar as string | undefined, color: (me.info as any)?.color ?? '#06f' }]
       : []),
-    ...others.map((u) => ({ id: u.connectionId, name: (u.info as any)?.name ?? 'User', avatar: (u.info as any)?.avatar as string | undefined, color: (u.info as any)?.color ?? '#06f' })),
+    ...dedupedOthers.map((u) => ({ id: u.connectionId, name: (u.info as any)?.name ?? 'User', avatar: (u.info as any)?.avatar as string | undefined, color: (u.info as any)?.color ?? '#06f' })),
   ];
   return (
     <div className="flex -space-x-2">

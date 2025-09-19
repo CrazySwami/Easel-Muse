@@ -1,13 +1,13 @@
 import { currentUser } from '@/lib/auth';
 import type { Metadata } from 'next';
+import { env } from '@/lib/env';
 import { redirect } from 'next/navigation';
 import Home from './(unauthenticated)/home/page';
 import UnauthenticatedLayout from './(unauthenticated)/layout';
 
 export const metadata: Metadata = {
-  title: 'A visual AI playground | Tersa',
-  description:
-    'Tersa is an open source canvas for building AI workflows. Drag, drop connect and run nodes to build your own workflows powered by various industry-leading AI models.',
+  title: `A visual AI playground | ${env.NEXT_PUBLIC_APP_NAME}`,
+  description: `${env.NEXT_PUBLIC_APP_NAME} is an open source canvas for building AI workflows. Drag, drop, connect and run nodes to build your own workflows powered by various industry-leading AI models.`,
 };
 
 const Index = async () => {

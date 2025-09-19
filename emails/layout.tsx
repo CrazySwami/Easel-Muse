@@ -22,10 +22,10 @@ export const EmailLayout = ({ children }: EmailLayoutProps) => (
       <Container className="mx-auto mb-16 bg-white py-5 pb-12">
         <Section className="px-12">
           <Img
-            src={new URL('/tersa.png', returnUrl).toString()}
+            src={new URL((env.NEXT_PUBLIC_LOGO_PATH?.startsWith('/') ? env.NEXT_PUBLIC_LOGO_PATH : '/Easel-Logo.svg'), returnUrl).toString()}
             width="85"
             height="21.5"
-            alt="Tersa"
+            alt={env.NEXT_PUBLIC_APP_NAME}
           />
           <Hr className="my-5 border-[#e6ebf1]" />
           {children}

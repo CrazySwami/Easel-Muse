@@ -199,8 +199,8 @@
     @apply fill-foreground/80!;
   }
   .dark .react-flow__background-pattern.dots {
-    /* Brighter dots in dark mode */
-    @apply fill-foreground/90!;
+    /* Dimmer dots in dark mode */
+    @apply fill-foreground/50!;
   }
   .react-flow__node.selected .node-container {
     @apply ring-2! ring-[var(--cursor-color,var(--primary))]!;
@@ -221,6 +221,14 @@
   .react-flow__handle-right {
     @apply !-right-4;
   }
+}
+
+.changelog-gif {
+  border-radius: 8px;
+}
+
+.dark .changelog-gif {
+  border: 1px solid oklch(1 0 0 / 20%);
 }
 
 nextjs-portal {

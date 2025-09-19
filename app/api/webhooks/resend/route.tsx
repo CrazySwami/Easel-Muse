@@ -72,7 +72,7 @@ export const POST = async (req: Request) => {
           email={user.email}
         />
       );
-      subject = 'Confirm your email address for Tersa';
+      subject = `Confirm your email address for ${env.NEXT_PUBLIC_APP_NAME}`;
     } else if (email_action_type === 'magiclink') {
       react = (
         <LoginEmailTemplate
@@ -80,7 +80,7 @@ export const POST = async (req: Request) => {
           email={user.email}
         />
       );
-      subject = 'Your magic link to login to Tersa';
+      subject = `Your magic link to login to ${env.NEXT_PUBLIC_APP_NAME}`;
     } else if (email_action_type === 'recovery') {
       react = (
         <ForgotPasswordEmailTemplate
@@ -88,7 +88,7 @@ export const POST = async (req: Request) => {
           email={user.email}
         />
       );
-      subject = 'Reset your password for Tersa';
+      subject = `Reset your password for ${env.NEXT_PUBLIC_APP_NAME}`;
     } else {
       throw new Error('Invalid email action type');
     }

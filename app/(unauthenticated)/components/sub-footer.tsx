@@ -18,15 +18,16 @@ export const SubFooter = () => {
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
         <Link href="/acceptable-use">Acceptable Use</Link>
+        <Link href="/update-log">Changelog</Link>
         <a
-          href="https://github.com/haydenbleasel/tersa"
+          href="https://github.com/CrazySwami/Easel-Muse/tree/main"
           target="_blank"
           rel="noopener noreferrer"
         >
           Source Code
         </a>
         <a
-          href="https://x.com/haydenbleasel"
+          href="https://hustletogether.com"
           target="_blank"
           rel="noopener noreferrer"
         >

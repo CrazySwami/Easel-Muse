@@ -95,7 +95,7 @@ Below are descriptions of the primary helper functions used for data extraction,
 
 ## 5. Data Persistence and AI Tool Integration
 
-When developing AI tools that create or modify nodes, it's essential to understand how data is persisted and passed between nodes in the Hustle-Tersa system.
+When developing AI tools that create or modify nodes, it's essential to understand how data is persisted and passed between nodes in the Hustle-Easel system.
 
 ### 5.1 Model IDs and Resource Identifiers
 

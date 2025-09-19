@@ -2,6 +2,7 @@ import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { currentUser } from '@/lib/auth';
 import Link from 'next/link';
+import { env } from '@/lib/env';
 
 export const Header = async () => {
   const user = await currentUser();
@@ -10,7 +11,7 @@ export const Header = async () => {
     <header className="flex items-center justify-between px-8">
       <Link href="/" className="flex items-center gap-2">
         <Logo className="h-6 w-auto" />
-        <span className="font-medium text-xl tracking-tight">Tersa</span>
+        <span className="font-medium text-xl tracking-tight">{env.NEXT_PUBLIC_APP_NAME}</span>
       </Link>
       <div className="flex items-center gap-2">
         <Button variant="link" asChild className="text-muted-foreground">

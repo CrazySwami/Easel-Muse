@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-Tersa is a visual AI playground built with Next.js 15 and React 19, allowing users to create AI workflows by connecting nodes in a drag-and-drop interface.
+Easel is a visual AI playground built with Next.js 15 and React 19, allowing users to create AI workflows by connecting nodes in a drag-and-drop interface.
 
 ### Core Technologies
 - **Frontend**: Next.js 15 with App Router, React 19, Tailwind CSS

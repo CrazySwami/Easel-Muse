@@ -13,11 +13,12 @@ import LiveblocksClientProvider from '@/providers/liveblocks-provider';
 import { projects } from '@/schema';
 import { eq } from 'drizzle-orm';
 import type { Metadata } from 'next';
+import { env } from '@/lib/env';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Tersa',
+  title: env.NEXT_PUBLIC_APP_NAME,
   description: 'Create and share AI workflows',
 };
 

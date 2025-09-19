@@ -16,6 +16,7 @@ import { PlayIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { env } from '@/lib/env';
 
 const TextNode = nodeButtons.find((button) => button.id === 'text');
 
@@ -174,7 +175,7 @@ export const WelcomeDemo = ({ title, description }: WelcomeDemoProps) => {
         <>
           That's it! You've created your first AI-powered workflow. You can
           continue to add more nodes to a canvas to create more complex flows
-          and discover the power of Tersa.
+          and discover the power of {env.NEXT_PUBLIC_APP_NAME}.
         </>
       ),
       action: (

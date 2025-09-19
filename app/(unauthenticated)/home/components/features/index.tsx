@@ -4,6 +4,7 @@ import { ImageDemo } from './image-demo';
 import { SpeechDemo } from './speech-demo';
 import { TextDemo } from './text-demo';
 import { VideoDemo } from './video-demo';
+import { env } from '@/lib/env';
 
 export const Features = () => (
   <div className="relative grid w-full grid-cols-[0.2fr_3fr_0.2fr] md:grid-cols-[0.5fr_3fr_0.5fr]">
@@ -51,7 +52,7 @@ export const Features = () => (
         </h2>
 
         <p className="mx-auto max-w-lg text-center text-muted-foreground tracking-[-0.01rem] sm:text-lg">
-          Tersa uses a drag and drop interface to build workflows, making it
+          {env.NEXT_PUBLIC_APP_NAME} uses a drag and drop interface to build workflows, making it
           super easy to create complex workflows with ease.
         </p>
       </div>

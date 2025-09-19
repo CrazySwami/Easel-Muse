@@ -1,8 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata } from 'next'; 
+import { env } from '@/lib/env';
 
 const title = 'Terms of Service';
 const description =
-  'These Terms of Service govern your use of the website and any related services provided by Tersa. By accessing any of the sites mentioned above, you agree to abide by these Terms of Service and to comply with all applicable laws and regulations.';
+  'These Terms of Service govern your use of the website and any related services provided by {env.NEXT_PUBLIC_APP_NAME}. By accessing any of the sites mentioned above, you agree to abide by these Terms of Service and to comply with all applicable laws and regulations.';
 
 export const metadata: Metadata = {
   title,
@@ -66,10 +67,10 @@ const Privacy = () => (
         <p>
           If you do not agree with these Terms of Service, you are prohibited
           from using or accessing this website or using any other services
-          provided by Tersa.
+          provided by {env.NEXT_PUBLIC_APP_NAME}.
         </p>
         <p>
-          We, Tersa, reserve the right to review and amend any of these Terms of
+          We, {env.NEXT_PUBLIC_APP_NAME}, reserve the right to review and amend any of these Terms of
           Service at our sole discretion. Upon doing so, we will update this
           page. Any changes to these Terms of Service will take effect
           immediately from the date of publication.
@@ -103,7 +104,7 @@ const Privacy = () => (
           <li>
             knowingly or negligently use this website or any of its associated
             services in a way that abuses or disrupts our networks or any other
-            service Tersa provides;
+            service {env.NEXT_PUBLIC_APP_NAME} provides;
           </li>
           <li>
             use this website or its associated services to transmit or publish
@@ -129,14 +130,14 @@ const Privacy = () => (
         <h2>Intellectual Property</h2>
         <p>
           The intellectual property in the materials contained in this website
-          are owned by or licensed to Tersa and are protected by applicable
+          are owned by or licensed to {env.NEXT_PUBLIC_APP_NAME} and are protected by applicable
           copyright and trademark law. We grant our users permission to download
           one copy of the materials for personal, non-commercial transitory use.
         </p>
         <p>
           This constitutes the grant of a license, not a transfer of title. This
           license shall automatically terminate if you violate any of these
-          restrictions or the Terms of Service, and may be terminated by Tersa
+          restrictions or the Terms of Service, and may be terminated by {env.NEXT_PUBLIC_APP_NAME}
           at any time.
         </p>
         <h2>User-Generated Content</h2>
@@ -170,7 +171,7 @@ const Privacy = () => (
         <h2>Liability</h2>
         <p>
           Our website and the materials on our website are provided on an 'as
-          is' basis. To the extent permitted by law, Tersa makes no warranties,
+          is' basis. To the extent permitted by law, {env.NEXT_PUBLIC_APP_NAME} makes no warranties,
           expressed or implied, and hereby disclaims and negates all other
           warranties including, without limitation, implied warranties or
           conditions of merchantability, fitness for a particular purpose, or
@@ -178,10 +179,10 @@ const Privacy = () => (
           rights.
         </p>
         <p>
-          In no event shall Tersa or its suppliers be liable for any
+          In no event shall {env.NEXT_PUBLIC_APP_NAME} or its suppliers be liable for any
           consequential loss suffered or incurred by you or any third party
           arising from the use or inability to use this website or the materials
-          on this website, even if Tersa or an authorized representative has
+          on this website, even if {env.NEXT_PUBLIC_APP_NAME} or an authorized representative has
           been notified, orally or in writing, of the possibility of such
           damage.
         </p>
@@ -201,17 +202,17 @@ const Privacy = () => (
         <h2>Accuracy of Materials</h2>
         <p>
           The materials appearing on our website are not comprehensive and are
-          for general information purposes only. Tersa does not warrant or make
+          for general information purposes only. {env.NEXT_PUBLIC_APP_NAME} does not warrant or make
           any representations concerning the accuracy, likely results, or
           reliability of the use of the materials on this website, or otherwise
           relating to such materials or on any resources linked to this website.
         </p>
         <h2>Links</h2>
         <p>
-          Tersa has not reviewed all of the sites linked to its website and is
+          {env.NEXT_PUBLIC_APP_NAME} has not reviewed all of the sites linked to its website and is
           not responsible for the contents of any such linked site. The
           inclusion of any link does not imply endorsement, approval, or control
-          by Tersa of the site. Use of any such linked site is at your own risk
+          by {env.NEXT_PUBLIC_APP_NAME} of the site. Use of any such linked site is at your own risk
           and we strongly advise you make your own investigations with respect
           to the suitability of those sites.
         </p>

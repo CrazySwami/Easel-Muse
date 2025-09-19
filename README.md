@@ -1,8 +1,8 @@
-![Tersa image](/app/opengraph-image.png)
+![Easel image](/app/opengraph-image.png)
 
-# Tersa
+# Easel
 
-A visual AI playground. Tersa is an open source canvas for building AI workflows. Drag, drop connect and run nodes to build your own workflows powered by various industry-leading AI models.
+A visual AI playground. Easel is an open source canvas for building AI workflows. Drag, drop connect and run nodes to build your own workflows powered by various industry-leading AI models.
 
 ## Features
 
@@ -39,8 +39,8 @@ A visual AI playground. Tersa is an open source canvas for building AI workflows
 
 1. Clone the repository
    ```sh
-   git clone https://github.com/haydenbleasel/tersa.git
-   cd tersa
+   git clone https://github.com/haydenbleasel/Easel.git
+   cd Easel
    ```
 
 2. Install dependencies
@@ -65,6 +65,42 @@ A visual AI playground. Tersa is an open source canvas for building AI workflows
 4. Connect nodes by dragging from one node's output to another node's input
 5. Configure node settings as needed
 6. Run your workflow to process data through the AI models
+
+## Branding and App Name (reusing this project)
+
+You can customize the product name and logo for reuse across projects.
+
+### 1) Configure via environment
+
+Add the following to `.env.local`:
+
+```
+NEXT_PUBLIC_APP_NAME=Easel
+NEXT_PUBLIC_LOGO_PATH=/Easel-Logo.svg
+```
+
+Wire these in code by importing `env` from `lib/env.ts` and referencing `env.NEXT_PUBLIC_APP_NAME` and `env.NEXT_PUBLIC_LOGO_PATH` instead of hard‑coded strings. Typical places to use them:
+
+- UI shell: `app/(unauthenticated)/components/header.tsx` (brand text next to the logo)
+- Page titles/descriptions: `app/page.tsx`, `app/(unauthenticated)/home/page.tsx`, `app/(unauthenticated)/pricing/page.tsx`, `app/(authenticated)/projects*/page.tsx`
+- Emails: `emails/*` subjects/body and `app/api/webhooks/resend/route.tsx`
+
+Restart the dev server after adding new env variables.
+
+### 2) Things you must change manually (not env‑driven)
+
+- Package metadata: `package.json` ("name")
+- Supabase project identifier: `supabase/config.toml` (`project_id`)
+- Static assets: replace `public/Easel.png` (and update imports) or use `NEXT_PUBLIC_LOGO_PATH`
+- Docs content: files under `docs/` and this `README.md`
+- Hardcoded links to the public site/domain inside emails:
+  - `emails/sign-up.tsx`, `emails/sign-in.tsx`, `emails/forgot-password.tsx` (`magicLink` values)
+- Any remaining references to "Easel" in policy pages:
+  - `app/(unauthenticated)/terms/page.tsx`
+  - `app/(unauthenticated)/privacy/page.tsx`
+  - `app/(unauthenticated)/acceptable-use/page.tsx`
+
+Tip: to locate all references you may want to change, search the repo for `Easel` and `Easel`.
 
 ## License
 

@@ -7,10 +7,11 @@ import { and, eq } from 'drizzle-orm';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { WelcomeDemo } from './components/welcome-demo';
+import { env } from '@/lib/env';
 
-const title = 'Welcome to Tersa!';
+const title = 'Welcome to {env.NEXT_PUBLIC_APP_NAME}!';
 const description =
-  "Tersa is a platform for creating and sharing AI-powered projects. Let's get started by creating a flow, together.";
+  "{env.NEXT_PUBLIC_APP_NAME} is a platform for creating and sharing AI-powered projects. Let's get started by creating a flow, together.";
 
 export const metadata: Metadata = {
   title,
