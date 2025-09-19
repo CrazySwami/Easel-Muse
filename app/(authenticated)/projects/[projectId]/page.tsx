@@ -9,7 +9,7 @@ import { currentUserProfile } from '@/lib/auth';
 import { database } from '@/lib/database';
 import { ProjectProvider } from '@/providers/project';
 import { CursorsLayer, LiveblocksRoomProvider, RoomDebugPanel } from '@/providers/liveblocks';
-import { LiveblocksClientProvider } from '@/providers/liveblocks-provider';
+import LiveblocksClientProvider from '@/providers/liveblocks-provider';
 import { projects } from '@/schema';
 import { eq } from 'drizzle-orm';
 import type { Metadata } from 'next';

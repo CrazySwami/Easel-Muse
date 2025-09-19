@@ -1,0 +1,95 @@
+# agent_graph_ui.mdc
+description: >
+  Enforce Vercel AI-SDK agent patterns **and** build every visual workflow
+  with React Flow’s node/edge/data contracts.
+alwaysApply: true
+---
+
+# 📚 Canonical references  
+1. **Vercel AI Agents** – How to build agents with the AI SDK  
+   https://vercel.com/guides/ai-agents#how-to-build-agents-with-the-ai-sdk  
+2. **React Flow Learn** – Getting Started & Building a Flow  
+   https://reactflow.dev/learn  
+3. **MDN** – HTML Drag & Drop API (for sidebar palettes)
+
+---
+
+## ⚙️ Agent logic (Vercel AI SDK)
+- **Model calls**  
+  Prefer `generateText` or `streamText` with explicit `{ tools, maxSteps }`.  
+- **Tool wrappers**  
+  Wrap external integrations in `tool({ schema, run })` and export from `tools.ts`.  
+- **Sequential & parallel**  
+  Structure long-running workflows via **Sequential Chains**, **Parallel Tool Calls**, and **Evaluation Loops** as in the SDK “Cookbook.”  
+- **Fluid Compute**  
+  Use Vercel functions’ `waitUntil` / `after` hooks for post-response tasks.  
+- **Purity & typing**  
+  Keep agent logic pure; I/O lives in tools. Use TypeScript strict mode and Zod for schema safety.
+
+---
+
+## 🖼️ UI graph (React Flow)
+| Concern                   | Required pattern                                                                    |
+|---------------------------|-------------------------------------------------------------------------------------|
+| **State**                 | `useNodesState` + `useEdgesState`; treat flows as *controlled*                      |
+| **Nodes**                 | Custom Node components per tool/step; implement input/output handles                |
+| **Edges**                 | Create via `addEdge` in `onConnect`; validate to avoid duplicates                  |
+| **Drag & Drop**           | HTML Drag-and-Drop API for sidebar + React Flow’s internal drag handlers            |
+| **Zoom & pan**            | Wrap in `<ReactFlowProvider>`; expose `useReactFlow()` for programmatic control     |
+| **Custom edges**          | Extend `BaseEdge` for labels/actions                                                |
+| **Drop-to-create**        | Implement with `onConnectStart` / `onConnectEnd` shortcuts                          |
+| **Persistence**           | Serialize `{ nodes, edges }` to JSON; rehydrate via `reactFlowInstance.toObject()`  |
+| **Advanced UX**           | Constrain drag handles with a `.dragHandle` class for precise grabbing              |
+
+---
+
+## 🛠️ Implementation checklist
+1. **Imports**  
+   ```ts
+   import { openai } from '@vercel/ai';
+   import { ReactFlow, useNodesState, useEdgesState, addEdge, ReactFlowProvider } from 'reactflow';
+
+	2.	Agent tools
+
+// tools.ts
+export const summarizeTool = tool({
+  schema: z.object({ text: z.string() }),
+  run: async ({ text }) => { /* … */ },
+});
+
+
+	3.	Agent invocation
+
+const response = await openai.generateText({ tools: [summarizeTool], maxSteps: 3 });
+
+
+	4.	Flow state
+
+const [nodes, , onNodesChange] = useNodesState(initialNodes);
+const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+const onConnect = params => setEdges(e => addEdge(params, e));
+
+
+	5.	Persistence
+
+useEffect(() => {
+  localStorage.setItem('flow', JSON.stringify({ nodes, edges }));
+}, [nodes, edges]);
+
+
+	6.	Shared schemas
+Re-export all Zod schemas from /lib/validators.ts and reuse for both agent tools and node props.
+
+⸻
+
+📝 Style & lint
+	•	TypeScript strict mode ON.
+	•	ESLint: airbnb-base config.
+	•	CSS: include reactflow/dist/style.css in your root layout.
+	•	Keep functions pure; side-effects only in explicit tool handlers.
+
+**Installation**  
+```bash
+mkdir -p .cursor/rules
+# Paste the above into .cursor/rules/agent_graph_ui.mdc
+```

@@ -17,13 +17,8 @@ export const LiveblocksRoomProvider = ({ children, projectId }: LiveblocksRoomPr
   }
 
   return (
-    <RoomProvider 
-      id={projectId} 
-      initialPresence={{ cursor: null }}
-    >
-      <ClientSideSuspense fallback={<div>Loading room...</div>}>
-        {children}
-      </ClientSideSuspense>
+    <RoomProvider id={projectId} initialPresence={{ cursor: null }}>
+      <ClientSideSuspense fallback={<div>Loading room...</div>}>{children}</ClientSideSuspense>
     </RoomProvider>
   );
 };
@@ -44,7 +39,7 @@ export const CursorsLayer = () => {
     const loop = () => {
       const e = lastEventRef.current;
       if (e) {
-        if (++tick % 2 === 0) { // ~30ms on 60Hz
+        if (++tick % 2 === 0) {
           const flow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
           setMyPresence({ cursor: { x: flow.x, y: flow.y } });
           tick = 0;
@@ -67,18 +62,6 @@ export const CursorsLayer = () => {
       cancelAnimationFrame(raf);
     };
   }, [setMyPresence]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('Liveblocks cursors - Others count:', others.length);
-    others.forEach((user, index) => {
-      console.log(`User ${index}:`, {
-        connectionId: user.connectionId,
-        presence: user.presence,
-        cursor: user.presence?.cursor
-      });
-    });
-  }, [others]);
 
   const renderCursor = (flowX: number, flowY: number, color: string, label?: string, key?: string | number) => {
     const [tx, ty, zoom] = transform ?? [0, 0, 1];
@@ -146,119 +129,6 @@ export const CursorsLayer = () => {
   );
 };
 
-export const RoomAvatars = () => {
-  const others = useOthers();
-  const me = useSelf();
-  const users = [
-    ...(me
-      ? [
-          {
-            id: me.connectionId,
-            name: (me.info as any)?.name ?? 'You',
-            email: (me.info as any)?.email as string | undefined,
-            avatar: (me.info as any)?.avatar as string | undefined,
-            color: (me.info as any)?.color ?? '#06f',
-          },
-        ]
-      : []),
-    ...others.map((u) => ({
-      id: u.connectionId,
-      name: (u.info as any)?.name ?? (u.info as any)?.email ?? 'User',
-      email: (u.info as any)?.email as string | undefined,
-      avatar: (u.info as any)?.avatar as string | undefined,
-      color: (u.info as any)?.color ?? '#06f',
-    })),
-  ];
-
-  const [open, setOpen] = useState<boolean>(false);
-  const [hoverId, setHoverId] = useState<number | null>(null);
-
-  return (
-    <div
-      style={{ position: 'absolute', right: 12, bottom: 84, zIndex: 60 }}
-      className="flex flex-col items-end gap-2"
-    >
-      {open && (
-        <div className="rounded-md border bg-card/95 p-2 backdrop-blur-sm shadow-md">
-          <div className="flex flex-col gap-1 max-h-56 overflow-auto">
-            {users.map((u) => (
-              <div key={u.id} className="flex items-center gap-2">
-                {u.avatar ? (
-                  <img
-                    src={u.avatar}
-                    alt={u.name}
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 9999,
-                      boxShadow: '0 0 0 2px white',
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 9999,
-                      background: u.color,
-                      boxShadow: '0 0 0 2px white',
-                    }}
-                  />
-                )}
-                <span className="text-xs" style={{ color: 'var(--foreground)' }}>
-                  {u.name || u.email}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setOpen((v: boolean) => !v)}
-        className="flex flex-col items-center gap-1 rounded-full border bg-card/90 px-2 py-2 drop-shadow-xs backdrop-blur-sm"
-        style={{ position: 'relative' }}
-      >
-        {users.map((u) => (
-          <div key={u.id} style={{ position: 'relative' }}>
-            <div
-              onMouseEnter={() => setHoverId(u.id)}
-              onMouseLeave={() => setHoverId((curr) => (curr === u.id ? null : curr))}
-              title={u.name || u.email}
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 9999,
-                background: u.color,
-                boxShadow: '0 0 0 1px rgba(255,255,255,0.9)',
-              }}
-            />
-            {hoverId === u.id ? (
-              <div
-                style={{
-                  position: 'absolute',
-                  right: 18,
-                  top: -2,
-                  background: 'rgba(0,0,0,0.8)',
-                  color: 'white',
-                  padding: '2px 6px',
-                  borderRadius: 6,
-                  fontSize: 10,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {u.name || u.email}
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </button>
-    </div>
-  );
-};
-
-// Inline avatar stack (top‑right usage)
 export const AvatarStack = () => {
   const me = useSelf();
   const others = useOthers();
@@ -285,7 +155,6 @@ export const AvatarStack = () => {
   );
 };
 
-// Simple connection status pill (connected / connecting / reconnecting / closed)
 export const RoomStatus = () => {
   const room = useRoom();
   const [status, setStatus] = useState<string>(room.getStatus?.() ?? 'unknown');
@@ -305,75 +174,9 @@ export const RoomStatus = () => {
   );
 };
 
-// Minimal debug panel
+// Minimal stub to avoid undefined import at runtime; expand later if needed
 export const RoomDebugPanel = ({ projectId }: { projectId: string }) => {
-  const room = useRoom();
-  const [show, setShow] = useState(false);
-  const [status, setStatus] = useState<string>(room.getStatus?.() ?? 'unknown');
-  const [ydocSize, setYdocSize] = useState<number | null>(null);
-  const [resetting, setResetting] = useState(false);
-  useEffect(() => {
-    (async () => {
-      try {
-        // Quick client overrides
-        if (typeof window !== 'undefined') {
-          const params = new URLSearchParams(window.location.search);
-          const qp = params.get('debug');
-          if (qp && qp !== '0' && qp !== 'false') { setShow(true); return; }
-          if (localStorage.getItem('lbDebug') === '1') { setShow(true); return; }
-        }
-        const { data: { user } } = await createClient().auth.getUser();
-        if (!user) return;
-        const { data } = await createClient().from('profile').select('debug').eq('id', user.id).single();
-        setShow(Boolean(data?.debug));
-      } catch {}
-    })();
-  }, []);
-  useEffect(() => {
-    const update = () => setStatus(room.getStatus?.() ?? 'unknown');
-    const ev: any = (room as any).events;
-    ev?.on?.('status', update);
-    return () => ev?.off?.('status', update);
-  }, [room]);
-  useEffect(() => {
-    // Ask server for Yjs size (route may not exist yet; best-effort)
-    (async () => {
-      try {
-        const res = await fetch('/api/liveblocks/ydoc-size', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
-        if (!res.ok) return;
-        const json = await res.json();
-        setYdocSize(Math.round((json.bytes ?? 0) / 1024));
-        // Auto-rotate compact at > 2000 KB
-        if ((json.bytes ?? 0) > 2_000_000) {
-          try {
-            await fetch('/api/liveblocks/rotate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
-            setTimeout(() => location.reload(), 200);
-          } catch {}
-        }
-      } catch {}
-    })();
-  }, [projectId, status]);
-  if (!show) return null as any;
-  return (
-    <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 60 }} className="rounded-md border bg-card/95 px-3 py-2 text-xs drop-shadow-xs backdrop-blur-sm">
-      <div className="flex items-center gap-3">
-        <span><b>Status:</b> {status}</span>
-        {typeof ydocSize === 'number' ? <span><b>Yjs:</b> {ydocSize} KB</span> : null}
-        <button
-          type="button"
-          disabled={resetting}
-          onClick={async () => {
-            try {
-              setResetting(true);
-              await fetch('/api/liveblocks/rotate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: projectId }) });
-              setTimeout(() => location.reload(), 200);
-            } finally { setResetting(false); }
-          }}
-          className="rounded border px-2 py-0.5"
-        >{resetting ? 'Compacting…' : 'Compact (rotate)'}</button>
-      </div>
-    </div>
-  );
+  return null as any;
 };
 
 
