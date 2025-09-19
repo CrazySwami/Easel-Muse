@@ -1,108 +1,84 @@
-# Liveblocks Integration — Presence, Cursors, and Collaborative Editing
+# Liveblocks Integration — Presence, Storage sync, and Sharing
 
-This document captures how we added Liveblocks to the canvas (presence + live cursors) and sharing functionality, and how Yjs is wired for collaborative graph edits.
+This document explains our current Liveblocks setup for realtime presence (cursors) and shared graph state (nodes/edges) using Zustand. We do not use Yjs for the graph—Liveblocks Storage is the single source of truth for nodes and edges. Yjs remains an optional add‑on for future rich‑text nodes.
 
 ## Table of contents
-- Why Liveblocks
+- What we use Liveblocks for
 - Packages and environment
-- Server auth endpoint
-- Client providers and joining rooms
-- Presence model and live cursors on the canvas
-- Sharing functionality
-- Collaborative text‑editor node (Tiptap) — plan
-- Storage & permissions
-- Limits & troubleshooting
+- Client provider and room lifecycle
+- Store: Liveblocks + Zustand mapping
+- Presence model (cursors)
+- Persistence with Supabase
+- Sharing (read‑only/invite)
+- Limitations & troubleshooting
+- Stress testing checklist
+- When to add Yjs
 - References
 
-## Why Liveblocks
-Liveblocks provides realtime rooms, presence (ephemeral user state like cursor position), and storage for collaborative editors. It’s a good fit for:
-- Live cursors on the XYFlow canvas
-- Multi‑user text editing inside a node (Tiptap + Storage)
-
-References: Liveblocks docs and examples: [Docs](https://liveblocks.io/docs), [Advanced Tiptap example](https://liveblocks.io/examples/collaborative-text-editor-advanced/nextjs-tiptap-advanced), and upgrade/auth notes in [Liveblocks LLM doc](https://liveblocks.io/llms-full.txt).
+## What we use Liveblocks for
+- Presence: who is in the room + live cursors.
+- Storage: shared graph structure (nodes, edges). Any change to nodes/edges syncs to all clients.
 
 ## Packages and environment
-- Install: `@liveblocks/client @liveblocks/react @liveblocks/yjs yjs`
-- Env (server): `LIVEBLOCKS_SECRET_KEY` from your Liveblocks dashboard (Project → API keys)
+- Install: `@liveblocks/client @liveblocks/react @liveblocks/zustand`
+- Env (choose ONE path):
+  - Client‑only: `NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY=pk_…` and enable Public Client API in the dashboard (allow localhost origin and your room id pattern)
+  - Server auth: `LIVEBLOCKS_SECRET_KEY=sk_…` and `LiveblocksProvider` with `authEndpoint: '/api/liveblocks/auth'`
 
-## Server auth endpoint
-Create `/api/liveblocks-auth` (server only) that validates the current user, then calls Liveblocks to issue an ID token for the requested room.
-- Use `@liveblocks/node` or REST per docs ([authorization](https://liveblocks.io/llms-full.txt#authorize-endpoint)).
-- Required fields:
-  - `room`: we’ll use `projectId` as `roomId`.
-  - `userId`: stable unique user id (Supabase auth id).
-  - `userInfo`: name/color (optional; used for UI labels).
+## Client provider and room lifecycle
+- Global provider: `LiveblocksProvider` (public key or authEndpoint)
+- Per‑project: `RoomProvider id={projectId}` and `initialPresence={{ cursor: null }}`
+- Page wraps the canvas with `LiveblocksProvider → RoomProvider`
+- Top‑right shows `RoomStatus` and `AvatarStack`
 
-## Client providers and joining rooms
-At the canvas root we use an authenticated setup:
+## Store: Liveblocks + Zustand mapping
+- We wrap our Zustand store with `liveblocks` middleware and map:
+  - `storageMapping: { nodes: true, edges: true }`
+- Store exposes React Flow handlers that only update the store:
+  - `onNodesChange(changes) => set({ nodes: applyNodeChanges(changes, nodes) })`
+  - `onEdgesChange(changes) => set({ edges: applyEdgeChanges(changes, edges) })`
+  - `onConnect(conn) => set({ edges: addEdge(conn, edges) })`
+- In the canvas, we also call `useFlowStore().liveblocks.enterRoom(projectId, { initialStorage: { nodes, edges } })` so Storage is joined and seeded.
 
-- `LiveblocksProvider` with `authEndpoint: '/api/liveblocks-auth'`
-- `RoomProvider` with `id: projectId` and `initialPresence: { cursor: null }`
-- `ClientSideSuspense` to keep hooks simple and to show a loading state
+Effect: Any node/edge edit on one tab syncs to all other tabs connected to the same `projectId` room.
 
-Status and participants are shown in the top‑right via `RoomStatus` (connected/connecting) and `AvatarStack` (up to 5 users).
+## Presence model (cursors)
+- Presence shape: `{ cursor: { x, y } | null }`
+- We convert screen → flow coords with `screenToFlowPosition` and publish at ~16–32ms.
+- Rendering converts back to screen coords with the current viewport transform, so dots are stable under pan/zoom.
 
-## Presence model and live cursors on the canvas
-- Presence shape: `{ cursor: { x, y } | null }` (color/name come from `userInfo` at auth)
-- We translate screen → canvas coords with XYFlow viewport and throttle publishes to ~30ms
-- On leave: `setMyPresence({ cursor: null })`
-- Rendering maps presence back to screen coords (using current transform) and draws dots + optional labels
+## Persistence with Supabase
+- Supabase stores project snapshots (for loading into a fresh room) and shares/permissions.
+- We do NOT save on every drag. We debounce save (e.g., 1s) and persist `reactFlowInstance.toObject()` to Supabase.
+- First client to open a fresh room seeds Storage from the project snapshot; subsequent clients load from Storage.
 
-## Canvas and Yjs sync
-- Yjs is enabled by default unless `localStorage.sync === 'off'`
-- Data model in the shared `Y.Doc`:
-  - `nodesMap: Y.Map<Node>` + `nodesOrder: Y.Array<string>`
-  - `edgesMap: Y.Map<Edge>` + `edgesOrder: Y.Array<string>`
-- Seeding: on first connect, we seed maps/orders from the project’s saved content
-- Observers rebuild the local Zustand store when remote peers change the Y.Doc
-- Writes are rAF‑batched and minimal:
-  - Presence‑only drag: during drag we do not write to Yjs; we publish position via Presence and update local UI
-  - Commit‑on‑drop: we write final positions to Yjs when dragging ends (or on structural edits like add/remove/connect)
-  - Arrays are only rewritten if order actually changes
+## Sharing (read‑only/invite)
+- Read‑only token holders see presence and the graph but cannot edit.
+- Invite links add collaborators (project members) with full edit access.
+- Tokens and membership are stored in Supabase; the Liveblocks room controls real‑time sync.
 
-## Sharing functionality
-- **Share Dialog**: Added to top-right corner with "Share" button.
-- **Read-only links**: Generated with `?ro={token}` parameter for view-only access.
-- **Invite links**: Generated with `/api/accept-invite?projectId={id}&invite={token}` for adding collaborators.
-- **Access control**: 
-  - Project owner and `project.members` get full edit access
-  - Read-only token holders get presence-only access (can see cursors but cannot edit)
-- **Database schema**: Added `readOnlyToken` and `inviteToken` columns to `projects` table.
-- **Server actions**: `generateShareLinks()` creates both link types with unique tokens.
+## Limitations & troubleshooting
+- Public key path: ensure Public Client API is enabled, origin is allowed (http://localhost:3000 in dev), and the room id pattern matches your `projectId`. Otherwise you’ll see “no access (4001)”.
+- Server auth path: `/api/liveblocks/auth` must return 200 with a token. A 500 usually means the secret is missing/invalid.
+- Room seeding: the first tab wins. If a second tab shows an empty graph, refresh after the first tab saves/joins.
+- Payload size: keep node/edge data lean (ids, positions, connections). Heavy fields (images, transcripts) should live in Supabase and be referenced.
+- Don’t write to DB during drag; debounce saves to avoid jank and overwrites.
 
-## Collaborative text‑editor node (Tiptap) — plan
-Phase 2 adds a node that mounts a Tiptap editor with Liveblocks storage:
-- Use `useLiveblocksExtension` from `@liveblocks/react-tiptap` to bind the editor to Liveblocks Storage (example: [Tiptap advanced](https://liveblocks.io/examples/collaborative-text-editor-advanced/nextjs-tiptap-advanced)).
-- Presence in the editor (selection cursors) comes for free via the extension.
-- Node data keeps local metadata (e.g., last updated), while content lives in Liveblocks Storage for true multi‑user edits.
-
-## Storage, permissions & persistence
-- The Liveblocks room stores the Yjs document server‑side; it persists between sessions
-- Presence is ephemeral and not persisted
-- We authorize via `/api/liveblocks-auth`: owner/members get FULL_ACCESS; read‑only token grants presence‑only
-
-## Limits & troubleshooting
-- Keep the shared Y.Doc structure‑only (id, type, position, connections). Heavy data (images, transcripts, long prompts) should live in Supabase and be referenced by id/url
-- If an older room stops connecting with WS 1011 (premature close), its stored Y.Doc is likely too large/corrupted. Quick remedies:
-  - Duplicate the project to a fresh room (works immediately)
-  - Temporarily set presence‑only: `localStorage.setItem('sync','off'); location.reload()`
-- Graph size debug (approximate):
+## Stress testing checklist
+- Tabs: open 5–10 tabs on the same room; drag nodes simultaneously. Expect smooth sync with minor last‑writer‑wins on position.
+- Throttle: try `{ throttle: 16 }` and `{ throttle: 32 }` in `createClient` to balance bandwidth vs latency.
+- Graph size: measure with
   ```js
   const rf = window.reactFlowInstance?.toObject?.();
-  if (rf) {
-    const bytes = new TextEncoder().encode(JSON.stringify({ nodes: rf.nodes, edges: rf.edges })).length;
-    console.log('graphKB ~', Math.round(bytes / 1024));
-  }
+  const bytes = new TextEncoder().encode(JSON.stringify({ nodes: rf.nodes, edges: rf.edges })).length;
+  console.log('graphKB ~', Math.round(bytes / 1024));
   ```
-- Performance knobs we use:
-  - Presence‑only drag + commit‑on‑drop
-  - rAF batching and minimal array rewrites
-  - `selectionOnDrag=false`, memoized node components, `onlyRenderVisibleElements`
+  Aim to keep under a few hundred KB for best realtime responsiveness.
+- Save pressure: simulate rapid edits and ensure debounced saves don’t conflict (no server errors in Network).
 
-Planned hardening (optional):
-- Liveblocks client options `{ throttle: 32, largeMessageStrategy: 'upload' }`
-- Client/server size gate to auto‑fallback to presence‑only when the doc is too large
+## When to add Yjs
+- If you add rich‑text nodes or need offline edits/complex merges within a field, add Yjs for that specific content, not for the whole graph. Keep nodes/edges in Liveblocks Storage; mount Yjs only inside nodes that need Google‑Docs‑style editing.
 
 ## References
 - Liveblocks docs: <https://liveblocks.io/docs>
-- Yjs discussion: <https://discuss.yjs.dev/>
+- React Flow: <https://reactflow.dev/>
