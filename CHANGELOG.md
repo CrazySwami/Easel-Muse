@@ -2,6 +2,17 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.6 — Project Page & Advanced Debugging (2025-09-19)
+
+<img src="/changelog/project-page-easel.gif" alt="New Project Page" class="changelog-gif" />
+
+-   **New Project Page**
+    -   After logging in, you will now land on a brand-new ***Project Page***. This central hub lets you see all your projects in one place.
+    -   You can now easily track who created each project, when it was made, and perform actions like ***renaming and deleting*** projects.
+-   **Advanced Debug Mode for Stress Testing**
+    -   We've introduced a powerful new ***Debug Mode*** to help us test the platform's limits and ensure the live collaboration features are robust.
+    -   This mode allows us to add a large number of nodes, connections, and trigger simultaneous generations to stress-test the system and identify performance bottlenecks.
+
 ## v0.0.5 — Quality of Life Improvements (2025-09-19)
 
 -   **Canvas Interaction**
