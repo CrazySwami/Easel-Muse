@@ -38,3 +38,29 @@ export const deleteProjectAction = async (
     return { error: message };
   }
 };
+
+export const deleteProjectsBulkAction = async (
+  projectIds: string[],
+): Promise<
+  | { success: true; count: number }
+  | { error: string }
+> => {
+  try {
+    const user = await currentUser();
+    if (!user) throw new Error('You need to be logged in to delete projects!');
+    if (!Array.isArray(projectIds) || projectIds.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const { inArray } = await import('drizzle-orm');
+    const result = await database
+      .delete(projects)
+      .where(and(inArray(projects.id, projectIds), eq(projects.userId, user.id)));
+
+    // Drizzle returns info via driver; we can just report the requested count
+    return { success: true, count: projectIds.length };
+  } catch (error) {
+    const message = parseError(error);
+    return { error: message };
+  }
+};

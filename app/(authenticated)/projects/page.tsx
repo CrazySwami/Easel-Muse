@@ -65,7 +65,7 @@ const ProjectsPage = async () => {
       </div>
 
       <div className="mt-8">
-        <ProjectList projects={userProjects} />
+        <ProjectList projects={userProjects} currentUserId={profile.id} />
       </div>
     </div>
   );
