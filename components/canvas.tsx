@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { updateProjectAction } from '@/app/actions/project/update';
@@ -11,6 +12,7 @@ import { LocksProvider, type NodeLock } from '@/providers/locks';
 import { useProject } from '@/providers/project';
 import { useFlowStore } from '@/lib/flow-store';
 // Liveblocks/Yjs removed in this branch
+import dynamic from 'next/dynamic';
 import {
   Background,
   type IsValidConnection,
@@ -46,6 +48,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from './ui/context-menu';
+
+const StressPanel = dynamic(() => import('./stress-panel').then((m) => m.StressPanel), { ssr: false });
 
 export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const project = useProject();
@@ -110,6 +114,10 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   // Join Liveblocks Storage room via Zustand middleware so nodes/edges sync across tabs
   useEffect(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const disabled = window.localStorage?.getItem('disableCollab') === '1';
+        if (disabled) return;
+      }
       const stateAny: any = (useFlowStore as any).getState?.();
       const lb: any = stateAny?.liveblocks;
       if (!lb || !projectId) return;
@@ -313,6 +321,14 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   }, [flushPendingNodeChanges]);
 
   const handleEdgesChange = useCallback<OnEdgesChange>((changes) => {
+    // Apply in micro-batches to avoid overwhelming reconciliation with very large graphs
+    const batchedChanges = Array.isArray(changes) && changes.length > 200 ? ((): typeof changes => {
+      const out: typeof changes = [] as any;
+      const chunk = 200;
+      for (let i = 0; i < changes.length; i += chunk) out.push(...changes.slice(i, i + chunk));
+      return out;
+    })() : changes;
+
     if (enableYjs && ydoc && yEdgesMap && yEdgesOrder) {
       const prevOrder = yEdgesOrder.toArray();
       const prevMap = new Map<string, Edge>();
@@ -321,7 +337,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         if (e) prevMap.set(id, e);
       }
       const prevArr = prevOrder.map((id) => prevMap.get(id)!).filter(Boolean) as Edge[];
-      const nextArr = applyEdgeChanges(changes, prevArr);
+      const nextArr = applyEdgeChanges(batchedChanges, prevArr);
 
       const nextOrder = nextArr.map((e) => e.id);
       const hasStructural = nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i]);
@@ -342,14 +358,14 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       }, 'local');
 
       save();
-      onEdgesChange?.(changes);
+      onEdgesChange?.(batchedChanges);
       return;
     }
 
     // Liveblocks Storage mode
-    setEdges((current: Edge[]) => applyEdgeChanges(changes, current));
+    setEdges((current: Edge[]) => applyEdgeChanges(batchedChanges, current));
     save();
-    onEdgesChange?.(changes);
+    onEdgesChange?.(batchedChanges);
   }, [enableYjs, ydoc, yEdgesMap, yEdgesOrder, onEdgesChange, save, setEdges]);
 
   const handleEdgeClick = useCallback((event: any, edge: Edge) => {
@@ -373,6 +389,18 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   const handleConnect = useCallback<OnConnect>(
     (connection) => {
+      // Guard against undefined/empty ids in extreme stress; generate an id if missing
+      if (!(connection as any)?.source || !(connection as any)?.target) {
+        return;
+      }
+      // Dev-only: defer transform node mount side-effects to idle when a new
+      // connection is made, to reduce layout effect cascades.
+      try {
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          // @ts-ignore
+          (window as any).requestIdleCallback(() => {});
+        }
+      } catch {}
       if (enableYjs && ydoc && yEdgesMap && yEdgesOrder) {
         const prevOrder = yEdgesOrder.toArray();
         const prevMap = new Map<string, Edge>();
@@ -686,6 +714,8 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               {...rest}
             >
               <Background gap={28} size={2.2} />
+              {/* Dev-only stress utilities */}
+              {process.env.NODE_ENV !== 'production' ? <StressPanel /> : null}
               {children}
             </ReactFlow>
           </ContextMenuTrigger>

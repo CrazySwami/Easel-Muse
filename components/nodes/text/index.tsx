@@ -1,7 +1,14 @@
 import type { JSONContent } from '@tiptap/core';
 import { useNodeConnections } from '@xyflow/react';
+import dynamic from 'next/dynamic';
 import { TextPrimitive } from './primitive';
-import { TextTransform } from './transform';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+
+// Load the heavy transform lazily on the client to avoid dev build layout
+// effect cascades when the node switches from primitive → transform.
+const TextTransform = dynamic(() => import('./transform').then((m) => m.TextTransform), {
+  ssr: false,
+});
 
 export type TextNodeProps = {
   type: string;
@@ -27,7 +34,12 @@ export const TextNode = (props: TextNodeProps) => {
     id: props.id,
     handleType: 'target',
   });
-  const Component = connections.length ? TextTransform : TextPrimitive;
-
-  return <Component {...props} title="Text" />;
+  const hasIncomers = connections.length > 0;
+  const Component = hasIncomers ? TextTransform : TextPrimitive;
+  // Force a clean remount when switching modes
+  return (
+    <ErrorBoundary fallback={<TextPrimitive {...props} title="Text" /> }>
+      <Component key={hasIncomers ? 'transform' : 'primitive'} {...props} title="Text" />
+    </ErrorBoundary>
+  );
 };

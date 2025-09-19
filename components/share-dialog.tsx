@@ -15,9 +15,7 @@ import { Label } from '@/components/ui/label';
 import { ShareIcon, CopyIcon, MailIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-// Live viewers disabled in this branch
-const useOthers: any = () => [];
-const useSelf: any = () => null;
+import { useOthers, useSelf } from '@liveblocks/react';
 
 const ViewersList = () => {
   const others = useOthers();

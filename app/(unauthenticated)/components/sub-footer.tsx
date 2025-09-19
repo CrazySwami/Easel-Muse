@@ -12,12 +12,9 @@ export const SubFooter = () => {
     <div className="flex flex-col items-start justify-between gap-4 px-8 text-muted-foreground text-sm md:flex-row">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
         <Link href="/">
-          <Logo className="h-4 w-auto" />
+          <Logo className="h-6 w-auto" />
         </Link>
         <Link href="/pricing">Pricing</Link>
-        <Link href="/privacy">Privacy</Link>
-        <Link href="/terms">Terms</Link>
-        <Link href="/acceptable-use">Acceptable Use</Link>
         <Link href="/update-log">Changelog</Link>
         <a
           href="https://github.com/CrazySwami/Easel-Muse/tree/main"
@@ -26,13 +23,7 @@ export const SubFooter = () => {
         >
           Source Code
         </a>
-        <a
-          href="https://hustletogether.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Contact
-        </a>
+        {/* Temporarily hidden: Privacy, Terms, Acceptable Use, Contact */}
       </div>
       <div className="flex items-center justify-end">
         <ThemeSwitcher

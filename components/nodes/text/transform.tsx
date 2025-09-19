@@ -104,6 +104,20 @@ export const TextTransform = ({
     },
   });
 
+  // Defensive: if both source and target are text nodes, we keep the UI lightweight
+  // by delaying markdown rendering until generation completes.
+  const slowRender = status !== 'ready';
+
+  // Global stress trigger: listen for generate-all to fire generation on this node
+  useEffect(() => {
+    const onGen = () => {
+      // Only trigger for transform nodes (has incomers) to simulate pipelines
+      void handleGenerate();
+    };
+    window.addEventListener('easel:generate-all', onGen);
+    return () => window.removeEventListener('easel:generate-all', onGen);
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     const incomers = getIncomers({ id }, getNodes(), getEdges());
     const textPrompts = getTextFromTextNodes(incomers);

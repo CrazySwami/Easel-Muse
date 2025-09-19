@@ -194,13 +194,64 @@
   .react-flow__background {
     @apply bg-secondary! dark:bg-background!;
   }
+  .dark .react-flow__background {
+    /* Dull charcoal canvas in dark mode */
+    background-color: #111315 !important;
+  }
+  /* Animated hero gradient */
+  .animated-gradient {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(1600px 800px at 0% 0%, color-mix(in oklch, var(--primary) 22%, transparent), transparent 62%),
+                radial-gradient(1500px 750px at 100% 0%, color-mix(in oklch, var(--primary) 18%, transparent), transparent 62%),
+                radial-gradient(1600px 900px at 50% 115%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 62%);
+    filter: blur(26px);
+    opacity: 0.70;
+    animation: gradient-move 12s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  .dark .animated-gradient { opacity: 0.50; }
+  @keyframes gradient-move {
+    0% {
+      transform: translate3d(-3%, -1%, 0) scale(1.02);
+    }
+    50% {
+      transform: translate3d(2%, 1.5%, 0) scale(1.05);
+    }
+    100% {
+      transform: translate3d(-1%, 2%, 0) scale(1.03);
+    }
+  }
+
+  /* Bottom fade to background to ensure a solid base in both themes */
+  .hero-bottom-fade {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 40%;
+    background-image: linear-gradient(to bottom, transparent 0%, var(--background) 70%, var(--background) 100%);
+    pointer-events: none;
+  }
+
+  /* Content entrance */
+  .fade-up-in { opacity: 0; transform: translateY(12px); animation: fade-up 600ms ease-out forwards; }
+  @keyframes fade-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Make a section bleed full width within a centered container */
+  .full-bleed {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
   .react-flow__background-pattern.dots {
     /* Darker dots in light mode */
     @apply fill-foreground/80!;
   }
   .dark .react-flow__background-pattern.dots {
-    /* Dimmer dots in dark mode */
-    @apply fill-foreground/50!;
+    /* Much more faded dots in dark mode */
+    @apply fill-foreground/12!;
   }
   .react-flow__node.selected .node-container {
     @apply ring-2! ring-[var(--cursor-color,var(--primary))]!;

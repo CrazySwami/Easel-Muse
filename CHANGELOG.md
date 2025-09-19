@@ -2,6 +2,20 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.4 — Live Collaboration & Enhanced Sharing (2025-09-19 → Present)
+
+-   **Live Collaboration is Here**
+    -   Our new ***Liveblocks and Zustand-powered*** collaboration system is now live and undergoing quality assurance testing. This lightweight setup allows for a remarkably fluid and real-time experience.
+    -   You can now see collaborators moving nodes, typing, and viewing generation results as they happen.
+-   **Enhanced Sharing with Roles**
+    -   We've improved the share and invite link system to include user roles for better collaboration control:
+        -   **View-only:** Users can interact with the canvas—moving nodes and editing content—but their changes will not be saved, providing a safe sandbox environment.
+        -   **Edit:** Users have full collaborative power. All changes are saved and synchronized in real time with everyone else in the room.
+-   **Full Presence Features**
+    -   Presence is now fully enabled. You can see the avatars of all active users in the top right of the screen, as well as their cursors moving across the canvas in real time.
+-   **What's Next**
+    -   We will be enhancing this new collaborative system even further in the coming weeks.
+
 ## v0.0.3 — Auth, Permissions, Presence Polish (2025-09-12 → 2025-09-18)
 
 -   **Authentication & Permissions**
