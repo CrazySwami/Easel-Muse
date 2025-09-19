@@ -219,6 +219,10 @@
     background-color: hsl(var(--secondary)) !important;
   }
 
+  .react-flow__pane {
+    user-select: none;
+  }
+
   /* Disable accidental text selection on the canvas */
   .react-flow {
     user-select: none;

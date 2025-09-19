@@ -54,7 +54,14 @@ export const columns: ColumnDef<Project>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => <ProjectActions project={row.original} />,
+    cell: ({ row }) => (
+      <div className="flex items-center justify-end gap-2">
+        <ProjectActions project={row.original} />
+        <Button asChild variant="outline" className="text-primary">
+          <Link href={`/projects/${row.original.id}`}>Open</Link>
+        </Button>
+      </div>
+    ),
   },
 ];
 

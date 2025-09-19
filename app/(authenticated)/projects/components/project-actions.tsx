@@ -31,7 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { handleError } from '@/lib/error/handle';
 import type { projects } from '@/schema';
-import { MoreHorizontal } from 'lucide-react';
+import { PencilIcon, TrashIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -48,6 +48,7 @@ type Project = typeof projects.$inferSelect;
 export const ProjectActions = ({ project }: { project: Project }) => {
   const [name, setName] = useState(project.name);
   const [isPending, startTransition] = useTransition();
+  const [renameOpen, setRenameOpen] = useState(false);
   const router = useRouter();
 
   const handleRenameProject = useCallback<FormEventHandler<HTMLFormElement>>(
@@ -59,6 +60,7 @@ export const ProjectActions = ({ project }: { project: Project }) => {
             name: name.trim(),
           });
           if ('error' in response) throw new Error(response.error);
+          setRenameOpen(false);
           router.refresh();
         } catch (error) {
           handleError('Error renaming project', error);
@@ -81,31 +83,26 @@ export const ProjectActions = ({ project }: { project: Project }) => {
   }, [project.id, router]);
 
   return (
-    <Dialog>
+    <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
       <AlertDialog>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
+        <div className="flex items-center gap-1">
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <PencilIcon className="h-4 w-4" />
+              <span className="sr-only">Rename project</span>
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link href={`/projects/${project.id}`}>Open</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DialogTrigger asChild>
-              <DropdownMenuItem>Rename</DropdownMenuItem>
-            </DialogTrigger>
-            <AlertDialogTrigger asChild>
-              <DropdownMenuItem className="text-destructive">
-                Delete
-              </DropdownMenuItem>
-            </AlertDialogTrigger>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </DialogTrigger>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive hover:text-destructive"
+            >
+              <TrashIcon className="h-4 w-4" />
+              <span className="sr-only">Delete project</span>
+            </Button>
+          </AlertDialogTrigger>
+        </div>
 
         <DialogContent>
           <DialogHeader>

@@ -143,9 +143,9 @@ export const ProjectSettings = ({ data }: ProjectSettingsProps) => {
           <Button
             variant="link"
             onClick={handleDeleteProject}
-            className="flex items-center gap-2 text-destructive"
+            className="flex items-center gap-2 text-foreground hover:text-destructive"
           >
-            <TrashIcon size={16} />
+            <TrashIcon size={16} className="text-foreground group-hover:text-destructive" />
             <span>Delete</span>
           </Button>
         </DialogFooter>

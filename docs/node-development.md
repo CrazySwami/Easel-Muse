@@ -894,6 +894,12 @@ Easel includes several built-in node types, each designed for specific content t
 - **Key Features**: Tweet content extraction and display
 - **Data Structure**: `content.id`, `content.text`, `content.author`, `content.date`
 
+### Voice Memo Node (`components/nodes/voice-memo/`)
+- **Purpose**: Record audio from the microphone
+- **Modes**: Primitive only
+- **Key Features**: Browser-based audio recording, stores audio as a file
+- **Data Structure**: `content.url`, `content.type`
+
 ### Drop Node (`components/nodes/drop.tsx`)
 - **Purpose**: Special node for adding new nodes to the canvas
 - **Features**: Command palette interface, auto-cleanup, keyboard shortcuts (Escape to close)

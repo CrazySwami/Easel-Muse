@@ -5,6 +5,7 @@ import type { ImageNodeProps } from '@/components/nodes/image';
 import type { TextNodeProps } from '@/components/nodes/text';
 import type { TweetNodeProps } from '@/components/nodes/tweet';
 import type { Node } from '@xyflow/react';
+import type { VoiceMemoNodeProps } from '@/components/nodes/voice-memo';
 
 export const getTextFromTextNodes = (nodes: Node[]) => {
   const sourceTexts = nodes
@@ -87,6 +88,42 @@ export const getFilesFromFileNodes = (nodes: Node[]) => {
     .filter(Boolean) as { url: string; type: string; name: string }[];
 
   return files;
+};
+
+export const getAudioFromVoiceMemoNodes = (nodes: Node[]) => {
+  const audioFiles = nodes
+    .filter((node) => node.type === 'voice-memo' && node.data.content)
+    .map((node) => {
+      const data = node.data as VoiceMemoNodeProps['data'];
+      if (data.content?.url) {
+        return {
+          url: data.content.url,
+          type: data.content.type,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as { url: string; type: string }[];
+  return audioFiles;
+};
+
+export const getAudioFromAudioNodes = (nodes: Node[]) => {
+  const audioFiles = nodes
+    .filter(
+      (node) => node.type === 'audio' && node.data.transcript
+    )
+    .map((node) => {
+      const data = node.data as AudioNodeProps['data'];
+      if (data.transcript) {
+        return {
+          url: '', // No direct URL for audio transcript, but could be a placeholder
+          type: 'audio/wav', // Assuming a common audio type
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as { url: string; type: string }[];
+  return audioFiles;
 };
 
 export const getTweetContentFromTweetNodes = (nodes: Node[]) => {
