@@ -2,7 +2,7 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
-## v0.0.7 — Rich Text, Voice Memos, & Inspector UI (2025-09-23)
+## v0.0.7 — Rich Text, Voice Memos, & Inspector UI (2025-09-22)
 
 -   **New Tiptap Node**
     -   We've added a brand-new node powered by ***Tiptap*** for collaborative, rich text editing right on the canvas.
@@ -13,7 +13,7 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
 -   **Dependencies & Styling**
     -   We've updated our dependencies and global styles to support these new features and ensure a consistent, polished experience.
 
-## v0.0.6 — Project Page & Advanced Debugging (2025-09-22)
+## v0.0.6 — Project Page & Advanced Debugging (2025-09-21)
 
 <img src="/changelog/project-page-easel.gif" alt="New Project Page" class="changelog-gif" />
 
@@ -24,7 +24,7 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
     -   We've introduced a powerful new ***Debug Mode*** to help us test the platform's limits and ensure the live collaboration features are robust.
     -   This mode allows us to add a large number of nodes, connections, and trigger simultaneous generations to stress-test the system and identify performance bottlenecks.
 
-## v0.0.5 — Quality of Life Improvements (2025-09-19)
+## v0.0.5 — Quality of Life Improvements (2025-09-20)
 
 -   **Canvas Interaction**
     -   Disabled the default text highlighting behavior that would occur when adding a new node, resulting in a cleaner and more focused user experience.

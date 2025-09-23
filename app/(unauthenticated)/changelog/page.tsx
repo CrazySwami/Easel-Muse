@@ -21,8 +21,8 @@ function parseSections(md: string): Section[] {
     const lines = raw.trim().split('\n');
     const titleLine = lines[0].trim();
     const body = lines.slice(1).join('\n').trim();
-    const dateMatch = titleLine.match(/\((\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})\)/);
-    const dateRange = dateMatch ? `${dateMatch[1]} → ${dateMatch[2]}` : undefined;
+    const dateMatch = titleLine.match(/\((.*?)\)/);
+    const dateRange = dateMatch ? dateMatch[1] : undefined;
     const id = slugify(titleLine);
     sections.push({ id, title: titleLine, dateRange, body });
   }
