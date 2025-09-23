@@ -211,6 +211,8 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
+      {/* Show standard handles on both sides for connections */}
+      {type !== 'drop' && <Handle type="target" position={Position.Left} />}
       {type !== 'video' && <Handle type="source" position={Position.Right} />}
       <Dialog open={showData} onOpenChange={setShowData}>
         <DialogContent>
