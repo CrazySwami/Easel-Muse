@@ -897,8 +897,14 @@ Easel includes several built-in node types, each designed for specific content t
 ### Voice Memo Node (`components/nodes/voice-memo/`)
 - **Purpose**: Record audio from the microphone
 - **Modes**: Primitive only
-- **Key Features**: Browser-based audio recording, stores audio as a file
-- **Data Structure**: `content.url`, `content.type`
+-- **Key Features**: Browser-based audio recording, stores audio as a file, optional transcription
+- **Data Structure**: `content.url`, `content.type`, `transcript`
+
+### Tiptap Node (`components/nodes/tiptap/`)
+- **Purpose**: Collaborative rich text editor
+- **Modes**: Primitive only
+- **Key Features**: Real-time collaboration with Liveblocks and Yjs, resizable
+- **Data Structure**: `content` (JSONContent)
 
 ### Drop Node (`components/nodes/drop.tsx`)
 - **Purpose**: Special node for adding new nodes to the canvas
@@ -914,7 +920,30 @@ All nodes (except File, Tweet, and Drop) follow these patterns:
 3. **Model Integration**: AI-powered nodes integrate with the gateway system for model selection
 4. **Toolbar Pattern**: Generate/Regenerate buttons, model selectors, timestamp indicators
 5. **Error Handling**: Toast notifications, loading states, and error recovery
+6. **Optional Resizing (new)**: You can enable per‑node resize controls via `data.resizable: true`. When enabled, the layout renders React Flow’s `NodeResizer`, allowing the user to drag from the corners/edges to change width/height. See the [NodeResizer API](https://reactflow.dev/api-reference/components/node-resizer).
 
+#### Enabling Resizing on a Node
+
+- Set `data.resizable = true` when creating a node or toggling from your UI. Example:
+
+```ts
+addNode('tiptap', {
+  position: { x: 200, y: 120 },
+  data: {
+    resizable: true,
+    // you can also seed a starting size for certain nodes
+    width: 1200,
+    height: 1600,
+  },
+});
+```
+
+- Implementation detail: `components/nodes/layout.tsx` checks `data.resizable` and renders `<NodeResizer minWidth={160} minHeight={120} />`. The resizer is purely a UI control; your node content should size according to its container.
+
+- Tips:
+  - For document nodes, ensure the inner wrapper uses `style={{ width, height }}` or is responsive to the container so resize effects are visible.
+  - You can customize the resizer color/handles via `color`, `handleStyle`, `lineStyle`. We default to the theme primary.
+  - Consider clamping min/max sizes for usability.
 
 ## Best Practices
 

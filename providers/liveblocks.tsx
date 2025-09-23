@@ -1,24 +1,81 @@
 'use client';
 
-import { RoomProvider, ClientSideSuspense, useMyPresence, useOthers, useSelf, useRoom } from '@liveblocks/react';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import {
+  RoomProvider,
+  ClientSideSuspense,
+  useMyPresence,
+  useOthers,
+  useSelf,
+  useRoom,
+} from '@liveblocks/react';
+import { useEffect, useMemo, useState, useRef, createContext, useContext } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useReactFlow, useStore } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
-// removed duplicate import
+import * as Y from 'yjs';
+import { LiveblocksYjsProvider as LiveblocksYjsProvider_ } from '@liveblocks/yjs';
+
+type LiveblocksYjsProviderProps = PropsWithChildren & {
+  projectId: string;
+};
+
+// Yjs document context
+const YjsContext = createContext<{
+  doc: Y.Doc;
+  provider: LiveblocksYjsProvider_ | null;
+} | null>(null);
+
+export const LiveblocksYjsProvider = ({
+  children,
+  projectId,
+}: LiveblocksYjsProviderProps) => {
+  const room = useRoom();
+  const [doc] = useState(() => new Y.Doc());
+  const [provider, setProvider] =
+    useState<LiveblocksYjsProvider_ | null>(null);
+
+  useEffect(() => {
+    const p = new LiveblocksYjsProvider_(room as any, doc);
+    setProvider(p);
+    return () => {
+      p.destroy();
+    };
+  }, [room, doc]);
+
+  return (
+    <YjsContext.Provider value={{ doc, provider }}>
+      {children}
+    </YjsContext.Provider>
+  );
+};
+
+export const useYDoc = () => {
+    const context = useContext(YjsContext);
+    if (!context) {
+      throw new Error('useYDoc must be used within a LiveblocksYjsProvider');
+    }
+    return context;
+}
 
 type LiveblocksRoomProviderProps = PropsWithChildren & {
   projectId: string;
 };
 
-export const LiveblocksRoomProvider = ({ children, projectId }: LiveblocksRoomProviderProps) => {
+export const LiveblocksRoomProvider = ({
+  children,
+  projectId,
+}: LiveblocksRoomProviderProps) => {
   if (!projectId) {
     return <div>Loading...</div>;
   }
 
   return (
     <RoomProvider id={projectId} initialPresence={{ cursor: null }}>
-      <ClientSideSuspense fallback={<div>Loading room...</div>}>{children}</ClientSideSuspense>
+      <ClientSideSuspense fallback={<div>Loading room...</div>}>
+        <LiveblocksYjsProvider projectId={projectId}>
+            {children}
+        </LiveblocksYjsProvider>
+      </ClientSideSuspense>
     </RoomProvider>
   );
 };

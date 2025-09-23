@@ -7,6 +7,7 @@ export type VoiceMemoNodeProps = {
       url: string;
       type: string;
     };
+    transcript?: string;
     updatedAt?: string;
   };
   id: string;

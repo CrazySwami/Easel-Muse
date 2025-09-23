@@ -6,6 +6,7 @@ import type { TextNodeProps } from '@/components/nodes/text';
 import type { TweetNodeProps } from '@/components/nodes/tweet';
 import type { Node } from '@xyflow/react';
 import type { VoiceMemoNodeProps } from '@/components/nodes/voice-memo';
+import type { TiptapNodeProps } from '@/components/nodes/tiptap';
 
 export const getTextFromTextNodes = (nodes: Node[]) => {
   const sourceTexts = nodes
@@ -106,6 +107,37 @@ export const getAudioFromVoiceMemoNodes = (nodes: Node[]) => {
     .filter(Boolean) as { url: string; type: string }[];
   return audioFiles;
 };
+
+export const getTranscriptsFromVoiceMemoNodes = (nodes: Node[]) => {
+  const transcripts = nodes
+    .filter((node) => node.type === 'voice-memo' && node.data.transcript)
+    .map((node) => {
+      const data = node.data as VoiceMemoNodeProps['data'];
+      return data.transcript;
+    })
+    .filter(Boolean) as string[];
+  return transcripts;
+};
+
+export const getTextFromTiptapNodes = (nodes: Node[]) => {
+    const contents = nodes
+      .filter((node) => node.type === 'tiptap' && node.data.content)
+      .map((node) => {
+        const data = node.data as TiptapNodeProps['data'];
+        // a function to extract text from tiptap content
+        const getTextFromContent = (content: any): string => {
+            if (!content) return '';
+            if (content.text) return content.text;
+            if (content.content) {
+                return content.content.map(getTextFromContent).join(' ');
+            }
+            return '';
+        }
+        return getTextFromContent(data.content);
+      })
+      .filter(Boolean) as string[];
+    return contents;
+  };
 
 export const getAudioFromAudioNodes = (nodes: Node[]) => {
   const audioFiles = nodes

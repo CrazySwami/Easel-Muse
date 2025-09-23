@@ -2,6 +2,7 @@ import { SiX } from '@icons-pack/react-simple-icons';
 import {
   AudioWaveformIcon,
   FileIcon,
+  FileTextIcon,
   MicIcon,
   VideoIcon,
 } from 'lucide-react';
@@ -28,6 +29,16 @@ export const nodeButtons = [
     id: 'voice-memo',
     label: 'Voice Memo',
     icon: MicIcon,
+  },
+  {
+    id: 'tiptap',
+    label: 'Editor',
+    icon: FileTextIcon,
+    data: {
+      resizable: true,
+      width: 1440,
+      height: 1600,
+    },
   },
   {
     id: 'video',

@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import '@xyflow/react/dist/style.css';
 @import "shadcn-prose";
+@import "@liveblocks/react-tiptap/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -65,20 +66,21 @@
 
 :root {
   --radius: 0.625rem;
-  /* Slightly softer than pure white */
-  --background: oklch(0.98 0 0);
+  /* Slightly darker light-mode base */
+  --background: oklch(0.94 0 0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: oklch(0.99 0 0);
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.99 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.60 0.13 163);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
+  /* Slightly darker canvas/secondary */
+  --secondary: oklch(0.955 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: oklch(0.96 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --accent: oklch(0.96 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -100,7 +102,7 @@
 }
 
 .dark {
-  /* Slightly darker than before for more contrast */
+  /* unchanged */
   --background: oklch(0.12 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -227,6 +229,19 @@
   .react-flow {
     user-select: none;
   }
+  /* Allow text selection and I‑beam cursor inside editor areas */
+  .react-flow .ProseMirror,
+  .react-flow textarea,
+  .react-flow input,
+  .react-flow .cm-editor {
+    user-select: text !important;
+    cursor: text !important;
+  }
+  /* React Flow sets grab on nodes; override inside editor surface */
+  .react-flow__node .ProseMirror,
+  .react-flow__node .cm-editor {
+    cursor: text !important;
+  }
 
   .dark .react-flow__background {
     /* Dull charcoal canvas in dark mode */
@@ -327,8 +342,19 @@
   .react-flow__controls-button > svg {
     @apply size-4;
   }
+  /* Use default pointer over node toolbars (no grab hand) */
+  .react-flow__node-toolbar,
+  .react-flow__node-toolbar * {
+    cursor: default !important;
+  }
   .react-flow__handle {
-    @apply !size-4 !border-2 !border-border !bg-background;
+    @apply !size-4 !border-2 !bg-background;
+    /* Use theme primary for better visibility */
+    border-color: hsl(var(--primary)) !important;
+  }
+  .react-flow__handle:hover {
+    /* Slight emphasis on hover */
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18);
   }  
   .react-flow__handle-left {
     @apply !-left-4;
@@ -344,6 +370,50 @@
 
 .dark .changelog-gif {
   border: 1px solid oklch(1 0 0 / 20%);
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  height: 100%;
+  width: 100%;
+}
+
+/* Compact Liveblocks TipTap toolbar normalization */
+.lb-toolbar-compact {
+  gap: 0.375rem; /* 1.5 */
+}
+.lb-toolbar-compact [data-liveblocks-ui='Toolbar.Group'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.lb-toolbar-compact [data-liveblocks-ui='Toolbar.Label'] {
+  display: inline-flex;
+  align-items: center;
+  height: 1.75rem; /* align to buttons */
+}
+.lb-toolbar-compact [data-liveblocks-ui='Toolbar.SelectTrigger'] span,
+.lb-toolbar-compact [data-liveblocks-ui='Toolbar.SelectTrigger'] svg {
+  line-height: 1;
+}
+.lb-toolbar-compact [data-liveblocks-ui='Toolbar.Separator'] {
+  margin-inline: 0.25rem;
+}
+/* Add left padding so first control isn't flush against rounded corner */
+.lb-toolbar-compact {
+  padding-left: 0.75rem;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+  height: 0;
 }
 
 nextjs-portal {

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
 const themes = [
   {
@@ -30,6 +31,13 @@ const themes = [
 
 export const ThemeSwitcher = () => {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // During SSR (or before hydration), render a stable placeholder to avoid
+  // hydration mismatches when the resolved theme differs on the client.
+  const CurrentIcon = theme === 'light' ? SunIcon : theme === 'dark' ? MoonIcon : MonitorIcon;
 
   return (
     <div>
@@ -41,24 +49,22 @@ export const ThemeSwitcher = () => {
             aria-label="Select theme"
             className="rounded-full"
           >
-            {theme === 'light' && <SunIcon size={16} />}
-            {theme === 'dark' && <MoonIcon size={16} />}
-            {theme === 'system' && <MonitorIcon size={16} />}
+            {mounted ? <CurrentIcon size={16} /> : <MonitorIcon size={16} />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="min-w-32">
-          {themes.map((theme) => (
+          {themes.map((item) => (
             <DropdownMenuItem
-              key={theme.value}
-              onClick={() => setTheme(theme.value)}
+              key={item.value}
+              onClick={() => setTheme(item.value)}
             >
-              <theme.icon
+              <item.icon
                 size={16}
                 strokeWidth={2}
                 className="opacity-60"
                 aria-hidden="true"
               />
-              <span>{theme.label}</span>
+              <span>{item.label}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

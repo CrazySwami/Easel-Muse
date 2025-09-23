@@ -15,6 +15,8 @@ import { useFlowStore } from '@/lib/flow-store';
 import dynamic from 'next/dynamic';
 import {
   Background,
+  Panel,
+  useOnSelectionChange,
   type IsValidConnection,
   type OnConnect,
   type OnConnectEnd,
@@ -36,20 +38,25 @@ import {
 import { BoxSelectIcon, PlusIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { MouseEvent, MouseEventHandler } from 'react';
+import type { WheelEventHandler } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
 import { edgeTypes } from './edges';
-import { nodeTypes } from './nodes';
+import { nodeTypes as staticNodeTypes } from './nodes';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from './ui/context-menu';
+import { cn } from '@/lib/utils';
 
 const StressPanel = dynamic(() => import('./stress-panel').then((m) => m.StressPanel), { ssr: false });
+const TiptapNode = dynamic(() => import('./nodes/tiptap').then((m) => m.TiptapNode), { ssr: false });
+
+const nodeTypes = { ...staticNodeTypes, tiptap: TiptapNode };
 
 type CanvasProps = ReactFlowProps & { debug?: boolean };
 
@@ -587,18 +594,13 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
 
   const addDropNode = useCallback<MouseEventHandler<HTMLDivElement>>(
     (event) => {
-      if (!(event.target instanceof HTMLElement)) {
-        return;
-      }
+      if (!(event.target instanceof HTMLElement)) return;
+      // Only create a drop node when double-clicking on the pane itself,
+      // not when double-clicking inside existing nodes/edges/UI elements.
+      if (!event.target.classList.contains('react-flow__pane')) return;
 
-      const { x, y } = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      addNode('drop', {
-        position: { x, y },
-      });
+      const { x, y } = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      addNode('drop', { position: { x, y } });
     },
     [addNode, screenToFlowPosition]
   );
@@ -635,6 +637,113 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     // Add new nodes
     setNodes((nodes: Node[]) => [...nodes, ...newNodes]);
   }, [copiedNodes]);
+
+  // --- Inspector panel ---
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectedNode, setInspectedNode] = useState<Node | null>(null as any);
+  const [inspectorLocked, setInspectorLocked] = useState(false);
+  const [inspectorWidth, setInspectorWidth] = useState(0.5); // fraction of viewport width
+  const [isResizingInspector, setIsResizingInspector] = useState(false);
+
+  useOnSelectionChange({
+    onChange: ({ nodes }) => {
+      if (inspectorLocked) return;
+      setInspectedNode(nodes?.[0] ?? null);
+    },
+  });
+
+  // Open inspector from node toolbar "Inspect" button
+  useEffect(() => {
+    const onInspect = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { nodeId?: string } | undefined;
+      const id = detail?.nodeId;
+      if (!id) {
+        setInspectorOpen(true);
+        return;
+      }
+      const node = getNode(id as any);
+      if (node) {
+        if (!inspectorLocked) {
+          setInspectedNode(node as any);
+          updateNode(id as any, { selected: true });
+        }
+        setInspectorOpen(true);
+      }
+    };
+    window.addEventListener('easel:inspect', onInspect as any);
+    return () => window.removeEventListener('easel:inspect', onInspect as any);
+  }, [getNode, updateNode, inspectorLocked]);
+
+  // Resize handlers for inspector (dragging the left edge)
+  useEffect(() => {
+    if (!isResizingInspector) return;
+    const onMove = (e: MouseEvent) => {
+      const vw = window.innerWidth;
+      const newFrac = Math.min(0.8, Math.max(0.2, (vw - e.clientX) / vw));
+      setInspectorWidth(newFrac);
+    };
+    const onUp = () => setIsResizingInspector(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp, { once: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp as any);
+    };
+  }, [isResizingInspector]);
+
+  const renderInspector = () => {
+    const node = inspectedNode as any;
+    if (!node) return <div className="text-muted-foreground">Select a node to inspect.</div>;
+    const { type, data } = node;
+    if (type === 'tiptap') {
+      const getText = (content: any): string => {
+        if (!content) return '';
+        if (content.text) return content.text as string;
+        if (Array.isArray(content.content)) return content.content.map(getText).join('');
+        return '';
+      };
+      const text = getText(data?.content);
+      return (
+        <div className="flex h-full flex-col gap-2">
+          <h3 className="text-sm font-medium">Document (read-only text)</h3>
+          <div className="flex-1 overflow-auto rounded-md border bg-secondary p-3 whitespace-pre-wrap text-sm">
+            {text || 'No document content'}
+          </div>
+        </div>
+      );
+    }
+    if (type === 'text') {
+      const text: string = data?.generated?.text || data?.text || '';
+      return (
+        <div className="flex h-full flex-col gap-2">
+          <h3 className="text-sm font-medium">Text</h3>
+          <div className="flex-1 overflow-auto rounded-md border bg-secondary p-3 whitespace-pre-wrap text-sm">{text || 'No text'}</div>
+        </div>
+      );
+    }
+    if (type === 'image') {
+      const src = data?.generated?.url || data?.content?.url;
+      return (
+        <div className="flex h-full flex-col gap-2">
+          <h3 className="text-sm font-medium">Image</h3>
+          {src ? (
+            // biome-ignore lint/a11y/useAltText: preview panel
+            <img src={src} className="max-h-[80vh] w-full rounded-md object-contain" />
+          ) : (
+            <div className="text-muted-foreground">No image</div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="flex h-full flex-col gap-2">
+        <h3 className="text-sm font-medium">{String(type)} data</h3>
+        <pre className="flex-1 overflow-auto rounded-md border bg-secondary p-3 text-xs">
+          {JSON.stringify(data ?? {}, null, 2)}
+        </pre>
+      </div>
+    );
+  };
 
   const handleDuplicateAll = useCallback(() => {
     const selected = getNodes().filter((node) => node.selected);
@@ -686,40 +795,121 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     release: (nodeId: string) => { delete locksRef.current[nodeId]; },
   };
 
+  // Prevent browser page zoom on trackpad pinch (ctrlKey + wheel) so canvas zoom is used
+  const handleWheelCapture = useCallback<WheelEventHandler<HTMLDivElement>>((event) => {
+    if (event.ctrlKey) {
+      event.preventDefault();
+    }
+  }, []);
+
   return (
     <LocksProvider value={locksApi}>
     <NodeOperationsProvider addNode={addNode} duplicateNode={duplicateNode}>
       <NodeDropzoneProvider>
         <ContextMenu>
           <ContextMenuTrigger onContextMenu={handleContextMenu}>
-            <ReactFlow
-              deleteKeyCode={['Backspace', 'Delete']}
-              nodes={nodes}
-              onNodesChange={handleNodesChange}
-              edges={edges}
-              onEdgesChange={handleEdgesChange}
-              onConnectStart={handleConnectStart}
-              onConnect={handleConnect}
-              onConnectEnd={handleConnectEnd}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              isValidConnection={isValidConnection}
-              connectionLineComponent={ConnectionLine}
-              panOnScroll
-              fitView
-              minZoom={0.02}
-              maxZoom={2}
-              zoomOnDoubleClick={false}
-              panOnDrag={false}
-              selectionOnDrag={false}
-              onDoubleClick={addDropNode}
-              {...rest}
+            <div
+              className="relative h-full w-full"
+              style={{ paddingRight: inspectorOpen ? `${Math.round(inspectorWidth * 100)}vw` : 0 }}
             >
-              <Background gap={28} size={2.2} />
-              {/* Dev-only stress utilities */}
-              {debug ? <StressPanel /> : null}
-              {children}
-            </ReactFlow>
+              <ReactFlow
+                onWheelCapture={handleWheelCapture}
+                deleteKeyCode={['Backspace', 'Delete']}
+                nodes={nodes}
+                onNodesChange={handleNodesChange}
+                edges={edges}
+                onEdgesChange={handleEdgesChange}
+                onConnectStart={handleConnectStart}
+                onConnect={handleConnect}
+                onConnectEnd={handleConnectEnd}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                isValidConnection={isValidConnection}
+                connectionLineComponent={ConnectionLine}
+                panOnScroll
+                zoomOnScroll
+                zoomOnPinch
+                preventScrolling
+                fitView
+                minZoom={0.02}
+                maxZoom={2}
+                zoomOnDoubleClick={false}
+                panOnDrag={false}
+                selectionOnDrag
+                onDoubleClick={addDropNode}
+                {...rest}
+              >
+                <Panel position="bottom-right" className="mb-3 mr-3">
+                  <button
+                    type="button"
+                    onClick={() => setInspectorOpen((v) => !v)}
+                    className="rounded-full border bg-card px-3 py-1 text-xs shadow-sm hover:bg-accent"
+                    title="Toggle inspector"
+                  >
+                    {inspectorOpen ? 'Close Inspector' : 'Open Inspector'}
+                  </button>
+                </Panel>
+                <Background gap={28} size={2.2} />
+                {/* Dev-only stress utilities */}
+                {debug ? <StressPanel /> : null}
+                {children}
+              </ReactFlow>
+              {/* Inspector as absolute child that pushes layout via wrapper padding */}
+              <div
+                aria-hidden={!inspectorOpen}
+                className={cn(
+                  'absolute right-0 top-0 z-[70] h-full border-l bg-card shadow-xl transition-transform duration-200',
+                  inspectorOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'
+                )}
+                style={{ width: `${Math.round(inspectorWidth * 100)}vw` }}
+              >
+                <div className="flex h-full flex-col gap-3 p-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium">Inspector</h2>
+                    <button
+                      type="button"
+                      className="rounded-full border bg-card px-2 py-1 text-xs shadow-sm hover:bg-accent"
+                      onClick={() => setInspectorOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs text-muted-foreground">Width: {Math.round(inspectorWidth * 100)}%</div>
+                    <button
+                      type="button"
+                      className={cn('rounded-full border px-2 py-1 text-xs shadow-sm', inspectorLocked ? 'bg-accent' : 'bg-card')}
+                      onClick={() => setInspectorLocked((v) => !v)}
+                    >
+                      {inspectorLocked ? 'Unlock' : 'Lock'}
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-auto">
+                    {(() => {
+                      const node = inspectedNode as any;
+                      if (!node) return <div className="text-muted-foreground">Select a node to inspect.</div>;
+                      const Comp: any = (nodeTypes as any)[node.type];
+                      if (!Comp) return <pre className="text-xs">{JSON.stringify(node?.data ?? {}, null, 2)}</pre>;
+                      const safeData = { ...(node.data ?? {}), resizable: false, inspector: true };
+                      return (
+                        <div className="min-h-[400px] w-full">
+                          <Comp id={node.id} type={node.type} data={safeData} />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                {/* resize handle - only show when open to avoid peeking */}
+                {inspectorOpen ? (
+                  <div
+                    onMouseDown={() => setIsResizingInspector(true)}
+                    className="absolute left-0 top-0 h-full w-1 cursor-col-resize bg-transparent"
+                    style={{ transform: 'translateX(-0.5rem)' }}
+                    title="Drag to resize"
+                  />
+                ) : null}
+              </div>
+            </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onClick={addDropNode}>

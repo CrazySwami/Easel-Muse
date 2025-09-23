@@ -2,6 +2,7 @@ import { NodeToolbar as NodeToolbarRaw, useReactFlow } from '@xyflow/react';
 import { Position } from '@xyflow/react';
 import { Fragment, type ReactNode } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { Button } from '../ui/button';
 
 type NodeToolbarProps = {
   id: string;
@@ -33,6 +34,24 @@ export const NodeToolbar = ({ id, items }: NodeToolbarProps) => {
           <Fragment key={index}>{button.children}</Fragment>
         )
       )}
+      {/* Inspect button to open the global inspector panel */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="rounded-full text-xs"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent('easel:inspect', { detail: { nodeId: id } })
+              )
+            }
+          >
+            Inspect
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Open inspector</TooltipContent>
+      </Tooltip>
     </NodeToolbarRaw>
   );
 };

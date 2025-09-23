@@ -23,6 +23,7 @@ import {
   getTextFromTextNodes,
   getTranscriptionFromAudioNodes,
   getTweetContentFromTweetNodes,
+  getTextFromTiptapNodes,
 } from '@/lib/xyflow';
 import { useGateway } from '@/providers/gateway/client';
 import { useProject } from '@/providers/project';
@@ -116,13 +117,14 @@ export const TextTransform = ({
   const handleGenerate = useCallback(async () => {
     const incomers = getIncomers({ id }, getNodes(), getEdges());
     const textPrompts = getTextFromTextNodes(incomers);
+    const docPrompts = getTextFromTiptapNodes(incomers);
     const audioPrompts = getTranscriptionFromAudioNodes(incomers);
     const images = getImagesFromImageNodes(incomers);
     const imageDescriptions = getDescriptionsFromImageNodes(incomers);
     const tweetContent = getTweetContentFromTweetNodes(incomers);
     const files = getFilesFromFileNodes(incomers);
 
-    if (!textPrompts.length && !audioPrompts.length && !data.instructions) {
+    if (!textPrompts.length && !docPrompts.length && !audioPrompts.length && !data.instructions) {
       handleError('Error generating text', 'No prompts found');
       return;
     }
@@ -135,6 +137,10 @@ export const TextTransform = ({
 
     if (textPrompts.length) {
       content.push('--- Text Prompts ---', ...textPrompts);
+    }
+
+    if (docPrompts.length) {
+      content.push('--- Doc Content ---', ...docPrompts);
     }
 
     if (audioPrompts.length) {

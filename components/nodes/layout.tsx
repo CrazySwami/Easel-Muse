@@ -15,10 +15,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useLocks } from '@/providers/locks';
 import { useNodeOperations } from '@/providers/node-operations';
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, NodeResizer, NodeToolbar as NodeToolbarRaw } from '@xyflow/react';
 import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
-import { NodeToolbar } from './toolbar';
+import { Fragment, type ReactNode, useState } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 type NodeLayoutProps = {
   children: ReactNode;
@@ -37,6 +37,16 @@ type NodeLayoutProps = {
   className?: string;
 };
 
+type NodeToolbarProps = {
+  id: string;
+  items:
+    | {
+        tooltip?: string;
+        children: ReactNode;
+      }[]
+    | undefined;
+};
+
 export const NodeLayout = ({
   children,
   type,
@@ -50,6 +60,10 @@ export const NodeLayout = ({
   const { duplicateNode } = useNodeOperations();
   const { getLock, acquire, release, me } = useLocks();
   const [showData, setShowData] = useState(false);
+
+  const isResizable = Boolean((data as any)?.resizable);
+  const isSelected = Boolean(getNode(id)?.selected);
+  const inInspector = Boolean((data as any)?.inspector);
 
   const handleFocus = () => {
     const node = getNode(id);
@@ -101,16 +115,29 @@ export const NodeLayout = ({
 
   return (
     <>
-      {type !== 'drop' && Boolean(toolbar?.length) && (
-        <NodeToolbar id={id} items={toolbar} />
+      {!inInspector && toolbar && Boolean(toolbar.length) && (
+        <NodeToolbarRaw
+          isVisible={isSelected}
+          position={Position.Bottom}
+          className="flex items-center gap-1 rounded-full bg-background/40 p-1.5 backdrop-blur-sm"
+        >
+          {toolbar?.map((button: any, index: number) =>
+            button.tooltip ? (
+              <Tooltip key={button.tooltip}>
+                <TooltipTrigger asChild>{button.children}</TooltipTrigger>
+                <TooltipContent>{button.tooltip}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Fragment key={index}>{button.children}</Fragment>
+            )
+          )}
+        </NodeToolbarRaw>
       )}
-      {type !== 'file' && type !== 'tweet' && (
-        <Handle type="target" position={Position.Left} />
-      )}
+      {/* handles removed in layout; Position enum not used */}
       <ContextMenu onOpenChange={handleSelect}>
         <ContextMenuTrigger>
-          <div className="relative size-full h-auto w-sm">
-            {type !== 'drop' && (
+          <div className={cn('relative', inInspector ? 'h-full w-full' : 'size-full h-auto w-sm')}>
+            {!inInspector && type !== 'drop' && (
               <div className="-translate-y-full -top-2 absolute right-0 left-0 flex shrink-0 items-center justify-between">
                 <p className="font-mono text-muted-foreground text-xs tracking-tighter">
                   {title}
@@ -119,17 +146,30 @@ export const NodeLayout = ({
             )}
             <div
               className={cn(
-                'node-container flex size-full flex-col divide-y rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
-                isLocked && 'ring-2',
+                inInspector
+                  ? 'node-container flex h-full w-full flex-col bg-transparent p-0 ring-0 rounded-none'
+                  : type === 'tiptap'
+                  ? 'node-container inline-flex flex-col divide-y rounded-[28px] bg-card p-2 ring-1 ring-border transition-all'
+                  : 'node-container flex size-full flex-col divide-y rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
                 lockedByOther && 'pointer-events-none',
                 className
               )}
-              style={isLocked && lock?.color ? { boxShadow: `0 0 0 2px ${lock.color}` } : undefined}
+              style={isLocked && !inInspector && lock?.color ? { boxShadow: `0 0 0 2px ${lock.color}` } : undefined}
             >
-              <div className="overflow-hidden rounded-3xl bg-card">
+              {isResizable && !inInspector ? (
+                <NodeResizer
+                  color={'hsl(var(--primary))'}
+                  minWidth={160}
+                  minHeight={120}
+                  isVisible={isSelected}
+                  handleStyle={{ width: 10, height: 10, borderRadius: 6, background: 'hsl(var(--primary))', zIndex: 50 }}
+                  lineStyle={{ borderColor: 'hsl(var(--primary))', zIndex: 40 }}
+                />
+              ) : null}
+              <div className={cn(inInspector ? 'h-full w-full overflow-auto rounded-none bg-transparent' : 'overflow-hidden rounded-3xl bg-card')}>
                 {children}
               </div>
-              {isLocked && (
+              {!inInspector && isLocked && (
                 <div className="pointer-events-none absolute -top-2 -right-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-1 text-xs text-muted-foreground ring-1 ring-border">
                   <LockIcon size={12} />
                   {lockedByGenerating ? 'Generating…' : lockedByOther ? 'Locked' : 'Locked (you)'}
