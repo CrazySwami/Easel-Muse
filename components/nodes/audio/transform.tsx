@@ -114,34 +114,6 @@ export const AudioTransform = ({
   };
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
-    {
-      children: (
-        <ModelSelector
-          value={modelId}
-          options={speechModels}
-          key={id}
-          className="w-[200px] rounded-full"
-          onChange={(value) => updateNodeData(id, { model: value })}
-        />
-      ),
-    },
-  ];
-
-  if (model?.voices.length) {
-    toolbar.push({
-      children: (
-        <VoiceSelector
-          value={data.voice ?? model.voices[0]}
-          options={model.voices}
-          key={id}
-          className="w-[200px] rounded-full"
-          onChange={(value) => updateNodeData(id, { voice: value })}
-        />
-      ),
-    });
-  }
-
-  toolbar.push(
     loading
       ? {
           tooltip: 'Generating...',
@@ -168,7 +140,7 @@ export const AudioTransform = ({
             </Button>
           ),
         }
-  );
+  ];
 
   if (data.generated) {
     toolbar.push({
@@ -205,37 +177,53 @@ export const AudioTransform = ({
   ) => updateNodeData(id, { instructions: event.target.value });
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar}>
-      {loading && (
-        <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
-          <Loader2Icon
-            size={16}
-            className="size-4 animate-spin text-muted-foreground"
+    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar} className="w-80 min-h-[200px]">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 px-3 py-2">
+          <ModelSelector
+            value={modelId}
+            options={speechModels}
+            key={`${id}-model`}
+            className="w-[220px] rounded-full"
+            onChange={(value) => updateNodeData(id, { model: value })}
           />
-        </Skeleton>
-      )}
-      {!loading && !data.generated?.url && (
-        <div className="flex h-[50px] w-full items-center justify-center rounded-full bg-secondary">
-          <p className="text-muted-foreground text-sm">
-            Press <PlayIcon size={12} className="-translate-y-px inline" /> to
-            generate audio
-          </p>
+          {model?.voices.length ? (
+            <VoiceSelector
+              value={data.voice ?? model.voices[0]}
+              options={model.voices}
+              key={`${id}-voice`}
+              className="w-[220px] rounded-full"
+              onChange={(value) => updateNodeData(id, { voice: value })}
+            />
+          ) : null}
         </div>
-      )}
-      {!loading && data.generated?.url && (
-        // biome-ignore lint/a11y/useMediaCaption: <explanation>
-        <audio
-          src={data.generated.url}
-          controls
-          className="w-full rounded-none"
+
+        {loading && (
+          <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
+            <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
+          </Skeleton>
+        )}
+
+        {!loading && !data.generated?.url && (
+          <div className="flex h-[50px] w-full items-center justify-center rounded-full bg-secondary">
+            <p className="text-muted-foreground text-sm">
+              Press <PlayIcon size={12} className="-translate-y-px inline" /> to generate audio
+            </p>
+          </div>
+        )}
+
+        {!loading && data.generated?.url && (
+          // biome-ignore lint/a11y/useMediaCaption: <explanation>
+          <audio src={data.generated.url} controls className="w-full rounded-none" />
+        )}
+
+        <Textarea
+          value={data.instructions ?? ''}
+          onChange={handleInstructionsChange}
+          placeholder="Enter instructions"
+          className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
         />
-      )}
-      <Textarea
-        value={data.instructions ?? ''}
-        onChange={handleInstructionsChange}
-        placeholder="Enter instructions"
-        className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
-      />
+      </div>
     </NodeLayout>
   );
 };

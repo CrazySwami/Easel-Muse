@@ -3,8 +3,8 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext } from 'react';
 
-export type LockReason = 'drag' | 'generating' | 'manual-edit' | 'manual-move';
-export type LockLevel = 'edit' | 'move';
+export type LockReason = 'drag' | 'generating' | 'manual-edit' | 'manual-move' | 'manual-lock';
+export type LockLevel = 'edit' | 'move' | 'full';
 
 export type NodeLock = {
   nodeId: string;

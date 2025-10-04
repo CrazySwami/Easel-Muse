@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { CodeIcon, ImageIcon, TextIcon } from 'lucide-react';
+import { GlobeIcon } from 'lucide-react';
 
 export const nodeButtons = [
   {
@@ -35,7 +36,7 @@ export const nodeButtons = [
     label: 'Editor',
     icon: FileTextIcon,
     data: {
-      resizable: true,
+      resizable: false,
       width: 1440,
       height: 1600,
     },
@@ -51,6 +52,18 @@ export const nodeButtons = [
     icon: CodeIcon,
     data: {
       content: { language: 'javascript' },
+    },
+  },
+  {
+    id: 'firecrawl',
+    label: 'Firecrawl',
+    icon: GlobeIcon,
+    data: {
+      mode: 'scrape',
+      emit: 'markdown',
+      resizable: false,
+      width: 840,
+      height: 560,
     },
   },
   {

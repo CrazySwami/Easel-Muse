@@ -100,17 +100,6 @@ export const VideoTransform = ({
   };
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
-    {
-      children: (
-        <ModelSelector
-          value={modelId}
-          options={videoModels}
-          key={id}
-          className="w-[200px] rounded-full"
-          onChange={(value) => updateNodeData(id, { model: value })}
-        />
-      ),
-    },
     loading
       ? {
           tooltip: 'Generating...',
@@ -174,41 +163,51 @@ export const VideoTransform = ({
   ) => updateNodeData(id, { instructions: event.target.value });
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar}>
-      {loading && (
-        <Skeleton className="flex aspect-video w-full animate-pulse items-center justify-center rounded-b-xl">
-          <Loader2Icon
-            size={16}
-            className="size-4 animate-spin text-muted-foreground"
+    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar} className="w-96 min-h-[280px]">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 px-3 py-2">
+          <ModelSelector
+            value={modelId}
+            options={videoModels}
+            key={`${id}-model`}
+            className="w-[220px] rounded-full"
+            onChange={(value) => updateNodeData(id, { model: value })}
           />
-        </Skeleton>
-      )}
-      {!loading && !data.generated?.url && (
-        <div className="flex aspect-video w-full items-center justify-center rounded-b-xl bg-secondary">
-          <p className="text-muted-foreground text-sm">
-            Press <PlayIcon size={12} className="-translate-y-px inline" /> to
-            generate video
-          </p>
         </div>
-      )}
-      {data.generated?.url && !loading && (
-        <video
-          src={data.generated.url}
-          width={data.width ?? 800}
-          height={data.height ?? 450}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="w-full rounded-b-xl object-cover"
+
+        {loading && (
+          <Skeleton className="flex aspect-video w-full animate-pulse items-center justify-center rounded-b-xl">
+            <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
+          </Skeleton>
+        )}
+
+        {!loading && !data.generated?.url && (
+          <div className="flex aspect-video w-full items-center justify-center rounded-b-xl bg-secondary">
+            <p className="text-muted-foreground text-sm">
+              Press <PlayIcon size={12} className="-translate-y-px inline" /> to generate video
+            </p>
+          </div>
+        )}
+
+        {data.generated?.url && !loading && (
+          <video
+            src={data.generated.url}
+            width={data.width ?? 800}
+            height={data.height ?? 450}
+            autoPlay
+            muted
+            controls
+            className="aspect-video w-full rounded-b-xl"
+          />
+        )}
+
+        <Textarea
+          value={data.instructions ?? ''}
+          onChange={handleInstructionsChange}
+          placeholder="Enter instructions"
+          className="resize-y rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground shadow-none transition focus-visible:ring-2 focus-visible:ring-primary/60"
         />
-      )}
-      <Textarea
-        value={data.instructions ?? ''}
-        onChange={handleInstructionsChange}
-        placeholder="Enter instructions"
-        className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
-      />
+      </div>
     </NodeLayout>
   );
 };

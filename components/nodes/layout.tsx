@@ -2,7 +2,12 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import {
@@ -16,8 +21,8 @@ import { cn } from '@/lib/utils';
 import { useLocks } from '@/providers/locks';
 import { useNodeOperations } from '@/providers/node-operations';
 import { Handle, Position, useReactFlow, NodeResizer, NodeToolbar as NodeToolbarRaw } from '@xyflow/react';
-import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
-import { Fragment, type ReactNode, useState } from 'react';
+import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon, CheckIcon } from 'lucide-react';
+import { Fragment, type ReactNode, useState, useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 type NodeLayoutProps = {
@@ -61,7 +66,9 @@ export const NodeLayout = ({
   const { getLock, acquire, release, me } = useLocks();
   const [showData, setShowData] = useState(false);
 
-  const isResizable = Boolean((data as any)?.resizable);
+  const isResizable = Boolean((data as any)?.resizable) && type !== 'tiptap';
+  const desiredWidth = (data as any)?.width as number | undefined;
+  const desiredHeight = (data as any)?.height as number | undefined;
   const isSelected = Boolean(getNode(id)?.selected);
   const inInspector = Boolean((data as any)?.inspector);
 
@@ -113,6 +120,16 @@ export const NodeLayout = ({
   const lockedByGenerating = lock?.reason === 'generating';
   const lockedByOther = isLocked && lock?.userId !== me?.userId;
 
+  const lockLabel = useMemo(() => {
+    if (!lock) return null;
+    if (lock.reason === 'generating') return 'Generating...';
+    if (lockedByOther) return lock.label ?? 'Locked';
+    if (lock.level === 'edit') return 'Locked (you)';
+    if (lock.level === 'move') return 'Position locked (you)';
+    return 'Locked (you)';
+  }, [lock, lockedByOther]);
+
+
   return (
     <>
       {!inInspector && toolbar && Boolean(toolbar.length) && (
@@ -136,7 +153,20 @@ export const NodeLayout = ({
       {/* handles removed in layout; Position enum not used */}
       <ContextMenu onOpenChange={handleSelect}>
         <ContextMenuTrigger>
-          <div className={cn('relative', inInspector ? 'h-full w-full' : 'size-full h-auto w-sm')}>
+          <div
+            className={cn(
+              'relative',
+              inInspector ? 'h-full w-full' : 'size-full h-auto'
+            )}
+            style={
+              !inInspector && (isResizable || desiredWidth || desiredHeight)
+                ? {
+                    width: desiredWidth,
+                    height: desiredHeight,
+                  }
+                : undefined
+            }
+          >
             {!inInspector && type !== 'drop' && (
               <div className="-translate-y-full -top-2 absolute right-0 left-0 flex shrink-0 items-center justify-between">
                 <p className="font-mono text-muted-foreground text-xs tracking-tighter">
@@ -166,27 +196,56 @@ export const NodeLayout = ({
                   lineStyle={{ borderColor: 'hsl(var(--primary))', zIndex: 40 }}
                 />
               ) : null}
-              <div className={cn(inInspector ? 'h-full w-full overflow-auto rounded-none bg-transparent' : 'overflow-hidden rounded-3xl bg-card')}>
+              <div
+                className={cn(
+                  'overflow-hidden rounded-3xl bg-card',
+                  lock?.level === 'edit' && 'pointer-events-none'
+                )}
+                style={{ height: '100%' }}
+              >
                 {children}
               </div>
               {!inInspector && isLocked && (
                 <div className="pointer-events-none absolute -top-2 -right-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-1 text-xs text-muted-foreground ring-1 ring-border">
                   <LockIcon size={12} />
-                  {lockedByGenerating ? 'Generating…' : lockedByOther ? 'Locked' : 'Locked (you)'}
+                  {lockLabel}
                 </div>
               )}
             </div>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={() => acquire(id, 'manual-edit', 'move')}>
-            <LockIcon size={12} className="mr-2" />
-            <span>Lock (no move)</span>
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => release(id)}>
-            <UnlockIcon size={12} className="mr-2" />
-            <span>Unlock</span>
-          </ContextMenuItem>
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>
+              <LockIcon size={12} className="mr-2" />
+              <span>Lock state</span>
+            </ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuRadioGroup
+                value={lock?.level ?? 'unlocked'}
+                onValueChange={(value) => {
+                  if (value === 'unlocked') {
+                    release(id);
+                  } else {
+                    acquire(id, 'manual-lock', value as 'move' | 'edit');
+                  }
+                }}
+              >
+                <ContextMenuRadioItem value="unlocked">
+                  <UnlockIcon size={12} className="mr-2" />
+                  <span>Unlocked</span>
+                </ContextMenuRadioItem>
+                <ContextMenuRadioItem value="move">
+                  <LockIcon size={12} className="mr-2" />
+                  <span>Lock position only</span>
+                </ContextMenuRadioItem>
+                <ContextMenuRadioItem value="edit">
+                  <LockIcon size={12} className="mr-2" />
+                  <span>Lock position & edits</span>
+                </ContextMenuRadioItem>
+              </ContextMenuRadioGroup>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
           <ContextMenuItem onClick={() => duplicateNode(id)}>
             <CopyIcon size={12} />
             <span>Duplicate</span>
@@ -211,7 +270,7 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      {/* Show standard handles on both sides for connections */}
+      {/* Conventional handles: left = target, right = source */}
       {type !== 'drop' && <Handle type="target" position={Position.Left} />}
       {type !== 'video' && <Handle type="source" position={Position.Right} />}
       <Dialog open={showData} onOpenChange={setShowData}>

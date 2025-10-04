@@ -101,3 +101,162 @@ Run tests using the standard Next.js testing approach. The project uses Biome fo
 - **File Uploads**: Handled through Supabase storage with proper access controls
 - **State Management**: Jotai for client-side state, ReactFlow for canvas state
 - **Authentication**: Middleware-based auth with Supabase integration
+
+---
+
+## Current Issues: Node UI Layout and Structure (2025-10-01)
+
+### Problem Synopsis
+
+The text transform node is experiencing multiple UI/UX issues related to layout, toolbar positioning, and the instructions textarea visibility. These issues stem from inconsistent implementation patterns compared to working nodes like Firecrawl.
+
+### Issues Identified
+
+1. **Toolbar Overlapping Content**
+   - The floating toolbar (with model selector and play button) is positioned inside the node content area instead of floating below it
+   - Toolbar position changes with zoom level
+   - The toolbar offset mechanism isn't working correctly
+
+2. **Missing Instructions Textarea**
+   - The instructions textarea ("Add additional context or guidance") is not visible in the transform mode
+   - This textarea should appear below the output area with a divider between them
+
+3. **Incorrect Layout Structure**
+   - The node was using nested containers with extra rounded borders creating a "UI within a UI" effect
+   - Content wasn't following the established pattern from working nodes
+
+4. **Independent Scrolling Issues**
+   - The instructions textarea was scrolling independently instead of being part of the overall node layout
+   - Content area wasn't properly constrained with max-height
+
+### Root Causes
+
+1. **Inconsistent Child Structure in NodeLayout**
+   - Text transform was wrapping children in a Fragment or extra div
+   - Should pass multiple direct children to NodeLayout (like Firecrawl does)
+   - NodeLayout uses `flex-col divide-y` to stack children vertically with dividers
+
+2. **Missing Height Constraints**
+   - Content area needs `h-full max-h-[30rem]` to prevent infinite growth
+   - Without max-height, content pushes toolbar off-screen
+
+3. **Incorrect CSS Classes**
+   - Using `flex-1` without proper height constraints
+   - Missing `nowheel` class for scroll behavior
+   - Incorrect rounded corner classes
+
+### Correct Pattern (from Firecrawl Node)
+
+```tsx
+<NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar}>
+  {/* First child: Content area */}
+  <div className="nowheel h-full max-h-[30rem] flex-1 overflow-auto rounded-t-3xl rounded-b-xl bg-secondary p-4">
+    {/* Output content here */}
+  </div>
+  
+  {/* Second child: Instructions textarea */}
+  <Textarea
+    value={data.instructions ?? ''}
+    onChange={handleInstructionsChange}
+    placeholder="Add additional context or guidance"
+    className="shrink-0 resize-none rounded-none border-none bg-transparent shadow-none focus-visible:ring-0"
+  />
+</NodeLayout>
+```
+
+### Key Requirements
+
+1. **Multiple Direct Children**: Pass content div and textarea as separate children to NodeLayout (NOT wrapped in Fragment or div)
+2. **Height Constraints**: Content area must have `h-full max-h-[30rem]` to prevent toolbar overlap
+3. **No Extra Wrappers**: Don't add extra divs or rounded containers between NodeLayout and content
+4. **Proper Classes**: Use `nowheel` for scroll areas, `shrink-0` for fixed elements
+5. **Toolbar Offset**: NodeLayout already handles toolbar positioning with `offset={40}` (see `components/nodes/layout.tsx` line 171)
+
+### Files to Reference
+
+**Primary Files:**
+- **Working Example**: `components/nodes/firecrawl/transform.tsx` - Correct implementation pattern (lines 91-135)
+- **Problem File**: `components/nodes/text/transform.tsx` - Currently being fixed to match Firecrawl pattern
+- **Layout Component**: `components/nodes/layout.tsx` - Lines 165-181 (toolbar), 218-251 (children rendering)
+
+**Documentation Files (docs/):**
+- `docs/node-development.md` - **CRITICAL**: Comprehensive guide for creating and customizing nodes (lines 397-434 show transform pattern)
+- `docs/ui-and-component-guide.md` - UI standards, component patterns, and design principles
+- `docs/xyflow-data-consumption.md` - How nodes consume and pass data between each other
+- `docs/node-locking.md` - Node locking system for collaboration
+- `docs/firecrawl-node.md` - Firecrawl node implementation details
+- `docs/liveblocks-integration.md` - Real-time collaboration setup
+- `docs/liveblocks-reactflow.md` - ReactFlow integration with Liveblocks
+- `docs/model-management.md` - AI model configuration and management
+- `docs/supabase-workflow.md` - Database and Supabase setup workflow
+- `docs/billing-and-usage.md` - Stripe billing and credit system
+- `docs/getting-started.md` - Project setup and onboarding
+- `docs/feature-checklist.md` - Feature implementation checklist
+- `docs/changelog-policy.md` - How to maintain changelog
+- `docs/progress-tracking.md` - Development progress tracking
+- `docs/example-repos/` - Example repository references
+
+**Related Node Files (for comparison):**
+- `components/nodes/text/primitive.tsx` - Text node primitive mode
+- `components/nodes/text/index.tsx` - Text node entry point
+- `components/nodes/code/transform.tsx` - Code node transform (similar structure)
+- `components/nodes/image/transform.tsx` - Image node transform (similar structure)
+
+**Configuration Files:**
+- `lib/node-buttons.ts` - Node default sizes and toolbar button definitions
+- `lib/xyflow.ts` - Helper functions for data extraction between nodes
+
+**Database/Schema:**
+- `supabase/migrations/20250929200543_add_profile_background_fields.sql` - Profile table schema
+- `supabase/migrations/20251001235403_add_storage_buckets.sql` - Storage buckets setup
+- `supabase/migrations/20251001235853_add_profile_debug_field.sql` - Debug field (if created)
+
+**Styling:**
+- `app/globals.css` - Global styles and animations
+- `components/ui/textarea.tsx` - Textarea component used in instructions
+
+### Node Layout Architecture
+
+From `components/nodes/layout.tsx`:
+
+1. **Outer Container** (line 222): `flex-col divide-y rounded-[28px] bg-card p-2`
+   - Stacks children vertically
+   - Adds dividers between children
+   - Provides node chrome (border, padding, selection)
+
+2. **Inner Wrapper** (line 240-250): `overflow-hidden rounded-3xl bg-card`
+   - Contains `{children}`
+   - Handles overflow and rounding
+   - Height set to 100%
+
+3. **Toolbar** (line 165-181): `NodeToolbarRaw` with `position={Position.Bottom}` and `offset={40}`
+   - Floats below node
+   - Only visible when node is selected
+   - Should NOT overlap content if content has proper height constraints
+
+### Solution Applied
+
+Updated `components/nodes/text/transform.tsx` to:
+1. Remove Fragment wrapper
+2. Pass content div and Textarea as direct children to NodeLayout
+3. Add proper height constraints (`h-full max-h-[30rem]`)
+4. Match Firecrawl's class structure exactly
+5. Set node sizing: `className="w-80 min-h-[300px]"` on NodeLayout
+
+### Testing Checklist
+
+- [ ] Instructions textarea is visible below output area
+- [ ] Toolbar floats below node without overlapping
+- [ ] Toolbar position is stable across zoom levels
+- [ ] Content area scrolls when content exceeds max-height
+- [ ] Instructions textarea does NOT scroll independently
+- [ ] Divider line appears between output and instructions
+- [ ] Node has proper minimum size (320x300px)
+- [ ] No "UI within UI" nested border effect
+
+### Related Memories
+
+- Memory `6e57bfe5`: NodeToolbar overlap issue, offset={20} solution
+- Memory `cc4fe72c`: Node sizing standards and minimum dimensions
+- Memory `f5381b8e`: Node layout fixes and sizing consistency
+- Memory `aeb7633b`: Project overview and node architecture

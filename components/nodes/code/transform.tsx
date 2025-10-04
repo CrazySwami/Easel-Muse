@@ -262,36 +262,43 @@ export const CodeTransform = ({
   const nonUserMessages = messages.filter((message) => message.role !== 'user');
 
   return (
-    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar}>
-      <Editor
-        className="aspect-square w-full overflow-hidden rounded-b-xl"
-        language={language}
-        value={
-          nonUserMessages.length
-            ? (nonUserMessages[0].parts.find((part) => part.type === 'text')
-                ?.text ?? '')
-            : data.generated?.text
-        }
-        onChange={handleCodeChange}
-        theme="vs-dark"
-        loading={
-          <div className="dark aspect-square size-full">
-            <Skeleton className="size-full" />
-          </div>
-        }
-        options={{
-          readOnly: true,
-          minimap: {
-            enabled: false,
-          },
-        }}
-      />
-      <Textarea
-        value={data.instructions ?? ''}
-        onChange={handleInstructionsChange}
-        placeholder="Enter instructions"
-        className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
-      />
+    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar} className="w-96 min-h-[380px]">
+      <div className="flex flex-col gap-3" style={{ touchAction: 'manipulation', overscrollBehavior: 'none' }}>
+        <div className="overflow-hidden rounded-3xl border bg-card">
+          <Editor
+            className="h-[300px] min-h-[300px] w-full"
+            language={language}
+            value={
+              nonUserMessages.length
+                ? (nonUserMessages[0].parts.find((part) => part.type === 'text')
+                    ?.text ?? '')
+                : data.generated?.text
+            }
+            onChange={handleCodeChange}
+            theme="vs-dark"
+            loading={
+              <div className="dark h-[300px] w-full">
+                <Skeleton className="size-full" />
+              </div>
+            }
+            options={{
+              readOnly: true,
+              minimap: {
+                enabled: false,
+              },
+              scrollBeyondLastLine: false,
+              mouseWheelZoom: false,
+              disableLayerHinting: true,
+            }}
+          />
+        </div>
+        <Textarea
+          value={data.instructions ?? ''}
+          onChange={handleInstructionsChange}
+          placeholder="Enter instructions"
+          className="min-h-[110px] resize-y rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground shadow-none transition focus-visible:ring-2 focus-visible:ring-primary/60"
+        />
+      </div>
     </NodeLayout>
   );
 };

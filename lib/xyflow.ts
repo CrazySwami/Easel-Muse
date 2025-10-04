@@ -7,6 +7,7 @@ import type { TweetNodeProps } from '@/components/nodes/tweet';
 import type { Node } from '@xyflow/react';
 import type { VoiceMemoNodeProps } from '@/components/nodes/voice-memo';
 import type { TiptapNodeProps } from '@/components/nodes/tiptap';
+import type { FirecrawlNodeProps } from '@/components/nodes/firecrawl';
 
 export const getTextFromTextNodes = (nodes: Node[]) => {
   const sourceTexts = nodes
@@ -169,4 +170,30 @@ export const getTweetContentFromTweetNodes = (nodes: Node[]) => {
   );
 
   return tweetContent;
+};
+
+export const getMarkdownFromFirecrawlNodes = (nodes: Node[]) => {
+  const docs = nodes
+    .filter((node) => node.type === 'firecrawl')
+    .map((node) => (node.data as FirecrawlNodeProps['data']).generated)
+    .filter(Boolean);
+
+  const fromDoc = docs
+    .map((g) => g?.doc?.markdown)
+    .filter(Boolean) as string[];
+
+  return [...fromDoc];
+};
+
+export const getLinksFromFirecrawlNodes = (nodes: Node[]) => {
+  const docs = nodes
+    .filter((node) => node.type === 'firecrawl')
+    .map((node) => (node.data as FirecrawlNodeProps['data']).generated)
+    .filter(Boolean);
+
+  const fromDoc = docs
+    .flatMap((g) => g?.doc?.links ?? [])
+    .filter(Boolean) as string[];
+
+  return [...fromDoc];
 };

@@ -205,7 +205,7 @@ export const AudioPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title}>
+    <NodeLayout id={id} data={data} type={type} title={title} className="w-80 min-h-[180px]">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {!isRecording && (
           <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
@@ -246,13 +246,7 @@ export const AudioPrimitive = ({
         </Skeleton>
       )}
       {!isUploading && data.content && (
-        <div
-          className="nodrag nopan nowheel"
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-          onPointerMove={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="nodrag nopan nowheel">
           {/* biome-ignore lint/a11y/useMediaCaption: native controls */}
           <audio
             src={data.content.url}

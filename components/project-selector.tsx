@@ -147,7 +147,7 @@ export const ProjectSelector = ({
         value={value}
         onValueChange={handleSelect}
       >
-        <ComboboxTrigger className="w-[200px] rounded-full border-none bg-transparent shadow-none" />
+        <ComboboxTrigger className="w-[200px] rounded-full border-none shadow-none ring-2 ring-primary/70" />
         <ComboboxContent
           filter={filterByFuse}
           className="p-0"

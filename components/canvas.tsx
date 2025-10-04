@@ -11,12 +11,12 @@ import { NodeOperationsProvider } from '@/providers/node-operations';
 import { LocksProvider, type NodeLock } from '@/providers/locks';
 import { useProject } from '@/providers/project';
 import { useFlowStore } from '@/lib/flow-store';
+import { useCanvasStore } from '@/hooks/use-canvas-store';
 // Liveblocks/Yjs removed in this branch
 import dynamic from 'next/dynamic';
 import {
   Background,
   Panel,
-  useOnSelectionChange,
   type IsValidConnection,
   type OnConnect,
   type OnConnectEnd,
@@ -39,7 +39,7 @@ import { BoxSelectIcon, PlusIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { MouseEvent, MouseEventHandler } from 'react';
 import type { WheelEventHandler } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
@@ -61,6 +61,7 @@ const nodeTypes = { ...staticNodeTypes, tiptap: TiptapNode };
 type CanvasProps = ReactFlowProps & { debug?: boolean };
 
 export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
+  const { isLocked } = useCanvasStore();
   const project = useProject();
   const projectId = (project as any)?.id as string | undefined;
   // Collaboration disabled
@@ -95,6 +96,7 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   const [saveState, setSaveState] = useSaveProject();
   const rAFRef = useRef<number | null>(null);
   const pendingNodeChangesRef = useRef<Parameters<OnNodesChange>[0] | null>(null);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   // Expose a minimal React Flow instance for debugging (graph size, etc.)
   useEffect(() => {
@@ -234,16 +236,6 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     pendingNodeChangesRef.current = null;
     if (!pending || pending.length === 0) return;
 
-    // Acquire drag locks for nodes being moved this frame
-    try {
-      const draggingIds = pending
-        .filter((c: any) => c.type === 'position' && c.dragging === true)
-        .map((c: any) => c.id as string);
-      for (const nid of draggingIds) {
-        locksApi.acquire?.(nid, 'drag', 'move');
-      }
-    } catch {}
-
     if (enableYjs && ydoc && yNodesMap && yNodesOrder) {
       const hasStructural = pending.some((c) => c.type === 'add' || c.type === 'remove' || c.type === 'dimensions' || c.type === 'select');
       const includesDragEnd = pending.some((c: any) => c.type === 'position' && c.dragging === false);
@@ -291,13 +283,6 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
       }, 'local');
       if (hasStructural || includesDragEnd) {
         save();
-        // Release locks for nodes whose drag ended
-        try {
-          const ended = pending
-            .filter((c: any) => c.type === 'position' && c.dragging === false)
-            .map((c: any) => c.id as string);
-          ended.forEach((nid) => locksApi.release?.(nid));
-        } catch {}
       }
       onNodesChange?.(pending);
       return;
@@ -314,11 +299,27 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   }, [enableYjs, ydoc, yNodesMap, yNodesOrder, onNodesChange, save, setNodes]);
 
   const handleNodesChange = useCallback<OnNodesChange>((changes) => {
+    const filteredChanges = changes.filter(change => {
+      if (change.type === 'position' && change.dragging) {
+        const lock = locksApi.getLock(change.id);
+        // Prevent dragging if the node is locked for moving or editing
+        if (lock && (lock.level === 'move' || lock.level === 'edit')) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (filteredChanges.length === 0 && changes.length > 0) {
+      // This means all changes were filtered out, likely due to locks
+      return;
+    }
+
     // Accumulate changes and flush once per animation frame
     if (pendingNodeChangesRef.current) {
-      pendingNodeChangesRef.current = [...pendingNodeChangesRef.current, ...changes];
+      pendingNodeChangesRef.current = [...pendingNodeChangesRef.current, ...filteredChanges];
     } else {
-      pendingNodeChangesRef.current = changes;
+      pendingNodeChangesRef.current = filteredChanges;
     }
 
     if (rAFRef.current == null) {
@@ -330,37 +331,41 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   }, [flushPendingNodeChanges]);
 
   const handleEdgesChange = useCallback<OnEdgesChange>((changes) => {
-    // Apply in micro-batches to avoid overwhelming reconciliation with very large graphs
-    const batchedChanges = Array.isArray(changes) && changes.length > 200 ? ((): typeof changes => {
-      const out: typeof changes = [] as any;
-      const chunk = 200;
-      for (let i = 0; i < changes.length; i += chunk) out.push(...changes.slice(i, i + chunk));
-      return out;
-    })() : changes;
+    const batchedChanges = Array.isArray(changes) && changes.length > 200
+      ? (() => {
+          const out: typeof changes = [] as any;
+          const chunk = 200;
+          for (let i = 0; i < changes.length; i += chunk) {
+            out.push(...changes.slice(i, i + chunk));
+          }
+          return out;
+        })()
+      : changes;
 
     if (enableYjs && ydoc && yEdgesMap && yEdgesOrder) {
-      const prevOrder = yEdgesOrder.toArray();
-      const prevMap = new Map<string, Edge>();
-      for (const id of prevOrder) {
-        const e = yEdgesMap.get(id);
-        if (e) prevMap.set(id, e);
-      }
-      const prevArr = prevOrder.map((id) => prevMap.get(id)!).filter(Boolean) as Edge[];
-      const nextArr = applyEdgeChanges(batchedChanges, prevArr);
-
-      const nextOrder = nextArr.map((e) => e.id);
-      const hasStructural = nextOrder.length !== prevOrder.length || nextOrder.some((id, i) => id !== prevOrder[i]);
-
       Y.transact(ydoc, () => {
+        const prevOrder = yEdgesOrder.toArray();
+        const prevMap = new Map<string, Edge>();
+        for (const id of prevOrder) {
+          const e = yEdgesMap.get(id);
+          if (e) prevMap.set(id, e);
+        }
+        const prevArr = prevOrder.map((id) => prevMap.get(id)!).filter(Boolean) as Edge[];
+        const nextArr = applyEdgeChanges(batchedChanges, prevArr);
+        const nextOrder = nextArr.map((e) => e.id);
+
+        const hasStructural =
+          nextOrder.length !== prevOrder.length ||
+          nextOrder.some((id, index) => id !== prevOrder[index]);
+
         if (hasStructural) {
           if (yEdgesOrder.length) yEdgesOrder.delete(0, yEdgesOrder.length);
           if (nextOrder.length) yEdgesOrder.insert(0, nextOrder);
         }
-        // Update/insert each edge object
+
         for (const e of nextArr) {
           yEdgesMap.set(e.id, e);
         }
-        // Remove deleted edges from map
         for (const id of prevOrder) {
           if (!nextOrder.includes(id)) yEdgesMap.delete(id);
         }
@@ -371,7 +376,6 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
       return;
     }
 
-    // Liveblocks Storage mode
     setEdges((current: Edge[]) => applyEdgeChanges(batchedChanges, current));
     save();
     onEdgesChange?.(batchedChanges);
@@ -402,6 +406,7 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
       if (!(connection as any)?.source || !(connection as any)?.target) {
         return;
       }
+
       // Dev-only: defer transform node mount side-effects to idle when a new
       // connection is made, to reduce layout effect cascades.
       try {
@@ -437,7 +442,7 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
       save();
       onConnect?.(connection);
     },
-    [save, onConnect, enableYjs, ydoc, yEdgesMap, yEdgesOrder]
+    [save, onConnect, enableYjs, ydoc, yEdgesMap, yEdgesOrder, setEdges]
   );
 
   const addNode = useCallback(
@@ -503,13 +508,8 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
 
   const handleConnectEnd = useCallback<OnConnectEnd>(
     (event, connectionState) => {
-      // when a connection is dropped on the pane it's not valid
-
       if (!connectionState.isValid) {
-        // we need to remove the wrapper bounds, in order to get the correct position
-        const { clientX, clientY } =
-          'changedTouches' in event ? event.changedTouches[0] : event;
-
+        const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
         const sourceId = connectionState.fromNode?.id;
         const isSourceHandle = connectionState.fromHandle?.type === 'source';
 
@@ -538,52 +538,43 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     [addNode, screenToFlowPosition]
   );
 
-  const isValidConnection = useCallback<IsValidConnection>(
-    (connection) => {
-      // we are using getNodes and getEdges helpers here
-      // to make sure we create isValidConnection function only once
-      const nodes = getNodes();
-      const edges = getEdges();
-      const target = nodes.find((node) => node.id === connection.target);
+  const isValidConnection = useCallback<IsValidConnection>((connection) => {
+    const nodes = getNodes();
+    const edges = getEdges();
+    const target = nodes.find((node) => node.id === connection.target);
 
-      // Prevent connecting audio nodes to anything except transcribe nodes
-      if (connection.source) {
-        const source = nodes.find((node) => node.id === connection.source);
-
-        if (!source || !target) {
-          return false;
-        }
-
-        const valid = isValidSourceTarget(source, target);
-
-        if (!valid) {
-          return false;
-        }
-      }
-
-      // Prevent cycles
-      const hasCycle = (node: Node, visited = new Set<string>()) => {
-        if (visited.has(node.id)) {
-          return false;
-        }
-
-        visited.add(node.id);
-
-        for (const outgoer of getOutgoers(node, nodes, edges)) {
-          if (outgoer.id === connection.source || hasCycle(outgoer, visited)) {
-            return true;
-          }
-        }
-      };
-
-      if (!target || target.id === connection.source) {
+    if (connection.source) {
+      const source = nodes.find((node) => node.id === connection.source);
+      if (!source || !target) {
         return false;
       }
 
-      return !hasCycle(target);
-    },
-    [getNodes, getEdges]
-  );
+      if (!isValidSourceTarget(source, target)) {
+        return false;
+      }
+    }
+
+    const hasCycle = (node: Node, visited = new Set<string>()) => {
+      if (visited.has(node.id)) {
+        return false;
+      }
+
+      visited.add(node.id);
+
+      for (const outgoer of getOutgoers(node, nodes, edges)) {
+        if (outgoer.id === connection.source || hasCycle(outgoer, visited)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (!target || target.id === connection.source) {
+      return false;
+    }
+
+    return !hasCycle(target);
+  }, [getNodes, getEdges]);
 
   const handleConnectStart = useCallback<OnConnectStart>(() => {
     // Delete any drop nodes when starting to drag a node
@@ -638,113 +629,6 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     setNodes((nodes: Node[]) => [...nodes, ...newNodes]);
   }, [copiedNodes]);
 
-  // --- Inspector panel ---
-  const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [inspectedNode, setInspectedNode] = useState<Node | null>(null as any);
-  const [inspectorLocked, setInspectorLocked] = useState(false);
-  const [inspectorWidth, setInspectorWidth] = useState(0.5); // fraction of viewport width
-  const [isResizingInspector, setIsResizingInspector] = useState(false);
-
-  useOnSelectionChange({
-    onChange: ({ nodes }) => {
-      if (inspectorLocked) return;
-      setInspectedNode(nodes?.[0] ?? null);
-    },
-  });
-
-  // Open inspector from node toolbar "Inspect" button
-  useEffect(() => {
-    const onInspect = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { nodeId?: string } | undefined;
-      const id = detail?.nodeId;
-      if (!id) {
-        setInspectorOpen(true);
-        return;
-      }
-      const node = getNode(id as any);
-      if (node) {
-        if (!inspectorLocked) {
-          setInspectedNode(node as any);
-          updateNode(id as any, { selected: true });
-        }
-        setInspectorOpen(true);
-      }
-    };
-    window.addEventListener('easel:inspect', onInspect as any);
-    return () => window.removeEventListener('easel:inspect', onInspect as any);
-  }, [getNode, updateNode, inspectorLocked]);
-
-  // Resize handlers for inspector (dragging the left edge)
-  useEffect(() => {
-    if (!isResizingInspector) return;
-    const onMove = (e: MouseEvent) => {
-      const vw = window.innerWidth;
-      const newFrac = Math.min(0.8, Math.max(0.2, (vw - e.clientX) / vw));
-      setInspectorWidth(newFrac);
-    };
-    const onUp = () => setIsResizingInspector(false);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp, { once: true });
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp as any);
-    };
-  }, [isResizingInspector]);
-
-  const renderInspector = () => {
-    const node = inspectedNode as any;
-    if (!node) return <div className="text-muted-foreground">Select a node to inspect.</div>;
-    const { type, data } = node;
-    if (type === 'tiptap') {
-      const getText = (content: any): string => {
-        if (!content) return '';
-        if (content.text) return content.text as string;
-        if (Array.isArray(content.content)) return content.content.map(getText).join('');
-        return '';
-      };
-      const text = getText(data?.content);
-      return (
-        <div className="flex h-full flex-col gap-2">
-          <h3 className="text-sm font-medium">Document (read-only text)</h3>
-          <div className="flex-1 overflow-auto rounded-md border bg-secondary p-3 whitespace-pre-wrap text-sm">
-            {text || 'No document content'}
-          </div>
-        </div>
-      );
-    }
-    if (type === 'text') {
-      const text: string = data?.generated?.text || data?.text || '';
-      return (
-        <div className="flex h-full flex-col gap-2">
-          <h3 className="text-sm font-medium">Text</h3>
-          <div className="flex-1 overflow-auto rounded-md border bg-secondary p-3 whitespace-pre-wrap text-sm">{text || 'No text'}</div>
-        </div>
-      );
-    }
-    if (type === 'image') {
-      const src = data?.generated?.url || data?.content?.url;
-      return (
-        <div className="flex h-full flex-col gap-2">
-          <h3 className="text-sm font-medium">Image</h3>
-          {src ? (
-            // biome-ignore lint/a11y/useAltText: preview panel
-            <img src={src} className="max-h-[80vh] w-full rounded-md object-contain" />
-          ) : (
-            <div className="text-muted-foreground">No image</div>
-          )}
-        </div>
-      );
-    }
-    return (
-      <div className="flex h-full flex-col gap-2">
-        <h3 className="text-sm font-medium">{String(type)} data</h3>
-        <pre className="flex-1 overflow-auto rounded-md border bg-secondary p-3 text-xs">
-          {JSON.stringify(data ?? {}, null, 2)}
-        </pre>
-      </div>
-    );
-  };
-
   const handleDuplicateAll = useCallback(() => {
     const selected = getNodes().filter((node) => node.selected);
 
@@ -783,39 +667,74 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   });
 
   // Minimal local locks map as a placeholder; will be backed by Yjs in a follow-up
-  const locksRef = useRef<Record<string, NodeLock>>({});
+  const [locks, setLocks] = useState<Record<string, NodeLock>>({});
   const locksApi = {
     me: { userId: 'me', color: '#3b82f6' } as any,
-    locks: locksRef.current,
-    isLockedByOther: (nodeId: string) => false,
-    getLock: (nodeId: string) => locksRef.current[nodeId],
-    acquire: (nodeId: string, reason: 'drag' | 'generating' | 'manual-edit' | 'manual-move', level: 'edit' | 'move' = 'edit') => {
-      locksRef.current[nodeId] = { nodeId, userId: 'me', color: '#3b82f6', reason, level, ts: Date.now() } as NodeLock;
+    locks,
+    isLockedByOther: (nodeId: string) => locks[nodeId] && locks[nodeId].userId !== 'me',
+    getLock: (nodeId: string) => locks[nodeId],
+    acquire: (nodeId: string, reason: LockReason, level: LockLevel = 'edit') => {
+      let color: string | undefined;
+      if (reason === 'manual-lock' || reason === 'manual-move') {
+        if (level === 'move') color = '#10b981'; // emerald-500
+        if (level === 'edit') color = '#f43f5e'; // rose-500
+      }
+
+      setLocks((prev) => ({
+        ...prev,
+        [nodeId]: { nodeId, userId: 'me', color, reason, level, ts: Date.now() } as NodeLock,
+      }));
     },
-    release: (nodeId: string) => { delete locksRef.current[nodeId]; },
+    release: (nodeId: string) => {
+      setLocks((prev) => {
+        const next = { ...prev };
+        delete next[nodeId];
+        return next;
+      });
+    },
   };
 
+  const nodesWithLock = useMemo(() => {
+    return nodes.map((node) => {
+      const lock = locksApi.getLock(node.id);
+      const isDraggable = !lock || (lock.level !== 'move' && lock.level !== 'edit');
+
+      return {
+        ...node,
+        // Enforce non-draggable if locked, otherwise respect node's own draggable prop
+        draggable: isDraggable ? node.draggable : false,
+      };
+    });
+  }, [nodes, locks]);
+
   // Prevent browser page zoom on trackpad pinch (ctrlKey + wheel) so canvas zoom is used
-  const handleWheelCapture = useCallback<WheelEventHandler<HTMLDivElement>>((event) => {
-    if (event.ctrlKey) {
-      event.preventDefault();
-    }
+  useEffect(() => {
+    const wrapper = reactFlowWrapper.current;
+    if (!wrapper) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) {
+        event.preventDefault();
+      }
+    };
+
+    wrapper.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      wrapper.removeEventListener('wheel', handleWheel);
+    };
   }, []);
 
   return (
     <LocksProvider value={locksApi}>
-    <NodeOperationsProvider addNode={addNode} duplicateNode={duplicateNode}>
-      <NodeDropzoneProvider>
-        <ContextMenu>
-          <ContextMenuTrigger onContextMenu={handleContextMenu}>
-            <div
-              className="relative h-full w-full"
-              style={{ paddingRight: inspectorOpen ? `${Math.round(inspectorWidth * 100)}vw` : 0 }}
-            >
-              <ReactFlow
-                onWheelCapture={handleWheelCapture}
+      <NodeOperationsProvider addNode={addNode} duplicateNode={duplicateNode}>
+        <NodeDropzoneProvider>
+          <ContextMenu>
+            <ContextMenuTrigger onContextMenu={handleContextMenu}>
+              <div ref={reactFlowWrapper} className="relative h-full w-full">
+                <ReactFlow
                 deleteKeyCode={['Backspace', 'Delete']}
-                nodes={nodes}
+                nodes={nodesWithLock}
                 onNodesChange={handleNodesChange}
                 edges={edges}
                 onEdgesChange={handleEdgesChange}
@@ -826,104 +745,39 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                 edgeTypes={edgeTypes}
                 isValidConnection={isValidConnection}
                 connectionLineComponent={ConnectionLine}
-                panOnScroll
-                zoomOnScroll
-                zoomOnPinch
+                panOnScroll={!isLocked}
+                zoomOnScroll={!isLocked}
+                zoomOnPinch={!isLocked}
                 preventScrolling
                 fitView
                 minZoom={0.02}
                 maxZoom={2}
                 zoomOnDoubleClick={false}
-                panOnDrag={false}
+                panOnDrag={!isLocked}
                 selectionOnDrag
                 onDoubleClick={addDropNode}
                 {...rest}
               >
-                <Panel position="bottom-right" className="mb-3 mr-3">
-                  <button
-                    type="button"
-                    onClick={() => setInspectorOpen((v) => !v)}
-                    className="rounded-full border bg-card px-3 py-1 text-xs shadow-sm hover:bg-accent"
-                    title="Toggle inspector"
-                  >
-                    {inspectorOpen ? 'Close Inspector' : 'Open Inspector'}
-                  </button>
-                </Panel>
                 <Background gap={28} size={2.2} />
                 {/* Dev-only stress utilities */}
                 {debug ? <StressPanel /> : null}
                 {children}
               </ReactFlow>
-              {/* Inspector as absolute child that pushes layout via wrapper padding */}
-              <div
-                aria-hidden={!inspectorOpen}
-                className={cn(
-                  'absolute right-0 top-0 z-[70] h-full border-l bg-card shadow-xl transition-transform duration-200',
-                  inspectorOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'
-                )}
-                style={{ width: `${Math.round(inspectorWidth * 100)}vw` }}
-              >
-                <div className="flex h-full flex-col gap-3 p-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium">Inspector</h2>
-                    <button
-                      type="button"
-                      className="rounded-full border bg-card px-2 py-1 text-xs shadow-sm hover:bg-accent"
-                      onClick={() => setInspectorOpen(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs text-muted-foreground">Width: {Math.round(inspectorWidth * 100)}%</div>
-                    <button
-                      type="button"
-                      className={cn('rounded-full border px-2 py-1 text-xs shadow-sm', inspectorLocked ? 'bg-accent' : 'bg-card')}
-                      onClick={() => setInspectorLocked((v) => !v)}
-                    >
-                      {inspectorLocked ? 'Unlock' : 'Lock'}
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-auto">
-                    {(() => {
-                      const node = inspectedNode as any;
-                      if (!node) return <div className="text-muted-foreground">Select a node to inspect.</div>;
-                      const Comp: any = (nodeTypes as any)[node.type];
-                      if (!Comp) return <pre className="text-xs">{JSON.stringify(node?.data ?? {}, null, 2)}</pre>;
-                      const safeData = { ...(node.data ?? {}), resizable: false, inspector: true };
-                      return (
-                        <div className="min-h-[400px] w-full">
-                          <Comp id={node.id} type={node.type} data={safeData} />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-                {/* resize handle - only show when open to avoid peeking */}
-                {inspectorOpen ? (
-                  <div
-                    onMouseDown={() => setIsResizingInspector(true)}
-                    className="absolute left-0 top-0 h-full w-1 cursor-col-resize bg-transparent"
-                    style={{ transform: 'translateX(-0.5rem)' }}
-                    title="Drag to resize"
-                  />
-                ) : null}
-              </div>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onClick={addDropNode}>
               <PlusIcon size={12} />
-              <span>Add a new node</span>
+              <span>Add node</span>
             </ContextMenuItem>
             <ContextMenuItem onClick={handleSelectAll}>
               <BoxSelectIcon size={12} />
               <span>Select all</span>
             </ContextMenuItem>
           </ContextMenuContent>
-        </ContextMenu>
-      </NodeDropzoneProvider>
-    </NodeOperationsProvider>
+          </ContextMenu>
+        </NodeDropzoneProvider>
+      </NodeOperationsProvider>
     </LocksProvider>
   );
 };

@@ -56,7 +56,7 @@ export const VideoPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title}>
+    <NodeLayout id={id} data={data} type={type} title={title} className="w-96 min-h-[250px]">
       {isUploading && (
         <Skeleton className="flex aspect-video w-full animate-pulse items-center justify-center">
           <Loader2Icon

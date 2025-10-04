@@ -2,6 +2,28 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.8 — New Nodes, Canvas UX, & Locking Refinements (2025-09-23 → 2025-10-04)
+
+-   **New Nodes for Data Ingestion**
+    -   Added a new **Firecrawl Node** to allow scraping and crawling websites directly on the canvas.
+    -   Introduced a **Perplexity Search Node** to perform web searches and bring live data into your workflows.
+
+-   **Canvas & UI Overhaul**
+    -   The main canvas can now be **locked**, preventing any panning or zooming for a more stable editing experience.
+    -   The top UI bar can now be **hidden by clicking the Easel logo** in the top-left, providing a distraction-free "Zen Mode."
+    -   The bottom node-creation menu has been streamlined into a single **"+" button**, which now opens the command palette for a cleaner interface.
+
+-   **Node UI & Interaction**
+    -   Refactored the Text Node to use a **content-driven height** and a fixed header, ensuring the generation prompt is always visible while long text scrolls correctly.
+    -   Established a new, consistent UI pattern for nodes with flexible content areas (`flex-1`) and fixed instruction areas (`shrink-0`).
+    -   Tightened the **line height and paragraph spacing** in text nodes for a more compact and polished look.
+    -   The primitive Text Node is now **always editable**, allowing users to type without first selecting the node.
+
+-   **Enhanced Node Locking**
+    -   Restored and improved the node locking functionality. The context menu now correctly displays "Unlocked," "Lock position only," and "Lock position & edits."
+    -   Implemented robust **drag prevention for locked nodes**, ensuring they cannot be moved even during a multi-select operation.
+    -   Added distinct visual feedback for different lock states, including **color-coded borders** and descriptive badges.
+
 ## v0.0.7 — Rich Text, Voice Memos, & Inspector UI (2025-09-22)
 
 -   **New Tiptap Node**

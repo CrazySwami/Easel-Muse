@@ -341,79 +341,83 @@ export const TextTransform = ({
   }, [messages, reasoning, status, setReasoning]);
 
   return (
-    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar}>
-      <div className="nowheel h-full max-h-[30rem] flex-1 overflow-auto rounded-t-3xl rounded-b-xl bg-secondary p-4">
-        {status === 'submitted' && (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-60 animate-pulse rounded-lg" />
-            <Skeleton className="h-4 w-40 animate-pulse rounded-lg" />
-            <Skeleton className="h-4 w-50 animate-pulse rounded-lg" />
-          </div>
-        )}
-        {data.generated?.text &&
-          !nonUserMessages.length &&
-          status !== 'submitted' && (
-            <ReactMarkdown>{data.generated.text}</ReactMarkdown>
-          )}
-        {!data.generated?.text &&
-          !nonUserMessages.length &&
-          status !== 'submitted' && (
-            <div className="flex aspect-video w-full items-center justify-center bg-secondary">
-              <p className="text-muted-foreground text-sm">
-                Press <PlayIcon size={12} className="-translate-y-px inline" />{' '}
-                to generate text
+    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar} className="w-80 max-h-[36rem]">
+      <div className="nowheel flex-1 rounded-t-3xl rounded-b-xl bg-secondary/50 p-4 flex flex-col h-full">
+        {/* Fixed top part */}
+        <div className="flex-shrink-0">
+          {status === 'submitted' ? (
+            <div className="flex flex-col gap-2 py-2">
+              <Skeleton className="h-3 w-[90%] animate-pulse rounded-md" />
+              <Skeleton className="h-3 w-[75%] animate-pulse rounded-md" />
+              <Skeleton className="h-3 w-[85%] animate-pulse rounded-md" />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-3">
+              <p className="text-xs text-muted-foreground">
+                Press <PlayIcon size={10} className="-translate-y-px inline" /> to generate text
               </p>
             </div>
           )}
-        {Boolean(nonUserMessages.length) &&
-          status !== 'submitted' &&
-          nonUserMessages.map((message) => (
-            <AIMessage
-              key={message.id}
-              from={message.role === 'assistant' ? 'assistant' : 'user'}
-              className="p-0 [&>div]:max-w-none"
-            >
-              <div>
-                {Boolean(
-                  message.parts.filter((part) => part.type === 'source-url')
-                    ?.length
-                ) && (
-                  <AISources>
-                    <AISourcesTrigger
-                      count={
-                        message.parts.filter(
-                          (part) => part.type === 'source-url'
-                        ).length
-                      }
-                    />
-                    <AISourcesContent>
-                      {message.parts
-                        .filter((part) => part.type === 'source-url')
-                        .map(({ url, title }) => (
-                          <AISource
-                            key={url ?? ''}
-                            href={url}
-                            title={title ?? new URL(url).hostname}
-                          />
-                        ))}
-                    </AISourcesContent>
-                  </AISources>
-                )}
-                <AIMessageContent className="bg-transparent p-0">
-                  <AIResponse>
-                    {message.parts.find((part) => part.type === 'text')?.text ??
-                      ''}
-                  </AIResponse>
-                </AIMessageContent>
+        </div>
+
+        {/* Scrollable bottom part */}
+        {(data.generated?.text || nonUserMessages.length > 0) && (
+          <div className="overflow-auto flex-1 mt-2 pt-2 border-t">
+            {data.generated?.text && !nonUserMessages.length && status !== 'submitted' && (
+              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-p:leading-snug prose-headings:font-semibold prose-pre:bg-muted prose-pre:border prose-pre:border-border">
+                <ReactMarkdown>{data.generated.text}</ReactMarkdown>
               </div>
-            </AIMessage>
-          ))}
+            )}
+
+            {Boolean(nonUserMessages.length) && status !== 'submitted' &&
+              nonUserMessages.map((message) => (
+                <AIMessage
+                  key={message.id}
+                  from={message.role === 'assistant' ? 'assistant' : 'user'}
+                  className="p-0 [&>div]:max-w-none"
+                >
+                  <div>
+                    {Boolean(
+                      message.parts.filter((part) => part.type === 'source-url')?.length
+                    ) && (
+                      <AISources>
+                        <AISourcesTrigger
+                          count={
+                            message.parts.filter(
+                              (part) => part.type === 'source-url'
+                            ).length
+                          }
+                        />
+                        <AISourcesContent>
+                          {message.parts
+                            .filter((part) => part.type === 'source-url')
+                            .map(({ url, title }) => (
+                              <AISource
+                                key={url ?? ''}
+                                href={url}
+                                title={title ?? new URL(url).hostname}
+                              />
+                            ))}
+                        </AISourcesContent>
+                      </AISources>
+                    )}
+                    <AIMessageContent className="bg-transparent p-0">
+                      <AIResponse>
+                        {message.parts.find((part) => part.type === 'text')?.text ?? ''}
+                      </AIResponse>
+                    </AIMessageContent>
+                  </div>
+                </AIMessage>
+            ))}
+          </div>
+        )}
       </div>
       <Textarea
         value={data.instructions ?? ''}
         onChange={handleInstructionsChange}
-        placeholder="Enter instructions"
-        className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
+        placeholder="Add additional context or guidance"
+        rows={3}
+        className="shrink-0 resize-none rounded-none border-none bg-muted/30 px-4 py-3 text-sm placeholder:text-muted-foreground/60 shadow-none transition-colors focus-visible:bg-muted/50 focus-visible:ring-0"
       />
       <ReasoningTunnel.In>
         {messages.flatMap((message) =>
@@ -424,4 +428,5 @@ export const TextTransform = ({
       </ReasoningTunnel.In>
     </NodeLayout>
   );
-};
+}
+;

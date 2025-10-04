@@ -781,6 +781,42 @@ All nodes use the `NodeLayout` component which provides:
 - Context menu integration
 - Selection handling
 
+#### Lock states & badges (2025-09-25)
+
+- `NodeLayout` exposes a `Lock state` submenu in the context menu (implemented with `ContextMenuSub` in `components/nodes/layout.tsx`). The three radio options map to the `LockLevel` union in `providers/locks.tsx`:
+  - **Unlocked** calls `release(id)` and clears the lock entry.
+  - **Lock position only** acquires a lock with `reason: 'manual-move'` and `level: 'move'`, preventing drag/pan but keeping node controls enabled.
+  - **Lock position & edits** acquires `reason: 'manual-edit'` and `level: 'edit'`, preventing both drag and interaction; the content area is wrapped with `pointer-events-none` for the owner.
+- The in-node badge is color-coded for each state. Self-applied position locks use an emerald palette, full locks use rose, and collaborator locks use amber. Unlocked state remains neutral. Badge text is generated via the `lockLabel` memo.
+- Lock state is backed by the local `LocksProvider` defined in `components/canvas.tsx`, which maintains a `locks` state object. Multi-user awareness is driven by `locksApi.me.userId`; adjust this when integrating real identities.
+
+#### Scroll & Gesture Pattern for Interactive Editors
+
+Scrollable editor surfaces (TipTap, Monaco, Markdown previews, etc.) **must not** block canvas gestures when the node is idle. Follow this pattern when embedding editors inside `NodeLayout`:
+
+```tsx
+<div className="overflow-hidden group-data-[selected=true]:overflow-auto">
+  <div
+    className="pointer-events-none group-data-[selected=true]:pointer-events-auto"
+    onPointerDown={(event) => event.stopPropagation()}
+  >
+    {/* editor component goes here */}
+  </div>
+</div>
+```
+
+- **Canvas-first interactions**: The outer wrapper keeps `overflow-hidden` and `pointer-events:none` until the node is selected, ensuring pinch/zoom and pan work everywhere.
+- **Selected node focus**: When `NodeLayout` marks the container with `data-selected="true"`, the group selectors re-enable scrolling and editor input.
+- **Event hygiene**: Call `event.stopPropagation()` inside the inner wrapper so dragging on editor chrome does not move the canvas once the node is active.
+
+Apply this convention to any node that embeds TipTap, Monaco, or other gesture-heavy controls to guarantee consistent UX.
+
+### Canvas connection guardrails (2025-09-25)
+
+- The connection handlers in `components/canvas.tsx` (`handleConnect`, `handleConnectEnd`, `isValidConnection`) were reset to the known-stable logic from commit `8b87c2b` after an infinite update loop surfaced. Only guard against missing `source`/`target` ids and delegate edge creation to `addEdge`.
+- `isValidConnection` once again enforces `isValidSourceTarget()` and prevents cycles via `getOutgoers()`. Extend `lib/xyflow.ts:isValidSourceTarget()` when allowing new node pairings rather than bypassing validation.
+- The drop-node UX still creates a `temporary` edge when a drag ends on the canvas. `handleConnectStart` clears `drop` nodes and `temporary` edges at the start of every new connection to keep the graph tidy.
+
 ```tsx
 <NodeLayout
   id={id}
@@ -903,7 +939,7 @@ Easel includes several built-in node types, each designed for specific content t
 ### Tiptap Node (`components/nodes/tiptap/`)
 - **Purpose**: Collaborative rich text editor
 - **Modes**: Primitive only
-- **Key Features**: Real-time collaboration with Liveblocks and Yjs, resizable
+- **Key Features**: Real-time collaboration with Liveblocks and Yjs
 - **Data Structure**: `content` (JSONContent)
 
 ### Drop Node (`components/nodes/drop.tsx`)
@@ -920,30 +956,6 @@ All nodes (except File, Tweet, and Drop) follow these patterns:
 3. **Model Integration**: AI-powered nodes integrate with the gateway system for model selection
 4. **Toolbar Pattern**: Generate/Regenerate buttons, model selectors, timestamp indicators
 5. **Error Handling**: Toast notifications, loading states, and error recovery
-6. **Optional Resizing (new)**: You can enable per‑node resize controls via `data.resizable: true`. When enabled, the layout renders React Flow’s `NodeResizer`, allowing the user to drag from the corners/edges to change width/height. See the [NodeResizer API](https://reactflow.dev/api-reference/components/node-resizer).
-
-#### Enabling Resizing on a Node
-
-- Set `data.resizable = true` when creating a node or toggling from your UI. Example:
-
-```ts
-addNode('tiptap', {
-  position: { x: 200, y: 120 },
-  data: {
-    resizable: true,
-    // you can also seed a starting size for certain nodes
-    width: 1200,
-    height: 1600,
-  },
-});
-```
-
-- Implementation detail: `components/nodes/layout.tsx` checks `data.resizable` and renders `<NodeResizer minWidth={160} minHeight={120} />`. The resizer is purely a UI control; your node content should size according to its container.
-
-- Tips:
-  - For document nodes, ensure the inner wrapper uses `style={{ width, height }}` or is responsive to the container so resize effects are visible.
-  - You can customize the resizer color/handles via `color`, `handleStyle`, `lineStyle`. We default to the theme primary.
-  - Consider clamping min/max sizes for usability.
 
 ## Best Practices
 

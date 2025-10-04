@@ -1,4 +1,4 @@
-'use client';
+    'use client';
 
 import { NodeLayout } from '@/components/nodes/layout';
 import { useYDoc } from '@/providers/liveblocks';
@@ -17,6 +17,7 @@ import * as Y from 'yjs';
 import type { TiptapNodeProps } from '.';
 import { FileTextIcon, Loader2Icon, BoldIcon, ItalicIcon, StrikethroughIcon, Heading1Icon, Heading2Icon } from 'lucide-react';
 import { useThreads } from '@liveblocks/react';
+import { useLocks } from '@/providers/locks';
 
 // A simple debounce function
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
@@ -29,11 +30,12 @@ function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
 
 
 type TiptapEditorProps = TiptapNodeProps & {
-    doc: Y.Doc;
-    provider: NonNullable<ReturnType<typeof useYDoc>['provider']>;
+  doc: Y.Doc;
+  provider: NonNullable<ReturnType<typeof useYDoc>['provider']>;
+  readOnly?: boolean;
 };
 
-const TiptapEditor = ({ data, id, doc, provider }: TiptapEditorProps) => {
+const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEditorProps) => {
     const { updateNodeData } = useReactFlow();
     const { threads } = useThreads();
 
@@ -43,6 +45,7 @@ const TiptapEditor = ({ data, id, doc, provider }: TiptapEditorProps) => {
     ) as Y.XmlFragment;
 
     const editor = useEditor({
+        immediatelyRender: false,
         extensions: [
             // Keep history enabled (default); no override needed
             StarterKit.configure({}),
@@ -52,17 +55,15 @@ const TiptapEditor = ({ data, id, doc, provider }: TiptapEditorProps) => {
             Typography,
             Underline,
             Highlight,
-            Link.configure({
-                autolink: true,
-                linkOnPaste: true,
-                openOnClick: false,
-                validate: (href: string) => /^https?:\/\//.test(href),
-            }),
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
+            Link.configure({
+                openOnClick: false,
+            }),
+            // Type definitions may vary across versions; cast to any to satisfy TS
             // Type definitions may vary across versions; cast to any to satisfy TS
             useLiveblocksExtension({
-                provider,
                 fragment: yXmlFragment,
+                allowExtension: ({ editor }: { editor: any }) => editor.isEditable,
             } as any),
         ],
         editorProps: {
@@ -70,7 +71,31 @@ const TiptapEditor = ({ data, id, doc, provider }: TiptapEditorProps) => {
                 class: 'focus:outline-none p-4 h-full w-full',
             },
         },
+        editable: !readOnly,
+        content: data.content ?? {
+            type: 'doc',
+            content: [
+                {
+                    type: 'paragraph',
+                    content: [
+                        {
+                            type: 'text',
+                            text: '',
+                        },
+                    ],
+                },
+            ],
+        },
     });
+
+    useEffect(() => {
+        if (!editor) return;
+
+        editor.setEditable(!readOnly);
+        if (readOnly) {
+            editor.commands.blur();
+        }
+    }, [editor, readOnly]);
 
     useEffect(() => {
         const handleSync = () => {
@@ -114,13 +139,11 @@ const TiptapEditor = ({ data, id, doc, provider }: TiptapEditorProps) => {
                 <div className="sticky top-0 z-10 bg-primary text-primary-foreground [&_svg]:text-primary-foreground [&_button]:text-primary-foreground">
                     <Toolbar
                       editor={editor}
-                      className="lb-toolbar-compact flex h-10 w-full items-center gap-1.5 md:gap-2 overflow-x-auto whitespace-nowrap px-3 pr-3 py-2 text-sm leading-none
+                      className="lb-toolbar-compact flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-2 text-sm leading-none
                       [&_*]:!text-sm [&_*]:!leading-none
                       [&_svg]:!h-4 [&_svg]:!w-4
                       [&_button]:!h-8 [&_button]:!min-w-8 [&_button]:!w-8 [&_button]:!px-0 [&_button]:!py-0 [&_button]:!rounded-md [&_button]:shrink-0
-                      [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!h-8 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!px-2 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:shrink-0
-                      "
-                    />
+                      [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!h-8 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!px-2 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:shrink-0"/>
                 </div>
             )}
             {editor && (
@@ -161,18 +184,12 @@ const TiptapEditor = ({ data, id, doc, provider }: TiptapEditorProps) => {
                     </button>
                 </BubbleMenu>
             )}
-            <div
-              className="relative h-full w-full"
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              onPointerMove={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-                <EditorContent editor={editor} className="h-full w-full bg-white text-black dark:bg-neutral-900 dark:text-neutral-100 p-4" />
+            <div className="relative h-full w-full">
+                <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
                 {editor && (
                     <>
-                        <FloatingThreads threads={threads ?? []} editor={editor} />
-                        <FloatingComposer editor={editor} className="w-[350px]" />
+                        <FloatingThreads threads={threads ?? []} editor={editor} className="lb-threads" />
+                        <FloatingComposer editor={editor} className="lb-composer w-[350px]" />
                     </>
                 )}
             </div>
@@ -187,10 +204,14 @@ type TiptapPrimitiveProps = TiptapNodeProps & {
 
 export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
   const { doc, provider } = useYDoc();
+  const reactFlow = useReactFlow();
   
-  // Allow per-node overrides via data.width/height, else use paper-like defaults
-  const width = (props.data as any)?.width ?? 1440;
-  const height = (props.data as any)?.height ?? 1600;
+  // Allow per-node overrides via data.width/height
+  const width = (props.data as any)?.width ?? 640;
+  const height = (props.data as any)?.height ?? 840;
+  const { getLock } = useLocks();
+  const lock = getLock(props.id);
+  const isEditLocked = lock?.level === 'edit';
   const inInspector = Boolean((props.data as any)?.inspector);
 
   const createToolbar = (): ComponentProps<typeof NodeLayout>['toolbar'] => {
@@ -206,29 +227,62 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
     ];
   };
 
+  useEffect(() => {
+    if ('updateNodeInternals' in reactFlow && typeof reactFlow.updateNodeInternals === 'function') {
+      reactFlow.updateNodeInternals(props.id);
+    }
+  }, [props.id, width, height, reactFlow]);
+
   return (
     <NodeLayout
       id={props.id}
-      data={props.data}
+      data={{ ...props.data, width, height, resizable: false }}
       type={props.type}
       title={props.title}
       toolbar={createToolbar()}
+      className="min-h-[720px]"
     >
-      <div
-        className="nodrag nopan nowheel overflow-auto rounded-xl border bg-background shrink-0"
-        style={inInspector ? { width: '100%', height: '100%' } : { width, height }}
-        onPointerDown={(e) => e.stopPropagation()}
-        onPointerUp={(e) => e.stopPropagation()}
-        onPointerMove={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {provider ? (
-          <TiptapEditor data={props.data} id={props.id} type={props.type} doc={doc} provider={provider} />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            <Loader2Icon className="h-6 w-6 animate-spin" />
+      <div className="flex h-full flex-col gap-3">
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-card/60 px-3 py-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <FileTextIcon className="h-4 w-4" />
+            <span>Live collaborative document</span>
           </div>
-        )}
+          {props.data?.updatedAt ? (
+            <span className="text-xs text-muted-foreground">
+              Last edited {new Date(props.data.updatedAt).toLocaleString()}
+            </span>
+          ) : null}
+        </div>
+
+        <div
+          className="flex-1 overflow-hidden rounded-3xl border border-border bg-card"
+          style={inInspector ? { width: '100%', height: '100%' } : undefined}
+        >
+          <div
+            className="h-full overflow-hidden group-data-[selected=true]:overflow-auto group-data-[lock-level=edit]:overflow-hidden"
+          >
+            <div
+              className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none h-full"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {provider ? (
+                <TiptapEditor
+                  data={props.data}
+                  id={props.id}
+                  type={props.type}
+                  doc={doc}
+                  provider={provider}
+                  readOnly={isEditLocked}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                  <Loader2Icon className="h-6 w-6 animate-spin" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </NodeLayout>
   );

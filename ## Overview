@@ -1,0 +1,98 @@
+## Overview
+<Card title="Try Our New Interactive Playground" href="https://perplexity.ai/account/api/playground/search" horizontal="True" cta="Launch Playground">
+  Test queries and explore parameters in real-time. **No API key required.**
+</Card>
+
+The Search API gives ranked results from Perplexity's continuously refreshed index.
+
+<Info>
+  We recommend using our official SDKs for a more convenient and type-safe way to interact with the Search API.
+</Info>
+
+## Installation
+Install the SDK for your preferred language:
+
+<CodeGroup>
+  ```bash Python
+  pip install perplexityai
+  ```
+
+  ```bash TypeScript/JavaScript
+  npm install @perplexity-ai/perplexity_ai
+  ```
+</CodeGroup>
+
+## Basic Usage
+Start with a basic search query to get relevant web results:
+
+<CodeGroup>
+  ```python Python
+  from perplexity import Perplexity
+
+  client = Perplexity()
+
+  search = client.search.create(
+      query="latest AI developments 2024",
+      max_results=5,
+      max_tokens_per_page=1024
+  )
+
+  for result in search.results:
+      print(f"{result.title}: {result.url}")
+  ```
+
+  ```typescript TypeScript
+  import Perplexity from '@perplexity-ai/perplexity_ai';
+
+  const client = new Perplexity();
+
+  const search = await client.search.create({
+      query: "latest AI developments 2024",
+      maxResults: 5,
+      maxTokensPerPage: 1024
+  });
+
+  for (const result of search.results) {
+      console.log(`${result.title}: ${result.url}`);
+  }
+  ```
+
+  ```javascript JavaScript
+  const Perplexity = require('@perplexity-ai/perplexity_ai');
+
+  const client = new Perplexity();
+
+  async function main() {
+      const search = await client.search.create({
+          query: "latest AI developments 2024",
+          maxResults: 5,
+          maxTokensPerPage: 1024
+      });
+
+      for (const result of search.results) {
+          console.log(`${result.title}: ${result.url}`);
+      }
+  }
+
+  main();
+  ```
+
+  ```bash cURL
+  curl -X POST 'https://api.perplexity.ai/search' \
+    -H 'Authorization: Bearer YOUR_API_KEY' \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "query": "latest AI developments 2024",
+      "max_results": 5,
+      "max_tokens_per_page": 1024
+    }' | jq
+  ```
+</CodeGroup>
+
+<Accordion title="Response">
+  ```json
+  {
+    "results": [
+      {
+        "title": "2024: A year of extraordinary progress and advancement in AI - Google Blog",
+        "url": "https://blog.google/technology/ai/2024-ai-extraordinary-progress-advancement/",

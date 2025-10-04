@@ -41,6 +41,7 @@ export const env = createEnv({
     HUME_API_KEY: z.string().min(1),
     LMNT_API_KEY: z.string().min(1),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
+    FIRECRAWL_API_KEY: z.string().min(1).optional(),
 
     // Other Models
     MINIMAX_GROUP_ID: z.string().min(1),
@@ -106,5 +107,6 @@ export const env = createEnv({
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
     LIVEBLOCKS_SECRET_KEY: process.env.LIVEBLOCKS_SECRET_KEY,
     GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+    FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
   },
 });

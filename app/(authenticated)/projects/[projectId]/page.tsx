@@ -1,11 +1,9 @@
 import { Canvas } from '@/components/canvas';
-import { Controls } from '@/components/controls';
 import { Reasoning } from '@/components/reasoning';
 import { SaveIndicator } from '@/components/save-indicator';
 import { Toolbar } from '@/components/toolbar';
-import { TopLeft } from '@/components/top-left';
-import { TopRight } from '@/components/top-right';
-import { currentUserProfile } from '@/lib/auth';
+import { TopBar } from '@/components/top-bar';
+import { currentUserProfile, currentUser } from '@/lib/auth';
 import { database } from '@/lib/database';
 import { ProjectProvider } from '@/providers/project';
 import { CursorsLayer, LiveblocksRoomProvider, RoomDebugPanel } from '@/providers/liveblocks';
@@ -33,31 +31,35 @@ type ProjectProps = {
 const Project = async ({ params }: ProjectProps) => {
   const { projectId } = await params;
   const profile = await currentUserProfile();
+  const user = await currentUser();
 
-  if (!profile) {
+  if (!profile || !user) {
     return null;
   }
+
 
   if (!profile.onboardedAt) {
     return redirect('/welcome');
   }
 
-  const project = await database.query.projects.findFirst({
-    where: eq(projects.id, projectId),
+  const allProjects = await database.query.projects.findMany({
+    where: eq(projects.userId, user.id),
   });
 
-  if (!project) {
+  const currentProject = allProjects.find((p) => p.id === projectId);
+
+  if (!currentProject) {
     notFound();
   }
+
 
   return (
     <div className="flex h-screen w-screen items-stretch overflow-hidden">
       <div className="relative flex-1" style={{ overscrollBehaviorX: 'none' }}>
         <LiveblocksClientProvider>
             <LiveblocksRoomProvider projectId={projectId}>
-              <ProjectProvider data={project}>
+              <ProjectProvider data={currentProject}>
                 <Canvas debug={profile.debug}>
-                <Controls />
                 <Toolbar />
                 <SaveIndicator />
                 <CursorsLayer />
@@ -66,10 +68,7 @@ const Project = async ({ params }: ProjectProps) => {
               {profile.debug ? <RoomDebugPanel projectId={projectId} /> : null}
             </ProjectProvider>
             <Suspense fallback={null}>
-              <TopLeft id={projectId} />
-            </Suspense>
-            <Suspense fallback={null}>
-              <TopRight id={projectId} />
+              <TopBar projects={allProjects} currentProject={currentProject} profile={profile} />
             </Suspense>
           </LiveblocksRoomProvider>
         </LiveblocksClientProvider>

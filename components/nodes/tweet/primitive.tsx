@@ -55,7 +55,7 @@ export const TweetPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title}>
+    <NodeLayout id={id} data={data} type={type} title={title} className="w-80 min-h-[150px]">
       {data.content?.id ? (
         <div
           className={cn(

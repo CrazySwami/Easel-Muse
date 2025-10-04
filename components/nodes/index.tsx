@@ -7,6 +7,7 @@ import { TextNode } from './text';
 import { TweetNode } from './tweet';
 import { VideoNode } from './video';
 import { VoiceMemoNode } from './voice-memo';
+import { FirecrawlNode } from './firecrawl';
 
 export const nodeTypes = {
   image: ImageNode,
@@ -18,4 +19,5 @@ export const nodeTypes = {
   file: FileNode,
   tweet: TweetNode,
   'voice-memo': VoiceMemoNode,
+  firecrawl: FirecrawlNode,
 };

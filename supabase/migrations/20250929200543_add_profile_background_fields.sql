@@ -1,0 +1,3 @@
+ALTER TABLE profile
+ADD COLUMN light_bg TEXT,
+ADD COLUMN dark_bg TEXT;
