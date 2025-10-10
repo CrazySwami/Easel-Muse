@@ -9,7 +9,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { handleError } from '@/lib/error/handle';
 import { cn } from '@/lib/utils';
 import { useProject } from '@/providers/project';
-import { useState, type ChangeEventHandler, useMemo, useEffect } from 'react';
+import { useState, type ChangeEventHandler, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { FirecrawlNodeProps, FirecrawlMode } from './index';
 import { getIncomers, useReactFlow } from '@xyflow/react';

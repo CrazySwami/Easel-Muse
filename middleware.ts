@@ -1,7 +1,30 @@
 import { updateSession } from '@/lib/supabase/middleware';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const publicPaths = [
+    '/',
+    '/pricing',
+    '/home',
+    '/privacy',
+    '/terms',
+    '/acceptable-use',
+    '/changelog',
+  ];
+
+  // Bypass heavy session logic for public/marketing pages and non-page assets
+  if (
+    publicPaths.includes(path) ||
+    path.startsWith('/auth') ||
+    path.startsWith('/api/webhooks/') ||
+    path.startsWith('/_next/') ||
+    path.startsWith('/api/') ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp|mp3|mp4|ico)$/.test(path)
+  ) {
+    return NextResponse.next();
+  }
+
   return await updateSession(request);
 }
 
