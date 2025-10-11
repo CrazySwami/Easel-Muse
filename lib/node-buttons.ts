@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { CodeIcon, ImageIcon, TextIcon } from 'lucide-react';
-import { GlobeIcon, MonitorIcon, Maximize2Icon } from 'lucide-react';
+import { GlobeIcon, MonitorIcon, Maximize2Icon, SearchIcon } from 'lucide-react';
 import { PerplexityIcon } from '@/lib/icons';
 
 export const nodeButtons = [
@@ -94,7 +94,7 @@ export const nodeButtons = [
   {
     id: 'perplexity',
     label: 'Perplexity',
-    icon: PerplexityIcon,
+    icon: SearchIcon,
     data: {
       width: 1200,
       height: 800,
