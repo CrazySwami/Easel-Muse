@@ -21,7 +21,7 @@ type DropNodeProps = {
 };
 
 export const DropNode = ({ data, id }: DropNodeProps) => {
-  const { addNodes, deleteElements, getNode, addEdges, getEdges } =
+  const { addNodes, deleteElements, getNode, addEdges, getEdges, fitView, setCenter } =
     useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +59,17 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
       origin: [0, 0.5],
       ...rest,
     });
+
+    // Center/zoom on the new node shortly after it mounts
+    try {
+      setTimeout(() => {
+        try {
+          fitView({ nodes: [{ id: newNodeId } as any], padding: 0.2, duration: 350, minZoom: 0.6 });
+        } catch {
+          setCenter(position.x + 200, position.y + 150, { duration: 300, zoom: 0.9 });
+        }
+      }, 10);
+    } catch {}
 
     if (temp) {
       addEdges({
