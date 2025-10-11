@@ -32,7 +32,6 @@ export const AudioPrimitive = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [mode, setMode] = useState<'record' | 'upload'>(data?.content ? 'upload' : 'record');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -226,23 +225,8 @@ export const AudioPrimitive = ({
 
   return (
     <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false }} type={type} title={title}>
-      {/* Mode toggle */}
-      <div className="mb-2 flex items-center gap-2">
-        <div className="inline-flex rounded-full border p-0.5">
-          <Button size="sm" variant={mode === 'record' ? 'default' : 'ghost'} onClick={() => setMode('record')}>Record</Button>
-          <Button size="sm" variant={mode === 'upload' ? 'default' : 'ghost'} onClick={() => setMode('upload')}>Upload</Button>
-        </div>
-        {(isTranscribing || (data as any)?.transcribing) && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
-            <Loader2Icon className="size-3 animate-spin" />
-            Transcribing…
-          </span>
-        )}
-      </div>
-
-      {/* Recording controls (primary action) */}
-      {mode === 'record' && (
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+      {/* Recording controls zone (top) */}
+      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-card/60 px-3 py-2">
           {!isRecording && (
             <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
               <MicIcon className="mr-1" size={14} /> Record
@@ -266,8 +250,13 @@ export const AudioPrimitive = ({
           <span className="text-xs text-muted-foreground">
             {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
           </span>
-        </div>
-      )}
+          {(isTranscribing || (data as any)?.transcribing) && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+              <Loader2Icon className="size-3 animate-spin" />
+              Transcribing…
+            </span>
+          )}
+      </div>
       {isUploading && (
         <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
           <Loader2Icon
@@ -306,8 +295,8 @@ export const AudioPrimitive = ({
           </div>
         </div>
       )}
-      {/* Upload section (second option) */}
-      {!isUploading && mode === 'upload' && (
+      {/* Upload section (bottom zone) */}
+      {!isUploading && (
         <Dropzone
           maxSize={1024 * 1024 * 10}
           minSize={1024}
