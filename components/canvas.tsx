@@ -302,8 +302,8 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     const filteredChanges = changes.filter(change => {
       if (change.type === 'position' && change.dragging) {
         const lock = locksApi.getLock(change.id);
-        // Prevent dragging only when position is locked (move)
-        if (lock && lock.level === 'move') {
+        // Prevent dragging when position is locked (move or full)
+        if (lock && (lock.level === 'move' || lock.level === 'full')) {
           return false;
         }
       }
@@ -697,8 +697,8 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   const nodesWithLock = useMemo(() => {
     return nodes.map((node) => {
       const lock = locksApi.getLock(node.id);
-      // Only the 'move' level should disable dragging; 'edit' only affects inner content
-      const isDraggable = !lock || lock.level !== 'move';
+      // Disable dragging for 'move' and 'full'; allow dragging on 'edit'
+      const isDraggable = !lock || (lock.level !== 'move' && lock.level !== 'full');
 
       return {
         ...node,

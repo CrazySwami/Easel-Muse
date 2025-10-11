@@ -119,8 +119,8 @@ export const NodeLayout = ({
     if (lockedByOther) return lock.label ?? 'Locked';
     return lock.level === 'edit' ? 'Content locked' : 'Position locked';
   }, [lock, lockedByOther]);
-  const isPositionLocked = lock?.level === 'move';
-  const isContentLocked = lock?.level === 'edit';
+  const isPositionLocked = lock?.level === 'move' || lock?.level === 'full';
+  const isContentLocked = lock?.level === 'edit' || lock?.level === 'full';
   const allowIncoming = (data as any)?.allowIncoming ?? true;
   const allowOutgoing = (data as any)?.allowOutgoing ?? true;
 
@@ -272,16 +272,26 @@ export const NodeLayout = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isPositionLocked) {
-                      release(id);
+                      // If currently full, switch to content lock; else unlock
+                      if (lock?.level === 'full') {
+                        acquire(id, 'manual-lock', 'edit');
+                      } else {
+                        release(id);
+                      }
                     } else {
-                      acquire(id, 'manual-lock', 'move');
+                      // If content already locked, escalate to full; else lock position
+                      if (isContentLocked) {
+                        acquire(id, 'manual-lock', 'full');
+                      } else {
+                        acquire(id, 'manual-lock', 'move');
+                      }
                     }
                   }}
                 >
                   <MoveIcon className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{isPositionLocked ? 'Unlock position' : 'Lock position'}</TooltipContent>
+              <TooltipContent>{isPositionLocked ? (lock?.level === 'full' ? 'Switch to content lock' : 'Unlock position') : 'Lock position'}</TooltipContent>
             </Tooltip>
             {/* Content lock (edit) */}
             <Tooltip>
@@ -291,16 +301,24 @@ export const NodeLayout = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isContentLocked) {
-                      release(id);
+                      if (lock?.level === 'full') {
+                        acquire(id, 'manual-lock', 'move');
+                      } else {
+                        release(id);
+                      }
                     } else {
-                      acquire(id, 'manual-lock', 'edit');
+                      if (isPositionLocked) {
+                        acquire(id, 'manual-lock', 'full');
+                      } else {
+                        acquire(id, 'manual-lock', 'edit');
+                      }
                     }
                   }}
                 >
                   <FileLock2Icon className="h-3 w-3" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{isContentLocked ? 'Unlock content' : 'Lock content'}</TooltipContent>
+              <TooltipContent>{isContentLocked ? (lock?.level === 'full' ? 'Switch to position lock' : 'Unlock content') : 'Lock content'}</TooltipContent>
             </Tooltip>
           </div>
         </div>
