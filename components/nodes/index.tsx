@@ -10,7 +10,6 @@ import { VoiceMemoNode } from './voice-memo';
 import { FirecrawlNode } from './firecrawl';
 import { WebRendererNode } from './web-renderer';
 import { PerplexityNode } from './perplexity';
-import { FullscreenDemoNode } from './test-fullscreen';
 
 export const nodeTypes = {
   image: ImageNode,
@@ -25,5 +24,4 @@ export const nodeTypes = {
   firecrawl: FirecrawlNode,
   'web-renderer': WebRendererNode,
   perplexity: PerplexityNode,
-  'fullscreen-demo': FullscreenDemoNode,
 };

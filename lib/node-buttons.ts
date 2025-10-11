@@ -89,7 +89,7 @@ export const nodeButtons = [
     id: 'web-renderer',
     label: 'Web Renderer (HTML/URL)',
     icon: MonitorIcon,
-    data: { resizable: false, width: 1920, height: 1080 },
+    data: { resizable: false, width: 1920, height: 1080, fullscreenSupported: true, fullscreenOnly: false },
   },
   {
     id: 'perplexity',
@@ -105,16 +105,5 @@ export const nodeButtons = [
       fullscreenOnly: false,
     },
   },
-  {
-    id: 'fullscreen-demo',
-    label: 'Fullscreen (overlay demo)',
-    icon: Maximize2Icon,
-    data: {
-      width: 800,
-      height: 600,
-      resizable: false,
-      fullscreenSupported: true,
-      fullscreenOnly: true,
-    },
-  },
+  
 ];
