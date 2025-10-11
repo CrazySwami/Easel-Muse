@@ -74,19 +74,28 @@ export const ToolbarInner = () => {
         maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
         centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
       }
-      // Desired screen-centered location (flow coords)
-      const RIGHT_GAP = 560; // distance from rightmost node to palette center
-      const targetCenterX = maxRight + RIGHT_GAP;
-      const targetCenterY = centerY;
+      // Desired flow-centered location (enforce a minimum gap to the right)
+      const RIGHT_GAP = 600; // flow units
+      const desiredCenterX = Math.max(centerY /*dummy*/, 0); // placeholder to satisfy ts
+      // compute viewport-based center in flow coords
+      const vp0 = getViewport();
+      const centerFlowX = -vp0.x / vp0.zoom + window.innerWidth / 2 / vp0.zoom;
+      const centerFlowY = -vp0.y / vp0.zoom + window.innerHeight / 2 / vp0.zoom;
+      const targetCenterX = Math.max(centerFlowX, maxRight + RIGHT_GAP);
+      const targetCenterY = centerFlowY;
       // Zoom/center first so the palette appears in view
       setCenter(targetCenterX, targetCenterY, { duration: 350, zoom: 0.85 });
-      // Place the drop node after pan to better match final transform
-      const paletteW = 640;
-      const paletteH = 420;
+      // Place the drop node after pan with precise screen-to-flow centering
+      const paletteW = 640; const paletteH = 420;
       setTimeout(() => {
-        const topLeft = { x: targetCenterX - paletteW / 2, y: targetCenterY - paletteH / 2 };
-        addNode('drop', { position: topLeft, data: { position: topLeft } });
-      }, 180);
+        const vp = getViewport();
+        // top-left flow coords corresponding to screen center minus half palette size
+        const topLeft = {
+          x: targetCenterX - (paletteW / 2) / vp.zoom,
+          y: targetCenterY - (paletteH / 2) / vp.zoom,
+        };
+        addNode('drop', { position: topLeft, data: { position: topLeft, anchorRight: maxRight } });
+      }, 200);
     } catch (e) {
       // fallback: just toggle open list if something goes wrong
       setIsOpen(true);
