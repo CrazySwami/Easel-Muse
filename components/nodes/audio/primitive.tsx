@@ -169,6 +169,25 @@ export const AudioPrimitive = ({
       setFiles(files);
       const [file] = files;
 
+      // Validate MIME/extension before attempting upload
+      const allowedMime = new Set([
+        'audio/mpeg', // mp3
+        'audio/wav',
+        'audio/webm',
+        'audio/mp4', // m4a/mp4
+        'audio/ogg',
+      ]);
+      const allowedExt = new Set(['mp3', 'wav', 'webm', 'm4a', 'mp4', 'ogg']);
+      const ext = String(file.name.split('.').pop() || '').toLowerCase();
+      if (!allowedMime.has(file.type) && !allowedExt.has(ext)) {
+        handleError(
+          'Error uploading audio',
+          'Unsupported audio type. Allowed: MP3, WAV, WEBM, M4A/MP4, OGG.'
+        );
+        setIsUploading(false);
+        return;
+      }
+
       // Enforce explicit upload size limit (matches Dropzone maxSize)
       const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
       if (file.size > MAX_UPLOAD_BYTES) {
@@ -206,6 +225,7 @@ export const AudioPrimitive = ({
 
   return (
     <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false }} type={type} title={title}>
+      {/* Recording controls (primary action) */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {!isRecording && (
           <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
@@ -275,7 +295,8 @@ export const AudioPrimitive = ({
           </div>
         </div>
       )}
-      {!isUploading && !data.content && (
+      {/* Upload section (second option) */}
+      {!isUploading && (
         <Dropzone
           maxSize={1024 * 1024 * 10}
           minSize={1024}
