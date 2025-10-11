@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { useLocks } from '@/providers/locks';
 import { useNodeOperations } from '@/providers/node-operations';
 import { Handle, Position, useReactFlow, NodeResizer, NodeToolbar as NodeToolbarRaw } from '@xyflow/react';
-import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon, Maximize2Icon, XIcon, Minimize2Icon, FileLock2Icon } from 'lucide-react';
+import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon, Maximize2Icon, XIcon, Minimize2Icon, FileLock2Icon, MoveIcon } from 'lucide-react';
 import { Fragment, type ReactNode, useState, useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { createPortal } from 'react-dom';
@@ -213,71 +213,95 @@ export const NodeLayout = ({
       {!inInspector && !isFullscreen && type !== 'drop' && (
         <div className="mb-3 flex w-full items-center justify-between rounded-lg bg-emerald-600 px-2 py-1 text-white shadow">
           <div className="flex items-center gap-1">
-            <button
-              className="inline-flex h-6 w-6 items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
-              title="Delete"
-              onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-            >
-              <XIcon className="h-3 w-3" />
-            </button>
-            <button
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
-              title="Duplicate"
-              onClick={(e) => { e.stopPropagation(); duplicateNode(id); }}
-            >
-              <CopyIcon className="h-3 w-3" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="inline-flex h-6 w-6 items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                >
+                  <XIcon className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
+                  onClick={(e) => { e.stopPropagation(); duplicateNode(id); }}
+                >
+                  <CopyIcon className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicate</TooltipContent>
+            </Tooltip>
             {/* Show data */}
-            <button
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
-              title="Show data"
-              onClick={(e) => { e.stopPropagation(); setShowData(true); }}
-            >
-              <CodeIcon className="h-3 w-3" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
+                  onClick={(e) => { e.stopPropagation(); setShowData(true); }}
+                >
+                  <CodeIcon className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Show data</TooltipContent>
+            </Tooltip>
+            {/* Fullscreen on left cluster */}
+            {fullscreenSupported && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
+                    onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
+                  >
+                    <Maximize2Icon className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Enter fullscreen</TooltipContent>
+              </Tooltip>
+            )}
           </div>
-          {fullscreenSupported && (
-            <button
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
-              title="Enter fullscreen"
-              onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
-            >
-              <Maximize2Icon className="h-3 w-3" />
-            </button>
-          )}
           {/* Right-side locks */}
           <div className="flex items-center gap-1">
             {/* Position lock (move) */}
-            <button
-              className={cn('inline-flex h-6 w-6 items-center justify-center rounded bg-white text-emerald-700 hover:bg-white', isPositionLocked && 'ring-2 ring-white/80')}
-              title={isPositionLocked ? 'Unlock position' : 'Lock position'}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isPositionLocked) {
-                  release(id);
-                } else {
-                  acquire(id, 'manual-lock', 'move');
-                }
-              }}
-            >
-              {/* Use <> as a move/position indicator */}
-              <span className="text-[10px] font-bold">⇕</span>
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn('inline-flex h-6 w-6 items-center justify-center rounded-full text-white', isPositionLocked ? 'bg-white text-emerald-700' : 'hover:bg-white/10')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isPositionLocked) {
+                      release(id);
+                    } else {
+                      acquire(id, 'manual-lock', 'move');
+                    }
+                  }}
+                >
+                  <MoveIcon className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{isPositionLocked ? 'Unlock position' : 'Lock position'}</TooltipContent>
+            </Tooltip>
             {/* Content lock (edit) */}
-            <button
-              className={cn('inline-flex h-6 w-6 items-center justify-center rounded bg-white text-emerald-700 hover:bg-white', isContentLocked && 'ring-2 ring-white/80')}
-              title={isContentLocked ? 'Unlock content' : 'Lock content'}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isContentLocked) {
-                  release(id);
-                } else {
-                  acquire(id, 'manual-lock', 'edit');
-                }
-              }}
-            >
-              <FileLock2Icon className="h-3 w-3" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn('inline-flex h-6 w-6 items-center justify-center rounded-full text-white', isContentLocked ? 'bg-white text-emerald-700' : 'hover:bg-white/10')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isContentLocked) {
+                      release(id);
+                    } else {
+                      acquire(id, 'manual-lock', 'edit');
+                    }
+                  }}
+                >
+                  <FileLock2Icon className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{isContentLocked ? 'Unlock content' : 'Lock content'}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       )}
@@ -315,7 +339,7 @@ export const NodeLayout = ({
           )}
           <ContextMenuSub>
             <ContextMenuSubTrigger>
-              <LockIcon size={12} className="mr-2" />
+            <LockIcon size={12} className="mr-2" />
               <span>Lock state</span>
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
@@ -330,7 +354,7 @@ export const NodeLayout = ({
                 }}
               >
                 <ContextMenuRadioItem value="unlocked">
-                  <UnlockIcon size={12} className="mr-2" />
+            <UnlockIcon size={12} className="mr-2" />
                   <span>Unlocked</span>
                 </ContextMenuRadioItem>
                 <ContextMenuRadioItem value="move">
