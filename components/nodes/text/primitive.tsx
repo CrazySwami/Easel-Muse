@@ -53,7 +53,7 @@ export const TextPrimitive = ({
   return (
     <NodeLayout
       id={id}
-      data={{ ...data, width: 560, height: 420, resizable: false }}
+      data={{ ...data, width: 680, height: 520, resizable: false }}
       type={type}
       title={title}
       toolbar={toolbar}
