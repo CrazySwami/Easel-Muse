@@ -7,9 +7,9 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { nodeButtons } from '@/lib/node-buttons';
-import { type XYPosition, useReactFlow } from '@xyflow/react';
+import { type XYPosition, useReactFlow, useStore } from '@xyflow/react';
 import { nanoid } from 'nanoid';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { NodeLayout } from './layout';
 
 type DropNodeProps = {
@@ -21,10 +21,17 @@ type DropNodeProps = {
 };
 
 export const DropNode = ({ data, id }: DropNodeProps) => {
-  const { addNodes, deleteElements, getNode, addEdges, getEdges, getViewport } =
+  const { addNodes, deleteElements, getNode, addEdges, getEdges } =
     useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Track current canvas zoom to scale the palette for readability when zoomed out
+  const zoom = useStore((s: any) => (Array.isArray(s.transform) ? s.transform[2] : s.zoom ?? 1));
+  const scale = useMemo(() => {
+    if (!zoom || typeof zoom !== 'number') return 1;
+    // Upscale when zoomed out (<1), keep at 1 otherwise; clamp to 2x
+    return Math.min(2, zoom < 1 ? 1 / zoom : 1);
+  }, [zoom]);
 
   const handleSelect = (type: string, options?: Record<string, unknown>) => {
     // Get the position of the current node
@@ -64,22 +71,6 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
   };
 
   useEffect(() => {
-    // Autofocus the search input when opened
-    const t = setTimeout(() => {
-      const input = ref.current?.querySelector(
-        'input[data-slot="command-input"]'
-      ) as HTMLInputElement | null;
-      input?.focus();
-      input?.select?.();
-    }, 0);
-
-    // Size the palette relative to current viewport zoom so it remains legible when zoomed out
-    try {
-      const { zoom } = getViewport();
-      const s = Math.max(1, Math.min(1.8, 1.2 / Math.max(zoom, 0.1)));
-      setScale(s);
-    } catch {}
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         // Delete the drop node when Escape is pressed
@@ -105,21 +96,23 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
 
     setTimeout(() => {
       window.addEventListener('click', handleClick);
+      // Autofocus the search input after mount
+      requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
     }, 50);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('click', handleClick);
-      clearTimeout(t);
     };
-  }, [deleteElements, getViewport, id]);
+  }, [deleteElements, id]);
 
   return (
     <div ref={ref} className="relative z-[10010]">
       <NodeLayout id={id} data={data} type="drop" title="Add a new node">
-        <Command className="rounded-3xl shadow-xl w-[420px] max-h-[70vh] overflow-hidden bg-card" style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          <CommandInput placeholder="Type a command or search..." />
-          <CommandList className="max-h-[58vh] overflow-auto">
+        <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          <Command className="rounded-3xl shadow-xl w-[420px] max-h-[70vh] overflow-hidden bg-card">
+            <CommandInput ref={inputRef} placeholder="Type a command or search..." />
+            <CommandList className="max-h-[58vh] overflow-auto">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup heading="Add node">
               {nodeButtons
@@ -136,8 +129,9 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
                   </CommandItem>
                 ))}
             </CommandGroup>
-          </CommandList>
-        </Command>
+            </CommandList>
+          </Command>
+        </div>
       </NodeLayout>
     </div>
   );
