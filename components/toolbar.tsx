@@ -61,8 +61,9 @@ export const ToolbarInner = () => {
         const rights = nodes.map((n) => (n.position?.x ?? 0) + ((n.width as number) ?? 0));
         maxRight = Math.max(0, ...rights);
         // Middle Y of current viewport
-        const vp = getViewport();
-        centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
+      const vp = getViewport();
+      // target vertical center of current viewport
+      centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
       } else {
         const vp = getViewport();
         maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
@@ -75,7 +76,7 @@ export const ToolbarInner = () => {
       setCenter(targetCenterX, targetCenterY, { duration: 350, zoom: 0.9 });
       // Place the drop node so its UI is visually centered (approximate dims)
       const paletteW = 640; // slightly wider to better center
-      const paletteH = 380; // approximate
+      const paletteH = 420; // tune for vertical center visual alignment
       const topLeft = { x: targetCenterX - paletteW / 2, y: targetCenterY - paletteH / 2 };
       addNode('drop', { position: topLeft, data: { position: topLeft } });
     } catch (e) {

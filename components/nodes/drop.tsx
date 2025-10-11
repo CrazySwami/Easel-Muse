@@ -64,9 +64,9 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
     try {
       setTimeout(() => {
         try {
-          fitView({ nodes: [{ id: newNodeId } as any], padding: 0.2, duration: 350, minZoom: 0.6 });
+          fitView({ nodes: [{ id: newNodeId } as any], padding: 0.3, duration: 400, minZoom: 0.5 });
         } catch {
-          setCenter(position.x + 200, position.y + 150, { duration: 300, zoom: 0.9 });
+          setCenter(position.x + 200, position.y + 150, { duration: 350, zoom: 0.8 });
         }
       }, 10);
     } catch {}
