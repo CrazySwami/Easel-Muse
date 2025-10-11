@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { useLocks } from '@/providers/locks';
 import { useNodeOperations } from '@/providers/node-operations';
 import { Handle, Position, useReactFlow, NodeResizer, NodeToolbar as NodeToolbarRaw } from '@xyflow/react';
-import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon, CheckIcon } from 'lucide-react';
+import { CodeIcon, CopyIcon, EyeIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
 import { Fragment, type ReactNode, useState, useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
@@ -32,6 +32,13 @@ type NodeLayoutProps = {
     model?: string;
     source?: string;
     generated?: object;
+    width?: number;
+    height?: number;
+    resizable?: boolean;
+    minWidth?: number;
+    maxWidth?: number;
+    minHeight?: number;
+    maxHeight?: number;
   };
   title: string;
   type: string;
@@ -40,16 +47,6 @@ type NodeLayoutProps = {
     children: ReactNode;
   }[];
   className?: string;
-};
-
-type NodeToolbarProps = {
-  id: string;
-  items:
-    | {
-        tooltip?: string;
-        children: ReactNode;
-      }[]
-    | undefined;
 };
 
 export const NodeLayout = ({
@@ -66,146 +63,79 @@ export const NodeLayout = ({
   const { getLock, acquire, release, me } = useLocks();
   const [showData, setShowData] = useState(false);
 
+  // Layout intelligence: determines if the node is "Fill Frame" or "Hug Content"
+  const isFillFrame = Boolean((data as any)?.height);
   const isResizable = Boolean((data as any)?.resizable) && type !== 'tiptap';
   const desiredWidth = (data as any)?.width as number | undefined;
   const desiredHeight = (data as any)?.height as number | undefined;
   const isSelected = Boolean(getNode(id)?.selected);
   const inInspector = Boolean((data as any)?.inspector);
 
-  const handleFocus = () => {
-    const node = getNode(id);
-
-    if (!node) {
-      return;
-    }
-
-    const { x, y } = node.position;
-    const width = node.measured?.width ?? 0;
-
-    setCenter(x + width / 2, y, {
-      duration: 1000,
-    });
-  };
-
-  const handleDelete = () => {
-    deleteElements({
-      nodes: [{ id }],
-    });
-  };
-
-  const handleShowData = () => {
-    setTimeout(() => {
-      setShowData(true);
-    }, 100);
-  };
+  const handleDelete = () => deleteElements({ nodes: [{ id }] });
+  const handleShowData = () => setShowData(true);
 
   const handleSelect = (open: boolean) => {
-    if (!open) {
-      return;
-    }
-
-    const node = getNode(id);
-
-    if (!node) {
-      return;
-    }
-
-    if (!node.selected) {
+    if (open && !getNode(id)?.selected) {
       updateNode(id, { selected: true });
     }
   };
 
   const lock = getLock(id);
   const isLocked = Boolean(lock);
-  const lockedByGenerating = lock?.reason === 'generating';
   const lockedByOther = isLocked && lock?.userId !== me?.userId;
 
   const lockLabel = useMemo(() => {
     if (!lock) return null;
     if (lock.reason === 'generating') return 'Generating...';
     if (lockedByOther) return lock.label ?? 'Locked';
-    if (lock.level === 'edit') return 'Locked (you)';
-    if (lock.level === 'move') return 'Position locked (you)';
-    return 'Locked (you)';
+    return lock.level === 'edit' ? 'Locked (you)' : 'Position locked (you)';
   }, [lock, lockedByOther]);
-
 
   return (
     <>
-      {!inInspector && toolbar && Boolean(toolbar.length) && (
-        <NodeToolbarRaw
-          isVisible={isSelected}
-          position={Position.Bottom}
-          className="flex items-center gap-1 rounded-full bg-background/40 p-1.5 backdrop-blur-sm"
-        >
-          {toolbar?.map((button: any, index: number) =>
+      {toolbar && (
+        <NodeToolbarRaw isVisible={isSelected} position={Position.Bottom} className="flex items-center gap-1 rounded-full bg-background/40 p-1.5 backdrop-blur-sm">
+          {toolbar.map((button, index) =>
             button.tooltip ? (
-              <Tooltip key={button.tooltip}>
-                <TooltipTrigger asChild>{button.children}</TooltipTrigger>
-                <TooltipContent>{button.tooltip}</TooltipContent>
-              </Tooltip>
+              <Tooltip key={index}><TooltipTrigger asChild>{button.children}</TooltipTrigger><TooltipContent>{button.tooltip}</TooltipContent></Tooltip>
             ) : (
               <Fragment key={index}>{button.children}</Fragment>
             )
           )}
         </NodeToolbarRaw>
       )}
-      {/* handles removed in layout; Position enum not used */}
       <ContextMenu onOpenChange={handleSelect}>
         <ContextMenuTrigger>
           <div
-            className={cn(
-              'relative',
-              inInspector ? 'h-full w-full' : 'size-full h-auto'
-            )}
-            style={
-              !inInspector && (isResizable || desiredWidth || desiredHeight)
-                ? {
-                    width: desiredWidth,
-                    height: desiredHeight,
-                  }
-                : undefined
-            }
+            className="relative"
+            style={isResizable || desiredWidth || desiredHeight ? { width: desiredWidth, height: desiredHeight } : {}}
           >
             {!inInspector && type !== 'drop' && (
-              <div className="-translate-y-full -top-2 absolute right-0 left-0 flex shrink-0 items-center justify-between">
-                <p className="font-mono text-muted-foreground text-xs tracking-tighter">
-                  {title}
-                </p>
+              <div className="-top-2 -translate-y-full absolute left-0 right-0 flex shrink-0 items-center justify-between">
+                <p className="font-mono text-xs tracking-tighter text-muted-foreground">{title}</p>
               </div>
             )}
             <div
               className={cn(
-                inInspector
-                  ? 'node-container flex h-full w-full flex-col bg-transparent p-0 ring-0 rounded-none'
-                  : type === 'tiptap'
-                  ? 'node-container inline-flex flex-col divide-y rounded-[28px] bg-card p-2 ring-1 ring-border transition-all'
-                  : 'node-container flex size-full flex-col divide-y rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
+                'node-container rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
+                isFillFrame ? 'flex h-full flex-col' : 'inline-flex flex-col',
                 lockedByOther && 'pointer-events-none',
                 className
               )}
-              style={isLocked && !inInspector && lock?.color ? { boxShadow: `0 0 0 2px ${lock.color}` } : undefined}
+              style={isLocked ? { boxShadow: `0 0 0 2px ${lock?.color}` } : {}}
             >
-              {isResizable && !inInspector ? (
-                <NodeResizer
-                  color={'hsl(var(--primary))'}
-                  minWidth={160}
-                  minHeight={120}
-                  isVisible={isSelected}
-                  handleStyle={{ width: 10, height: 10, borderRadius: 6, background: 'hsl(var(--primary))', zIndex: 50 }}
-                  lineStyle={{ borderColor: 'hsl(var(--primary))', zIndex: 40 }}
-                />
-              ) : null}
-              <div
-                className={cn(
-                  'overflow-hidden rounded-3xl bg-card',
-                  lock?.level === 'edit' && 'pointer-events-none'
-                )}
-                style={{ height: '100%' }}
-              >
+              {isResizable && !inInspector && <NodeResizer 
+                color="hsl(var(--primary))" 
+                isVisible={isSelected}
+                minWidth={data?.minWidth}
+                maxWidth={data?.maxWidth}
+                minHeight={data?.minHeight}
+                maxHeight={data?.maxHeight}
+              />}
+              <div className={cn('overflow-hidden rounded-3xl bg-card', lock?.level === 'edit' && 'pointer-events-none', isFillFrame && 'h-full w-full')}>
                 {children}
               </div>
-              {!inInspector && isLocked && (
+              {isLocked && !inInspector && (
                 <div className="pointer-events-none absolute -top-2 -right-2 flex items-center gap-1 rounded-full bg-card/90 px-2 py-1 text-xs text-muted-foreground ring-1 ring-border">
                   <LockIcon size={12} />
                   {lockLabel}
@@ -250,7 +180,7 @@ export const NodeLayout = ({
             <CopyIcon size={12} />
             <span>Duplicate</span>
           </ContextMenuItem>
-          <ContextMenuItem onClick={handleFocus}>
+          <ContextMenuItem onClick={() => setShowData(true)}>
             <EyeIcon size={12} />
             <span>Focus</span>
           </ContextMenuItem>
@@ -270,7 +200,6 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      {/* Conventional handles: left = target, right = source */}
       {type !== 'drop' && <Handle type="target" position={Position.Left} />}
       {type !== 'video' && <Handle type="source" position={Position.Right} />}
       <Dialog open={showData} onOpenChange={setShowData}>

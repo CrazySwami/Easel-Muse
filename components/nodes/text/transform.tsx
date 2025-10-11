@@ -215,6 +215,16 @@ export const TextTransform = ({
     toast.success('Copied to clipboard');
   }, []);
 
+  const generatedText = useMemo(() => {
+    if (messages.length > 0) {
+      return messages
+        .filter((m) => m.role === 'assistant')
+        .map((m) => m.parts.find((p) => p.type === 'text')?.text ?? '')
+        .join('\n');
+    }
+    return data.generated?.text;
+  }, [messages, data.generated?.text]);
+  
   const toolbar = useMemo(() => {
     const items: ComponentProps<typeof NodeLayout>['toolbar'] = [];
 
@@ -244,17 +254,7 @@ export const TextTransform = ({
           </Button>
         ),
       });
-    } else if (messages.length || data.generated?.text) {
-      const text = messages.length
-        ? messages
-            .filter((message) => message.role === 'assistant')
-            .map(
-              (message) =>
-                message.parts.find((part) => part.type === 'text')?.text ?? ''
-            )
-            .join('\n')
-        : data.generated?.text;
-
+    } else if (generatedText) {
       items.push({
         tooltip: 'Regenerate',
         children: (
@@ -274,8 +274,8 @@ export const TextTransform = ({
           <Button
             size="icon"
             className="rounded-full"
-            disabled={!text}
-            onClick={() => handleCopy(text ?? '')}
+            disabled={!generatedText}
+            onClick={() => handleCopy(generatedText ?? '')}
             variant="ghost"
           >
             <CopyIcon size={12} />
@@ -314,7 +314,7 @@ export const TextTransform = ({
 
     return items;
   }, [
-    data.generated?.text,
+    generatedText,
     data.updatedAt,
     handleGenerate,
     updateNodeData,
@@ -341,92 +341,58 @@ export const TextTransform = ({
   }, [messages, reasoning, status, setReasoning]);
 
   return (
-    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar} className="w-80 max-h-[36rem]">
-      <div className="nowheel flex-1 rounded-t-3xl rounded-b-xl bg-secondary/50 p-4 flex flex-col h-full">
-        {/* Fixed top part */}
-        <div className="flex-shrink-0">
-          {status === 'submitted' ? (
+    <NodeLayout
+      id={id}
+      data={{ ...data, width: 560, height: 420, resizable: false }}
+      type={type}
+      title={title}
+      toolbar={toolbar}
+    >
+      {/* "Fill Frame" Pattern: Direct child has h-full */}
+      <div className="flex h-full flex-col">
+
+        {/* 1. Main Content Area (Scrollable) */}
+        <div className="nowheel flex-1 bg-secondary/50 p-4 overflow-auto">
+          {status === 'submitted' && (
             <div className="flex flex-col gap-2 py-2">
               <Skeleton className="h-3 w-[90%] animate-pulse rounded-md" />
               <Skeleton className="h-3 w-[75%] animate-pulse rounded-md" />
               <Skeleton className="h-3 w-[85%] animate-pulse rounded-md" />
             </div>
-          ) : (
-            <div className="flex items-center justify-center py-3">
-              <p className="text-xs text-muted-foreground">
-                Press <PlayIcon size={10} className="-translate-y-px inline" /> to generate text
-              </p>
-            </div>
+          )}
+
+          {status !== 'submitted' && !generatedText && (
+             <div className="flex h-full items-center justify-center">
+               <p className="text-xs text-muted-foreground">
+                 Press <PlayIcon size={10} className="-translate-y-px inline" /> to generate text
+               </p>
+             </div>
+          )}
+          
+          {generatedText && (
+             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-p:leading-snug prose-headings:font-semibold prose-pre:bg-muted prose-pre:border prose-pre:border-border">
+               <ReactMarkdown>{generatedText}</ReactMarkdown>
+             </div>
           )}
         </div>
 
-        {/* Scrollable bottom part */}
-        {(data.generated?.text || nonUserMessages.length > 0) && (
-          <div className="overflow-auto flex-1 mt-2 pt-2 border-t">
-            {data.generated?.text && !nonUserMessages.length && status !== 'submitted' && (
-              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-p:leading-snug prose-headings:font-semibold prose-pre:bg-muted prose-pre:border prose-pre:border-border">
-                <ReactMarkdown>{data.generated.text}</ReactMarkdown>
-              </div>
-            )}
-
-            {Boolean(nonUserMessages.length) && status !== 'submitted' &&
-              nonUserMessages.map((message) => (
-                <AIMessage
-                  key={message.id}
-                  from={message.role === 'assistant' ? 'assistant' : 'user'}
-                  className="p-0 [&>div]:max-w-none"
-                >
-                  <div>
-                    {Boolean(
-                      message.parts.filter((part) => part.type === 'source-url')?.length
-                    ) && (
-                      <AISources>
-                        <AISourcesTrigger
-                          count={
-                            message.parts.filter(
-                              (part) => part.type === 'source-url'
-                            ).length
-                          }
-                        />
-                        <AISourcesContent>
-                          {message.parts
-                            .filter((part) => part.type === 'source-url')
-                            .map(({ url, title }) => (
-                              <AISource
-                                key={url ?? ''}
-                                href={url}
-                                title={title ?? new URL(url).hostname}
-                              />
-                            ))}
-                        </AISourcesContent>
-                      </AISources>
-                    )}
-                    <AIMessageContent className="bg-transparent p-0">
-                      <AIResponse>
-                        {message.parts.find((part) => part.type === 'text')?.text ?? ''}
-                      </AIResponse>
-                    </AIMessageContent>
-                  </div>
-                </AIMessage>
-            ))}
-          </div>
-        )}
+        {/* 2. Instructions (Fixed Height) */}
+        <Textarea
+          value={data.instructions ?? ''}
+          onChange={handleInstructionsChange}
+          placeholder="Add additional context or guidance"
+          rows={4}
+          className="shrink-0 resize-none rounded-none border-x-0 border-b-0 border-t border-border bg-muted/30 px-4 py-3 text-sm placeholder:text-muted-foreground/60 shadow-none transition-colors focus-visible:bg-muted/50 focus-visible:ring-0"
+        />
+        
+        <ReasoningTunnel.In>
+          {messages.flatMap((message) =>
+            message.parts
+              .filter((part) => part.type === 'reasoning')
+              .flatMap((part) => part.text ?? '')
+          )}
+        </ReasoningTunnel.In>
       </div>
-      <Textarea
-        value={data.instructions ?? ''}
-        onChange={handleInstructionsChange}
-        placeholder="Add additional context or guidance"
-        rows={3}
-        className="shrink-0 resize-none rounded-none border-none bg-muted/30 px-4 py-3 text-sm placeholder:text-muted-foreground/60 shadow-none transition-colors focus-visible:bg-muted/50 focus-visible:ring-0"
-      />
-      <ReasoningTunnel.In>
-        {messages.flatMap((message) =>
-          message.parts
-            .filter((part) => part.type === 'reasoning')
-            .flatMap((part) => part.text ?? '')
-        )}
-      </ReasoningTunnel.In>
     </NodeLayout>
   );
-}
-;
+};

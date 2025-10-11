@@ -134,15 +134,66 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
 
 
     return (
-      <div className="w-full">
-        {editor && (
-          <Toolbar
-            editor={editor}
-            className="lb-toolbar-compact flex h-9 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-border px-3 text-sm [&_*]:!text-sm [&_svg]:!h-4 [&_svg]:!w-4 [&_button]:!h-8 [&_button]:!px-1"
-          />
-        )}
-        <EditorContent editor={editor} className="w-full bg-card p-3" />
-      </div>
+        <div className="lb-tiptap flex h-full w-full flex-col">
+            {editor && (
+                <div className="sticky top-0 z-10 bg-primary text-primary-foreground [&_svg]:text-primary-foreground [&_button]:text-primary-foreground">
+                    <Toolbar
+                      editor={editor}
+                      className="lb-toolbar-compact flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-2 text-sm leading-none
+                      [&_*]:!text-sm [&_*]:!leading-none
+                      [&_svg]:!h-4 [&_svg]:!w-4
+                      [&_button]:!h-8 [&_button]:!min-w-8 [&_button]:!w-8 [&_button]:!px-0 [&_button]:!py-0 [&_button]:!rounded-md [&_button]:shrink-0
+                      [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!h-8 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!px-2 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:shrink-0"/>
+                </div>
+            )}
+            {editor && (
+                <BubbleMenu
+                    editor={editor}
+                    tippyOptions={{ duration: 100 }}
+                    className="flex items-center gap-1 rounded-md border bg-background p-1 shadow-md"
+                >
+                    <button
+                        onClick={() => editor.chain().focus().toggleBold().run()}
+                        className={`rounded-md p-2 hover:bg-muted ${editor.isActive('bold') ? 'bg-muted' : ''}`}
+                    >
+                        <BoldIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().toggleItalic().run()}
+                        className={`rounded-md p-2 hover:bg-muted ${editor.isActive('italic') ? 'bg-muted' : ''}`}
+                    >
+                        <ItalicIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().toggleStrike().run()}
+                        className={`rounded-md p-2 hover:bg-muted ${editor.isActive('strike') ? 'bg-muted' : ''}`}
+                    >
+                        <StrikethroughIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                        className={`rounded-md p-2 hover:bg-muted ${editor.isActive('heading', { level: 1 }) ? 'bg-muted' : ''}`}
+                    >
+                        <Heading1Icon className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                        className={`rounded-md p-2 hover:bg-muted ${editor.isActive('heading', { level: 2 }) ? 'bg-muted' : ''}`}
+                    >
+                        <Heading2Icon className="h-4 w-4" />
+                    </button>
+                </BubbleMenu>
+            )}
+            <div className="relative h-full w-full">
+                <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
+                {editor && (
+                    <>
+                        <FloatingThreads threads={threads ?? []} editor={editor} className="lb-threads" />
+                        <FloatingComposer editor={editor} className="lb-composer w-[350px]" />
+                    </>
+                )}
+            </div>
+        </div>
     );
 };
 
@@ -155,10 +206,9 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
   const { doc, provider } = useYDoc();
   const reactFlow = useReactFlow();
   
-  // Allow per-node overrides; prefer width default only so height is content-driven
+  // Allow per-node overrides via data.width/height
   const width = (props.data as any)?.width ?? 680;
-  // Intentionally ignore persisted height to keep content-driven sizing
-  const height = undefined as number | undefined;
+  const height = (props.data as any)?.height ?? 840;
   const { getLock } = useLocks();
   const lock = getLock(props.id);
   const isEditLocked = lock?.level === 'edit';
@@ -183,20 +233,17 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
     }
   }, [props.id, width, height, reactFlow]);
 
-  // Strip any persisted height from incoming data
-  const { height: _dropHeight, ...restData } = (props.data as any) ?? {};
-
   return (
     <NodeLayout
       id={props.id}
-      data={{ ...restData, width, height, resizable: false }}
+      data={{ ...props.data, width, height, resizable: false }}
       type={props.type}
       title={props.title}
       toolbar={createToolbar()}
+      className="min-h-[720px]"
     >
-      {/* Wrapper per guide: flex-col, no flex-1/h-full */}
-      <div className="flex flex-col gap-3 p-3">
-        {/* Fixed header */}
+      {/* "Fill Frame" Pattern: Direct child has h-full */}
+      <div className="flex h-full flex-col gap-3 p-3">
         <div className="shrink-0 flex items-center justify-between rounded-2xl border border-border bg-card/60 px-3 py-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <FileTextIcon className="h-4 w-4" />
@@ -209,11 +256,16 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
           ) : null}
         </div>
 
-        {/* Main content (grows only when node is tall) */}
-        <div className="overflow-hidden rounded-3xl border border-border bg-card">
-          <div className="overflow-hidden group-data-[selected=true]:overflow-auto group-data-[lock-level=edit]:overflow-hidden">
+        {/* Editor Content: flex-1 makes it grow and overflow-auto enables scrolling */}
+        <div
+          className="flex-1 overflow-auto rounded-3xl border border-border bg-card"
+          style={inInspector ? { width: '100%', height: '100%' } : undefined}
+        >
+          <div
+            className="h-full"
+          >
             <div
-              className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none"
+              className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none h-full"
               onPointerDown={(event) => event.stopPropagation()}
             >
               {provider ? (

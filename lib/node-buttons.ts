@@ -15,6 +15,14 @@ export const nodeButtons = [
     id: 'text',
     label: 'Text',
     icon: TextIcon,
+    data: {
+      source: 'primitive',
+      text: '',
+      width: 560,
+      height: 420,
+      resizable: false,
+    },
+    className: 'bg-primary/20 text-primary',
   },
   {
     id: 'image',
@@ -37,8 +45,7 @@ export const nodeButtons = [
     icon: FileTextIcon,
     data: {
       resizable: false,
-      width: 1440,
-      height: 1600,
+      width: 640,
     },
   },
   {
@@ -75,5 +82,20 @@ export const nodeButtons = [
     id: 'tweet',
     label: 'Tweet',
     icon: SiX,
+  },
+  {
+    id: 'web-renderer',
+    label: 'Web Renderer',
+    icon: GlobeIcon,
+    data: { resizable: false, width: 1920, height: 1080 },
+  },
+  {
+    id: 'custom',
+    label: 'Custom',
+    icon: FileTextIcon,
+    data: {
+      resizable: false,
+      width: 560,
+    },
   },
 ];

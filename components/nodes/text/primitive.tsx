@@ -1,12 +1,11 @@
-import { EditorProvider } from '@/components/ui/kibo-ui/editor';
-import { cn } from '@/lib/utils';
-import { useProject } from '@/providers/project';
-import type { Editor, EditorEvents } from '@tiptap/core';
+import { NodeLayout } from '@/components/nodes/layout';
+import { Textarea } from '@/components/ui/textarea';
 import { useReactFlow } from '@xyflow/react';
-import { useEffect, useRef } from 'react';
-import { useLocks } from '@/providers/locks';
+import { type ChangeEventHandler, type ComponentProps, useCallback } from 'react';
 import type { TextNodeProps } from '.';
-import { NodeLayout } from '../layout';
+import { CopyIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 type TextPrimitiveProps = TextNodeProps & {
   title: string;
@@ -19,68 +18,54 @@ export const TextPrimitive = ({
   title,
 }: TextPrimitiveProps) => {
   const { updateNodeData } = useReactFlow();
-  const editor = useRef<Editor | null>(null);
-  const project = useProject();
-  const { getLock } = useLocks();
-  const lock = getLock(id);
-  const isEditLocked = lock?.level === 'edit';
 
-  const handleUpdate = ({ editor }: { editor: Editor }) => {
-    const json = editor.getJSON();
-    const text = editor.getText();
-
-    updateNodeData(id, { content: json, text });
+  const handleTextChange: ChangeEventHandler<HTMLTextAreaElement> = (event) => {
+    updateNodeData(id, {
+      text: event.target.value,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
-  const handleCreate = (props: EditorEvents['create']) => {
-    editor.current = props.editor;
+  const handleCopy = useCallback(() => {
+    if (!data.text) return;
+    navigator.clipboard.writeText(data.text);
+    toast.success('Copied to clipboard');
+  }, [data.text]);
 
-    if (project) {
-      props.editor.chain().focus().run();
-    }
-  };
-
-  useEffect(() => {
-    if (!editor.current) return;
-
-    const instance = editor.current;
-    instance.setEditable(!isEditLocked);
-    if (isEditLocked) {
-      instance.commands.blur();
-    }
-  }, [isEditLocked]);
+  const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    { children: <div className="px-2 text-xs text-muted-foreground">Plain text</div> },
+    {
+      tooltip: 'Copy',
+      children: (
+        <Button
+          size="icon"
+          className="rounded-full"
+          disabled={!data.text}
+          onClick={handleCopy}
+          variant="ghost"
+        >
+          <CopyIcon size={12} />
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <NodeLayout
       id={id}
-      data={data}
-      title={title}
+      data={{ ...data, width: 560, height: 420, resizable: false }}
       type={type}
-      className="overflow-hidden p-0 w-80"
+      title={title}
+      toolbar={toolbar}
     >
-      <div className="h-full max-h-[30rem] overflow-auto nowheel">
-        <div
-          className="group-data-[selected=true]:nodrag group-data-[selected=true]:nopan"
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <EditorProvider
-            onCreate={handleCreate}
-            onUpdate={handleUpdate}
-            immediatelyRender={false}
-            content={data.content || '<p></p>'}
-            placeholder="Start typing..."
-            className={cn(
-              'prose prose-sm dark:prose-invert size-full p-6 min-h-[200px]',
-              'primitive-editor', // <-- New specific class
-              'prose-p:my-0 prose-p:leading-snug',
-              '[&_p:first-child]:mt-0',
-              '[&_p:last-child]:mb-0',
-              // Allow canvas gestures to work by disabling TipTap's gesture handling
-              '[&_.ProseMirror]:touch-action-manipulation',
-              '[&_.ProseMirror]:overscroll-behavior-none'
-            )}
-          />
-        </div>
+      {/* "Fill Frame" Pattern: Direct child has h-full */}
+      <div className="flex h-full flex-col">
+        <Textarea
+          value={data.text}
+          onChange={handleTextChange}
+          placeholder="Start typing..."
+          className="nodrag nopan nowheel h-full flex-1 resize-none rounded-3xl border-none bg-transparent p-4 text-lg shadow-none focus-visible:ring-0"
+        />
       </div>
     </NodeLayout>
   );

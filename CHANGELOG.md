@@ -2,6 +2,22 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.9 — Architectural UI Overhaul & Node Consistency (2025-10-05 → 2025-10-11)
+
+-   **Architectural Layout Fixes**
+    -   Overhauled the core `NodeLayout` component to fix deep-seated CSS bugs that caused connector misalignment and inconsistent node sizing. This architectural change ensures all nodes are visually and logically consistent.
+    -   Established and documented two official layout patterns in `ui-and-component-guide.md`: "Fill Frame" for fixed-size nodes and "Hug Content" for dynamically-sized nodes, eliminating guesswork for future development.
+    -   The sizing contract is now enforced: a node's creation properties in `lib/node-buttons.ts` must match the internal component defaults to prevent layout discrepancies.
+
+-   **Node UI & UX Enhancements**
+    -   **Text Node**: The UI for both the primitive and transform modes of the Text node has been completely rewritten. They now share a consistent, larger frame size (`560x420`) and correctly implement our new layout patterns.
+    -   The transform `Text` node now features a scrollable content area and a fixed prompt window, preventing the UI from breaking with long text generations.
+    -   A **Copy button** has been added to the primitive `Text` node for feature parity with the transform mode.
+    -   **Editor (Tiptap) Node**: Fixed a critical bug where the node's connectors were misaligned due to a conflict between the node's internal width and its creation width.
+
+-   **New Web Renderer Node**
+    -   Added a new **Web Renderer Node** that can render HTML from a connected `Code` node or a URL, built on the new robust "Fill Frame" layout pattern.
+
 ## v0.0.8 — New Nodes, Canvas UX, & Locking Refinements (2025-09-23 → 2025-10-04)
 
 -   **New Nodes for Data Ingestion**

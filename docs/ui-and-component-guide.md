@@ -88,7 +88,216 @@ The `NodeLayout` component (`components/nodes/layout.tsx`) provides the essentia
 -   **Typography**: For generated markdown content, use the `prose` classes for consistent typography (`prose prose-sm dark:prose-invert ...`).
 -   **Skeleton Loaders**: Use `Skeleton` components with percentage-based widths (`w-[90%]`, `w-[75%]`) for more realistic loading states.
 
-### 4. Node Resizing (Known Issue)
+### 4. Multi-Section Node Layout (Controls + Output)
 
--   **Intended Functionality**: Nodes can be made resizable by passing a `resizable: true` property in their default data. The `NodeResizer` component is implemented in `NodeLayout`.
--   **Current Status**: As of the latest review, the resizing functionality is **not working as expected**. The resizer handles appear, but dragging them does not update the node's dimensions. This is a known issue pending further investigation.
+To create complex nodes with multiple sections (e.g., control inputs, a growing output area, and a footer), a precise flexbox structure is required to prevent layout issues like misaligned connectors.
+
+#### The Golden Rule
+The single `div` that is the **direct child** of `<NodeLayout>` **must not** have `flex-1`. It should be a simple `flex flex-col` container. The `flex-1` property should only be used on elements *deeper inside* that container to make a specific section grow and fill the available space.
+
+---
+
+#### Correct Pattern:
+This pattern ensures the `NodeLayout` frame correctly wraps the visible content, keeping connectors aligned.
+
+```tsx
+<NodeLayout {...props}>
+  {/* ✅ CORRECT: Wrapper has flex-col, NO flex-1 */}
+  <div className="flex h-full flex-col">
+    {/* Section 1: Header/Controls (Fixed Height) */}
+    <div className="shrink-0 p-2"> ... </div>
+
+    {/* Section 2: Main Content (Grows and Scrolls) */}
+    {/* ✅ CORRECT: flex-1 is used here, on the grandchild */}
+    <div className="flex-1 overflow-auto p-2"> ... </div>
+
+    {/* Section 3: Footer (Fixed Height) */}
+    <div className="shrink-0 p-2"> ... </div>
+  </div>
+</NodeLayout>
+```
+
+#### Anti-Pattern (Causes Misaligned Connectors):
+This incorrect pattern will cause the `NodeLayout` frame to stretch, misaligning the connectors.
+
+```tsx
+<NodeLayout {...props}>
+  {/* ❌ INCORRECT: flex-1 on the direct child stretches the frame */}
+  <div className="flex h-full flex-col flex-1">
+    {/* ... content ... */}
+  </div>
+</NodeLayout>
+```
+---
+
+#### CSS Class Cheatsheet
+
+| Class      | When to Use                                                                 | Effect                                                         |
+| :--------- | :-------------------------------------------------------------------------- | :------------------------------------------------------------- |
+| `flex-1`   | On the **one section** you want to grow and fill available space (e.g., the output area). | The element will expand, pushing other sections to the edges.  |
+| `shrink-0` | On sections that must maintain a fixed height (e.g., headers, footers, input areas). | The element will not shrink, even if content overflows.         |
+| `h-full`   | On the main wrapper inside `NodeLayout`.                                    | Ensures the wrapper tries to fill the node's defined height.     |
+
+
+-   **Typography**: For generated markdown content, use the `prose` classes for consistent typography (`prose prose-sm dark:prose-invert ...`).
+-   **Skeleton Loaders**: Use `Skeleton` components with percentage-based widths (`w-[90%]`, `w-[75%]`) for more realistic loading states.
+
+### 5. Node Resizing
+
+-   **Intended Functionality**: Nodes can be made resizable by passing a `resizable: true` property in their default data. The `NodeResizer` component is implemented in `NodeLayout`. This works best when a node has a defined `width` and `height` in its data, which can be updated during the resize event.
+-   **Best Practice**: While nodes *can* be made resizable, our architectural overhaul has shown that a more stable and predictable user experience is achieved with fixed-size nodes. The new best practice is to set `resizable: false` in `lib/node-buttons.ts`.
+-   **Constraints**: For special cases where resizing is needed, the `NodeLayout` component now supports `minWidth`, `maxWidth`, `minHeight`, and `maxHeight` properties. These should be defined in the node's `data` prop in `lib/node-buttons.ts` to provide a constrained resizing experience.
+
+---
+
+## 6. Node Creation Guide (End-to-End)
+
+This guide provides the definitive, end-to-end process for creating a new custom node that is fully compliant with the Easel UI system. Following these steps will prevent the common layout, sizing, and connector alignment issues.
+
+### Core Principle: Consistent Sizing
+
+The most common source of layout bugs is a mismatch between a node's initial properties (defined when it's created) and its internal default properties (defined in the component itself). These **must** be kept in sync.
+
+1.  **Creation Properties (`lib/node-buttons.ts`)**: This file defines the node's properties when it's first dragged onto the canvas.
+    ```ts
+    // lib/node-buttons.ts
+    {
+      id: 'tiptap',
+      label: 'Editor',
+      data: {
+        width: 680, // <-- Creation Width
+        resizable: false,
+      },
+    },
+    ```
+
+2.  **Internal Defaults (`primitive.tsx`)**: The component itself has fallback values. These must match the creation properties.
+    ```ts
+    // components/nodes/editor/tiptap/primitive.tsx
+    const width = (props.data as any)?.width ?? 680; // <-- Internal Fallback Width
+    ```
+
+**The Rule**: The `width` in `node-buttons.ts` must be identical to the fallback `width` in the component file. A mismatch will cause the node's outer frame and inner content to have different sizes, leading to alignment bugs.
+
+### The Two Node Layout Patterns
+
+Every node in Easel falls into one of two layout patterns. The first step is to decide which pattern your node needs.
+
+1.  **Hug Content Pattern**: Use this when your node's size should be determined by its content. The node will grow or shrink vertically to fit what's inside it. Most nodes (`Text`, `Custom`, `Generator`) use this pattern.
+2.  **Fill Frame Pattern**: Use this when your node needs to have a specific, fixed size, and the content inside should stretch to fill that frame. This is for special cases like the `Web Renderer` or `Tiptap` editor.
+
+---
+
+### Pattern 1: How to Build a "Hug Content" Node
+
+Use this for nodes that should resize based on their content.
+
+#### 1. The Golden Rule of Hug Content
+
+> The single `div` that is the **direct child** of `<NodeLayout>` **must not** have `h-full` or `flex-1`. It must be a simple `flex flex-col` container. This allows the layout to correctly measure the content's height.
+
+#### 2. Layout Skeleton
+
+Your component's JSX structure must follow this skeleton.
+
+```tsx
+// components/nodes/your-node/primitive.tsx
+import { NodeLayout } from '@/components/nodes/layout';
+
+export const YourNodePrimitive = (props) => {
+  return (
+    <NodeLayout {...props} data={{ ...props.data, resizable: true /* or false */ }}>
+      {/* Direct child: NO h-full or flex-1 */}
+      <div className="flex flex-col gap-3 p-3">
+        
+        {/* Section 1 (Fixed height) */}
+        <div className="shrink-0">
+          {/* ... your controls, inputs, etc. ... */}
+        </div>
+
+        {/* Section 2 (Content-sized) */}
+        <div className="min-h-[60px]">
+          {/* ... your main content area ... */}
+        </div>
+
+        {/* Section 3 (Fixed height) */}
+        <div className="shrink-0">
+          {/* ... your footer, textareas, etc. ... */}
+        </div>
+
+      </div>
+    </NodeLayout>
+  );
+};
+```
+
+#### 3. `NodeLayout` Contract
+
+When calling `<NodeLayout>`, you **must not** pass a `height` in the `data` prop. The width is optional.
+
+- **DO**: `<NodeLayout data={{ width: 480, resizable: false }}>`
+- **DO NOT**: `<NodeLayout data={{ width: 480, height: 600, resizable: false }}>`
+
+---
+
+### Pattern 2: How to Build a "Fill Frame" Node
+
+Use this for nodes that need a fixed size (e.g., an iframe or a fixed-size editor).
+
+#### 1. The Golden Rule of Fill Frame
+
+> The single `div` that is the **direct child** of `<NodeLayout>` **must** have `h-full`. This tells the content to stretch to the frame's height.
+
+#### 2. Layout Skeleton
+
+Your component's JSX structure must follow this skeleton.
+
+```tsx
+// components/nodes/your-node/primitive.tsx
+import { NodeLayout } from '@/components/nodes/layout';
+
+export const YourNodePrimitive = (props) => {
+  // Pass the desired width and height to NodeLayout
+  const nodeWidth = 1920;
+  const nodeHeight = 1080;
+
+  return (
+    <NodeLayout {...props} data={{ ...props.data, width: nodeWidth, height: nodeHeight, resizable: false }}>
+      {/* Direct child: MUST have h-full */}
+      <div className="flex h-full flex-col gap-3 p-3">
+        
+        {/* Section 1 (Fixed height) */}
+        <div className="shrink-0">
+          {/* ... your controls, inputs, etc. ... */}
+        </div>
+
+        {/* Section 2 (Stretching Content) */}
+        <div className="flex-1 overflow-auto rounded-xl border">
+          {/* ... your iframe, editor, or other filling content ... */}
+        </div>
+
+      </div>
+    </NodeLayout>
+  );
+};
+```
+
+#### 3. `NodeLayout` Contract
+
+When calling `<NodeLayout>`, you **must** pass a `height` and `width` in the `data` prop.
+
+- **DO**: `<NodeLayout data={{ width: 1920, height: 1080, resizable: false }}>`
+- **DO NOT**: `<NodeLayout data={{ width: 1920, resizable: false }}>`
+
+---
+
+### Post-Implementation Checklist
+
+After creating or editing a node, verify the following:
+
+- [ ] **Pattern Choice**: Did I choose the correct pattern ("Hug Content" or "Fill Frame")?
+- [ ] **Golden Rule**: Is the direct child `div` of `<NodeLayout>` styled correctly for my chosen pattern?
+- [ ] **`NodeLayout` Data**: Am I passing (or not passing) `height` in the `data` prop correctly for my chosen pattern?
+- [ ] **Connectors & Label**: Are the left/right connectors and the bottom title label perfectly aligned with the node's frame, with no extra space?
+- [ ] **Resizing (if applicable)**: If `resizable: true`, does dragging the handle correctly resize the node and its content?
+- [ ] **No Visual Glitches**: Is there any unexpected empty space inside or outside the node's frame?

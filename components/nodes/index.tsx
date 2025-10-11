@@ -8,6 +8,8 @@ import { TweetNode } from './tweet';
 import { VideoNode } from './video';
 import { VoiceMemoNode } from './voice-memo';
 import { FirecrawlNode } from './firecrawl';
+import { CustomNode } from './custom';
+import { WebRendererNode } from './web-renderer';
 
 export const nodeTypes = {
   image: ImageNode,
@@ -20,4 +22,6 @@ export const nodeTypes = {
   tweet: TweetNode,
   'voice-memo': VoiceMemoNode,
   firecrawl: FirecrawlNode,
+  custom: CustomNode,
+  'web-renderer': WebRendererNode,
 };
