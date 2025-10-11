@@ -185,6 +185,23 @@ export const getMarkdownFromFirecrawlNodes = (nodes: Node[]) => {
   return [...fromDoc];
 };
 
+// Perplexity helpers: expose result texts (title + snippet) and result links
+export const getTextFromPerplexityNodes = (nodes: Node[]) => {
+  const texts = nodes
+    .filter((node) => node.type === 'perplexity')
+    .flatMap((node) => (node.data as any).outputTexts ?? [])
+    .filter(Boolean) as string[];
+  return texts;
+};
+
+export const getLinksFromPerplexityNodes = (nodes: Node[]) => {
+  const links = nodes
+    .filter((node) => node.type === 'perplexity')
+    .flatMap((node) => (node.data as any).outputLinks ?? [])
+    .filter(Boolean) as string[];
+  return links;
+};
+
 export const getLinksFromFirecrawlNodes = (nodes: Node[]) => {
   const docs = nodes
     .filter((node) => node.type === 'firecrawl')

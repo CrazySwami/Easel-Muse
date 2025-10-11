@@ -76,6 +76,19 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const deriveOutputsFromResults = (results: any[] | { query: string; results: any[] }[]) => {
+    const flat: any[] = Array.isArray(results) && results.length > 0 && 'query' in (results[0] as any)
+      ? (results as any[]).flatMap((g: any) => g.results ?? [])
+      : (results as any[]);
+    const texts = (flat ?? []).map((r: any) => {
+      const title = r?.title ?? '';
+      const snippet = r?.snippet ?? r?.text ?? '';
+      return [title, snippet].filter(Boolean).join(' — ');
+    }).filter(Boolean);
+    const links = (flat ?? []).map((r: any) => r?.url).filter(Boolean);
+    return { texts, links };
+  };
+
   // Derived state for button disabling
   const isSearchDisabled = isLoading || (inputMode === 'single' && !queries[0]?.trim());
   const isBatchSearchDisabled = isLoading || queries.filter((q: string) => q.trim()).length === 0;
@@ -127,13 +140,16 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
       const data = await response.json();
 
       if (inputMode === 'single') {
-        updateNodeData(props.id, { searchSingleResults: data.results ?? [] });
+        const single = data.results ?? [];
+        const out = deriveOutputsFromResults(single);
+        updateNodeData(props.id, { searchSingleResults: single, outputTexts: out.texts, outputLinks: out.links });
       } else {
         // batch: backend returns grouped [{ query, results: [...] }] or flat
         const grouped = Array.isArray(data) ? data : [];
         const nextResults = grouped.length ? grouped : (data.results ?? []);
         const statuses = Array.from({ length: (grouped.length || validQueries.length) }, () => 'done');
-        updateNodeData(props.id, { searchBatchResults: nextResults, batchStatuses: statuses as any });
+        const out = deriveOutputsFromResults(nextResults as any);
+        updateNodeData(props.id, { searchBatchResults: nextResults, batchStatuses: statuses as any, outputTexts: out.texts, outputLinks: out.links });
       }
     } catch (error) {
       console.error('Perplexity API request failed:', error);
@@ -171,7 +187,8 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
         const data = await resp.json();
         const results = data.results ?? [];
         groups[i] = { query: q, results };
-        updateNodeData(props.id, { searchBatchResults: [...groups] });
+        const out = deriveOutputsFromResults(groups as any);
+        updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: out.texts, outputLinks: out.links });
         const doneStatuses = [...nextStatuses];
         doneStatuses[i] = 'done';
         updateNodeData(props.id, { batchStatuses: doneStatuses });

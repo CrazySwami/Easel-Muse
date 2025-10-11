@@ -78,9 +78,21 @@ Below are descriptions of the primary helper functions used for data extraction,
     *   This provides a comprehensive textual context.
     *   Used by: `CodeNode` (to build its prompt).
 
+### Perplexity Search Extractors (new):
+
+*   **`getTextFromPerplexityNodes(nodes: Node[])`: string[]**
+    *   Returns flattened search result texts from Perplexity nodes. Each entry is `title — snippet`.
+    *   Backed by `perplexity` node writing `outputTexts` into its `data` on successful searches.
+*   **`getLinksFromPerplexityNodes(nodes: Node[])`: string[]**
+    *   Returns flattened `url` values from Perplexity search results.
+    *   Backed by `perplexity` node writing `outputLinks` into its `data`.
+
 ## 4. How Consumer Nodes Use These Helpers
 
 *   **`TextNode`**:
+*   **`PerplexityNode`**:
+    *   PRODUCES: `outputTexts` (titles/snippets) and `outputLinks` after searches or batch runs. These are simple string arrays intended for downstream nodes.
+    *   CONSUMES: Optionally seeds Batch `queries` from incomers via `getTextFromTextNodes`, `getMarkdownFromFirecrawlNodes`, and `getTextFromTiptapNodes` when its list is empty.
     *   Uses `getTextFromTextNodes`, `getContentFromFirecrawlNodes`, and `getTextFromBrandfetchNodes` to gather all textual inputs for its generation prompt.
 *   **`ImageNode`**:
     *   Uses `getImagesFromImageNodes`, `getImagesFromBrandfetchNodes`, and `getImagesFromFirecrawlNodes` to collect all available image URLs to use as references or inputs for image generation/editing.
