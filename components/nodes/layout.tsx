@@ -121,6 +121,8 @@ export const NodeLayout = ({
   }, [lock, lockedByOther]);
   const isPositionLocked = lock?.level === 'move';
   const isContentLocked = lock?.level === 'edit';
+  const allowIncoming = (data as any)?.allowIncoming ?? true;
+  const allowOutgoing = (data as any)?.allowOutgoing ?? true;
 
   const NodeChrome = (
     <div
@@ -366,8 +368,8 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      {type !== 'drop' && <Handle type="target" position={Position.Left} />}
-      {type !== 'drop' && type !== 'video' && <Handle type="source" position={Position.Right} />}
+      {type !== 'drop' && allowIncoming && <Handle type="target" position={Position.Left} />}
+      {type !== 'drop' && type !== 'video' && allowOutgoing && <Handle type="source" position={Position.Right} />}
       <Dialog open={showData} onOpenChange={setShowData}>
         <DialogContent className="max-h-[70vh] max-w-[80vw] overflow-auto">
           <DialogHeader>

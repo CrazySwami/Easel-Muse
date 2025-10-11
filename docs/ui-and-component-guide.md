@@ -653,3 +653,32 @@ const texts = getTextFromYourNodes(incomers); // string[]
 - [ ] Add/extend a `lib/xyflow.ts` extractor for any new output type
 - [ ] Consume incomers with existing extractors; add new ones if needed
 - [ ] Verify “Show data” displays the expected JSON
+
+### Optional: custom connectors and UI interactions
+- You can tailor how a node interacts with connected data and which connectors it exposes.
+- Visual presentation is up to the node UI: e.g., display incoming sources, aggregate previews, or action buttons. Keep these read-only unless explicitly editable.
+
+#### Connector toggles (per node)
+`NodeLayout` supports two optional flags in `data` to control handles:
+
+```ts
+// In your node's `<NodeLayout data={...}>`
+data={{
+  ...props.data,
+  allowIncoming: true,   // default true; set false to hide the left (target) handle
+  allowOutgoing: true,   // default true; set false to hide the right (source) handle
+}}
+```
+
+Example: make a node “output-only”
+
+```tsx
+<NodeLayout
+  {...props}
+  data={{ ...props.data, allowIncoming: false, allowOutgoing: true }}
+>
+  {/* … */}
+</NodeLayout>
+```
+
+This is useful for nodes that only produce data (e.g., a search/fetch node) and should not accept incomers.
