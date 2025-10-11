@@ -11,7 +11,7 @@ import { handleError } from '@/lib/error/handle';
 import { uploadFile } from '@/lib/upload';
 import { useProject } from '@/providers/project';
 import { useReactFlow } from '@xyflow/react';
-import { Loader2Icon, MicIcon, SquareIcon, CopyIcon } from 'lucide-react';
+import { Loader2Icon, MicIcon, SquareIcon, CopyIcon, UploadIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useEffect, useRef, useState } from 'react';
 import type { AudioNodeProps } from '.';
@@ -225,46 +225,89 @@ export const AudioPrimitive = ({
 
   return (
     <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false }} type={type} title={title}>
-      {/* Recording controls zone (top) */}
-      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-card/60 px-3 py-2">
-          {!isRecording && (
-            <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
-              <MicIcon className="mr-1" size={14} /> Record
-            </Button>
-          )}
-          {isRecording && !isPaused && (
-            <Button size="sm" variant="destructive" onClick={stopRecording} className="rounded-full">
-              <SquareIcon className="mr-1" size={14} /> Stop
-            </Button>
-          )}
-          {isRecording && !isPaused && (
-            <Button size="sm" variant="secondary" onClick={pauseRecording} className="rounded-full">
-              Pause
-            </Button>
-          )}
-          {isRecording && isPaused && (
-            <Button size="sm" onClick={resumeRecording} className="rounded-full">
-              Resume
-            </Button>
-          )}
-          <span className="text-xs text-muted-foreground">
-            {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
-          </span>
-          {(isTranscribing || (data as any)?.transcribing) && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
-              <Loader2Icon className="size-3 animate-spin" />
-              Transcribing…
+      {/* Options: two equal columns */}
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        {/* Record column */}
+        <div className="rounded-2xl border bg-card/60 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <MicIcon className="h-4 w-4" />
+            <span>Record audio</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!isRecording && (
+              <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
+                <MicIcon className="mr-1" size={14} /> Record
+              </Button>
+            )}
+            {isRecording && !isPaused && (
+              <Button size="sm" variant="destructive" onClick={stopRecording} className="rounded-full">
+                <SquareIcon className="mr-1" size={14} /> Stop
+              </Button>
+            )}
+            {isRecording && !isPaused && (
+              <Button size="sm" variant="secondary" onClick={pauseRecording} className="rounded-full">
+                Pause
+              </Button>
+            )}
+            {isRecording && isPaused && (
+              <Button size="sm" onClick={resumeRecording} className="rounded-full">
+                Resume
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
             </span>
+            {(isTranscribing || (data as any)?.transcribing) && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+                <Loader2Icon className="size-3 animate-spin" />
+                Transcribing…
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Upload column */}
+        <div className="rounded-2xl border bg-card/60 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <UploadIcon className="h-4 w-4" />
+            <span>Upload a file</span>
+          </div>
+          {isUploading ? (
+            <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
+              <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
+            </Skeleton>
+          ) : (
+            <Dropzone
+              maxSize={1024 * 1024 * 10}
+              minSize={1024}
+              maxFiles={1}
+              multiple={false}
+              accept={{
+                'audio/mpeg': ['.mp3'],
+                'audio/wav': ['.wav'],
+                'audio/webm': ['.webm'],
+                'audio/mp4': ['.m4a', '.mp4'],
+                'audio/ogg': ['.ogg'],
+              }}
+              onDrop={handleDrop}
+              src={files}
+              onError={(errors) => {
+                let message = 'Audio file rejected.';
+                if (Array.isArray(errors) && errors.length) {
+                  message = errors[0]?.message ?? message;
+                  if (/File is larger than/.test(message)) message = 'Audio file is too large. Max size is 10 MB.';
+                  if (/file type/i.test(message)) message = 'Unsupported audio type. Allowed: MP3, WAV, WEBM, M4A/MP4, OGG.';
+                }
+                handleError('Error uploading audio', message);
+              }}
+              className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
+            >
+              <DropzoneEmptyState />
+              <DropzoneContent />
+            </Dropzone>
           )}
+        </div>
       </div>
-      {isUploading && (
-        <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
-          <Loader2Icon
-            size={16}
-            className="size-4 animate-spin text-muted-foreground"
-          />
-        </Skeleton>
-      )}
       {!isUploading && data.content && (
         <div className="nodrag nopan nowheel">
           {/* biome-ignore lint/a11y/useMediaCaption: native controls */}
@@ -295,42 +338,7 @@ export const AudioPrimitive = ({
           </div>
         </div>
       )}
-      {/* Upload section (bottom zone) */}
-      {!isUploading && (
-        <Dropzone
-          maxSize={1024 * 1024 * 10}
-          minSize={1024}
-          maxFiles={1}
-          multiple={false}
-          accept={{
-            'audio/mpeg': ['.mp3'],
-            'audio/wav': ['.wav'],
-            'audio/webm': ['.webm'],
-            'audio/mp4': ['.m4a', '.mp4'],
-            'audio/ogg': ['.ogg'],
-          }}
-          onDrop={handleDrop}
-          src={files}
-          onError={(errors) => {
-            let message = 'Audio file rejected.';
-            if (Array.isArray(errors) && errors.length) {
-              message = errors[0]?.message ?? message;
-              // Tweak message for oversize
-              if (/File is larger than/.test(message)) {
-                message = 'Audio file is too large. Max size is 10 MB.';
-              }
-              if (/file type/i.test(message)) {
-                message = 'Unsupported audio type. Allowed: MP3, WAV, WEBM, M4A/MP4, OGG.';
-              }
-            }
-            handleError('Error uploading audio', message);
-          }}
-          className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
-        >
-          <DropzoneEmptyState />
-          <DropzoneContent />
-        </Dropzone>
-      )}
+      {/* end options grid */}
     </NodeLayout>
   );
 };
