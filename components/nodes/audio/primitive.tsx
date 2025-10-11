@@ -205,7 +205,7 @@ export const AudioPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} className="w-80 min-h-[180px]">
+    <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false }} type={type} title={title}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {!isRecording && (
           <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
@@ -269,7 +269,8 @@ export const AudioPrimitive = ({
               <CopyIcon size={14} />
             </Button>
           </div>
-          <div className="max-h-40 overflow-auto rounded-md border bg-background p-2 text-sm whitespace-pre-wrap">
+          <div className="nowheel nodrag nopan min-h-0 flex-1 overflow-auto rounded-md border bg-background p-2 text-sm whitespace-pre-wrap"
+               onPointerDown={(e) => e.stopPropagation()}>
             {data.transcript}
           </div>
         </div>
@@ -281,7 +282,11 @@ export const AudioPrimitive = ({
           maxFiles={1}
           multiple={false}
           accept={{
-            'audio/*': [],
+            'audio/mpeg': ['.mp3'],
+            'audio/wav': ['.wav'],
+            'audio/webm': ['.webm'],
+            'audio/mp4': ['.m4a', '.mp4'],
+            'audio/ogg': ['.ogg'],
           }}
           onDrop={handleDrop}
           src={files}
@@ -292,6 +297,9 @@ export const AudioPrimitive = ({
               // Tweak message for oversize
               if (/File is larger than/.test(message)) {
                 message = 'Audio file is too large. Max size is 10 MB.';
+              }
+              if (/file type/i.test(message)) {
+                message = 'Unsupported audio type. Allowed: MP3, WAV, WEBM, M4A/MP4, OGG.';
               }
             }
             handleError('Error uploading audio', message);

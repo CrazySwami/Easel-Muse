@@ -34,11 +34,7 @@ export const nodeButtons = [
     id: 'audio',
     label: 'Audio',
     icon: AudioWaveformIcon,
-  },
-  {
-    id: 'voice-memo',
-    label: 'Voice Memo',
-    icon: MicIcon,
+    data: { width: 840, height: 560, resizable: false },
   },
   {
     id: 'tiptap',
