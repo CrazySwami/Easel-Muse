@@ -7,10 +7,16 @@ export const ConnectionLine: ConnectionLineComponent = ({
   toY,
 }) => (
   <g>
+    <defs>
+      <filter id="edgeGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="rgba(16,185,129,0.6)" />
+      </filter>
+    </defs>
     <path
       fill="none"
-      stroke="var(--color-ring)"
-      strokeWidth={1}
+      stroke="hsl(var(--primary))"
+      strokeWidth={2}
+      filter="url(#edgeGlow)"
       className="animated"
       d={`M${fromX},${fromY} C ${fromX + (toX - fromX) * 0.5},${fromY} ${fromX + (toX - fromX) * 0.5},${toY} ${toX},${toY}`}
     />
@@ -18,9 +24,9 @@ export const ConnectionLine: ConnectionLineComponent = ({
       cx={toX}
       cy={toY}
       fill="#fff"
-      r={3}
-      stroke="var(--color-ring)"
-      strokeWidth={1}
+      r={4}
+      stroke="hsl(var(--primary))"
+      strokeWidth={2}
     />
   </g>
 );

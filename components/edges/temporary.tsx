@@ -23,9 +23,10 @@ export const TemporaryEdge = ({
       <BaseEdge
         id={id}
         path={edgePath}
-        className="stroke-1 stroke-ring"
+        className="stroke-2"
         style={{
-          strokeDasharray: '5, 5',
+          stroke: 'hsl(var(--primary))',
+          strokeDasharray: '6, 6',
         }}
       />
     </>

@@ -419,8 +419,12 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      {type !== 'drop' && allowIncoming && <Handle type="target" position={Position.Left} />}
-      {type !== 'drop' && type !== 'video' && allowOutgoing && <Handle type="source" position={Position.Right} />}
+      {type !== 'drop' && allowIncoming && (
+        <Handle type="target" position={Position.Left} className="!h-16 !w-2 !rounded-md !bg-emerald-600/70 hover:!bg-emerald-600" />
+      )}
+      {type !== 'drop' && type !== 'video' && allowOutgoing && (
+        <Handle type="source" position={Position.Right} className="!h-16 !w-2 !rounded-md !bg-emerald-600/70 hover:!bg-emerald-600" />
+      )}
       <Dialog open={showData} onOpenChange={setShowData}>
         <DialogContent className="max-h-[70vh] max-w-[80vw] overflow-auto">
           <DialogHeader>
