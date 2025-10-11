@@ -50,8 +50,9 @@ export const ToolbarInner = () => {
   }, []);
 
   return (
-    <Panel position="bottom-right" className="mb-24 mr-4">
-      <div className="flex items-end gap-3">
+    <>
+      {/* Palette toggle and node list: bottom-left (original position) */}
+      <Panel position="bottom-left" className="mb-12 ml-4">
         <div
           className={cn(
             'flex flex-col items-center rounded-full border bg-card/90 drop-shadow-xs backdrop-blur-sm transition-all duration-300',
@@ -94,11 +95,13 @@ export const ToolbarInner = () => {
             {isOpen ? <XIcon size={16} /> : <PlusIcon size={16} />}
           </Button>
         </div>
-        <div className="mb-1">
-          <Controls />
-        </div>
-      </div>
-    </Panel>
+      </Panel>
+
+      {/* Canvas controls: bottom-right above status checkmark */}
+      <Panel position="bottom-right" className="mb-24 mr-4">
+        <Controls />
+      </Panel>
+    </>
   );
 }
 ;
