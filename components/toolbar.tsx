@@ -69,7 +69,8 @@ export const ToolbarInner = () => {
       let anchorTopY: number | null = null;
       let anchorId: string | null = null;
       for (const n of nodes) {
-        const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
+        const w = (n.width as number) ?? ((n.data as any)?.width ?? 680);
+        const right = (n.position?.x ?? 0) + w;
         if (right >= maxRight) {
           maxRight = right;
           anchorTopY = (n.position?.y ?? 0);
@@ -81,14 +82,14 @@ export const ToolbarInner = () => {
       const estHeight = typeof est.height === 'number' ? est.height : 520;
       const estWidth = typeof est.width === 'number' ? est.width : 680;
       // Horizontal spacing considers the next node's width to avoid overlap on large nodes
-      const BASE_GAP = 220; // minimal spacing between nodes
-      const GAP = BASE_GAP + Math.round(estWidth * 0.25);
+      const BASE_GAP = 240; // minimal spacing between nodes
+      const GAP = BASE_GAP + Math.round(estWidth * 0.35);
       // Align top with the rightmost existing node; fallback to viewport center if none
       const topYForSpawn = anchorTopY ?? (flowCenter.y - estHeight / 2);
       const position = { x: maxRight + GAP, y: topYForSpawn };
       addNode(type, { position, data: est });
       setTimeout(() => {
-        try { fitView({ nodes: [{ id: (getNodes?.() ?? []).slice(-1)[0]?.id } as any], padding: 0.45, minZoom: 0.4, duration: 450 }); } catch {}
+        try { fitView({ nodes: [{ id: (getNodes?.() ?? []).slice(-1)[0]?.id } as any], padding: 0.5, minZoom: 0.35, duration: 500 }); } catch {}
       }, 10);
     } finally {
       closeCommandPalette();
