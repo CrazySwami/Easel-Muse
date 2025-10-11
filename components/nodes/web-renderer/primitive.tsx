@@ -66,7 +66,7 @@ export const WebRendererPrimitive = (props: WebRendererPrimitiveProps) => {
       type={props.type}
       title={props.title}
       toolbar={toolbar}
-      data={{ ...props.data, width: 1920, height: 1080, resizable: false }}
+      data={{ ...props.data, width: 1920, height: 1080, resizable: false, fullscreenSupported: true, fullscreenOnly: false }}
     >
       {/* "Fill Frame" Pattern: Wrapper has h-full */}
       <div className="flex h-full flex-col gap-3 p-3">
