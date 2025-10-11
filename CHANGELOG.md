@@ -46,6 +46,34 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
 -   **Documentation**
     -   UI guide expanded with: Fill Frame vs Hug Content, NodeLayout contract, scrolling/pan prevention, toolbar/registry workflow and checklist, and the new window‑chrome/fullscreen flags with examples and troubleshooting.
 
+-   **Context & Data Flow (New patterns)**
+    -   Added a dedicated "Node Data I/O" section in `ui-and-component-guide.md` describing Producer/Consumer patterns, per‑node `data` ownership, and shared extractors in `lib/xyflow.ts`.
+    -   Perplexity node now writes flattened outputs for downstream nodes:
+        -   `outputTexts`: `["<title> — <snippet>", …]`
+        -   `outputLinks`: `['https://…', …]`
+    -   New extractors in `lib/xyflow.ts`: `getTextFromPerplexityNodes`, `getLinksFromPerplexityNodes`.
+    -   Text Transform consumes Perplexity outputs (texts + links) and renders a compact, scrollable "Sources" box.
+
+-   **Canvas UI & Controls**
+    -   Palette toolbar: tooltips added; updated icons (Web Renderer → Monitor, Fullscreen Demo → Maximize2, Perplexity → Search).
+    -   Split panels: palette toggle returned to bottom‑left; canvas controls moved to bottom‑right, vertical, offset above save check.
+    -   Fine‑tuned controls offset to avoid overlap across viewports.
+
+-   **Add Node (Drop) Menu Improvements**
+    -   Larger command palette (scales inversely with canvas zoom), autofocus on open, correct z‑index, scrollable results, and a single visible surface (no double frame).
+    -   Connectors hidden while the drop menu is open; window bar suppressed for a cleaner picker.
+
+-   **Node Chrome & UX Fixes**
+    -   Focus action in context menu now centers the camera using `fitView` with padding; added separate "Show data" item.
+    -   Data dialog constrained with `max-w`/`max-h` and internal scrolling for large JSON.
+
+-   **Fullscreen Enablement**
+    -   Web Renderer and Perplexity primitives now set `fullscreenSupported: true` (and `fullscreenOnly: false`) so the inline control and context menu appear. Removed the demo fullscreen node.
+
+-   **Connector Options (Per‑node)**
+    -   `NodeLayout` now respects optional `data.allowIncoming` and `data.allowOutgoing` flags to show/hide left/right handles.
+    -   Perplexity configured as output‑only (`allowIncoming: false`, `allowOutgoing: true`). Documented in the UI guide under "Custom connectors and UI interactions."
+
 ## v0.0.8 — New Nodes, Canvas UX, & Locking Refinements (2025-09-23 → 2025-10-04)
 
 -   **New Nodes for Data Ingestion**
