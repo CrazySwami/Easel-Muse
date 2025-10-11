@@ -9,7 +9,7 @@ import {
 import { nodeButtons } from '@/lib/node-buttons';
 import { type XYPosition, useReactFlow } from '@xyflow/react';
 import { nanoid } from 'nanoid';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NodeLayout } from './layout';
 
 type DropNodeProps = {
@@ -21,9 +21,10 @@ type DropNodeProps = {
 };
 
 export const DropNode = ({ data, id }: DropNodeProps) => {
-  const { addNodes, deleteElements, getNode, addEdges, getEdges } =
+  const { addNodes, deleteElements, getNode, addEdges, getEdges, getViewport } =
     useReactFlow();
   const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
 
   const handleSelect = (type: string, options?: Record<string, unknown>) => {
     // Get the position of the current node
@@ -63,6 +64,22 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
   };
 
   useEffect(() => {
+    // Autofocus the search input when opened
+    const t = setTimeout(() => {
+      const input = ref.current?.querySelector(
+        'input[data-slot="command-input"]'
+      ) as HTMLInputElement | null;
+      input?.focus();
+      input?.select?.();
+    }, 0);
+
+    // Size the palette relative to current viewport zoom so it remains legible when zoomed out
+    try {
+      const { zoom } = getViewport();
+      const s = Math.max(1, Math.min(1.8, 1.2 / Math.max(zoom, 0.1)));
+      setScale(s);
+    } catch {}
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         // Delete the drop node when Escape is pressed
@@ -93,14 +110,15 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('click', handleClick);
+      clearTimeout(t);
     };
-  }, [deleteElements, id]);
+  }, [deleteElements, getViewport, id]);
 
   return (
     <div ref={ref} className="relative z-[10010]">
       <NodeLayout id={id} data={data} type="drop" title="Add a new node">
-        <Command className="rounded-3xl shadow-xl w-[420px] max-h-[70vh] overflow-hidden bg-card">
-          <CommandInput placeholder="Type a command or search..." autoFocus />
+        <Command className="rounded-3xl shadow-xl w-[420px] max-h-[70vh] overflow-hidden bg-card" style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          <CommandInput placeholder="Type a command or search..." />
           <CommandList className="max-h-[58vh] overflow-auto">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup heading="Add node">
