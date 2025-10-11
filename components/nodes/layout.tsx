@@ -83,6 +83,19 @@ export const NodeLayout = ({
 
   const handleDelete = () => deleteElements({ nodes: [{ id }] });
   const handleShowData = () => setShowData(true);
+  const handleFocus = () => {
+    const node = getNode(id);
+    if (!node) return;
+    const x = (node as any).positionAbsolute?.x ?? (node as any).position?.x ?? 0;
+    const y = (node as any).positionAbsolute?.y ?? (node as any).position?.y ?? 0;
+    const width = (node as any).width ?? desiredWidth ?? 0;
+    const height = (node as any).height ?? desiredHeight ?? 0;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    try {
+      setCenter(centerX, centerY, { duration: 400 });
+    } catch {}
+  };
 
   const handleSelect = (open: boolean) => {
     if (open && !getNode(id)?.selected) {
@@ -323,9 +336,13 @@ export const NodeLayout = ({
             <CopyIcon size={12} />
             <span>Duplicate</span>
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => setShowData(true)}>
+          <ContextMenuItem onClick={handleFocus}>
             <EyeIcon size={12} />
             <span>Focus</span>
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleShowData}>
+            <CodeIcon size={12} />
+            <span>Show data</span>
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={handleDelete} variant="destructive">
@@ -346,7 +363,7 @@ export const NodeLayout = ({
       {type !== 'drop' && <Handle type="target" position={Position.Left} />}
       {type !== 'drop' && type !== 'video' && <Handle type="source" position={Position.Right} />}
       <Dialog open={showData} onOpenChange={setShowData}>
-        <DialogContent>
+        <DialogContent className="max-h-[70vh] max-w-[80vw] overflow-auto">
           <DialogHeader>
             <DialogTitle>Node data</DialogTitle>
             <DialogDescription>
@@ -356,7 +373,7 @@ export const NodeLayout = ({
               </code>
             </DialogDescription>
           </DialogHeader>
-          <pre className="overflow-x-auto rounded-lg bg-black p-4 text-sm text-white">
+          <pre className="overflow-auto max-h-[52vh] rounded-lg bg-black p-4 text-sm text-white">
             {JSON.stringify(data, null, 2)}
           </pre>
         </DialogContent>
