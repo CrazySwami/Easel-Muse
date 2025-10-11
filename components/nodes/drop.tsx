@@ -97,11 +97,11 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
   }, [deleteElements, id]);
 
   return (
-    <div ref={ref}>
+    <div ref={ref} className="relative z-[10010]">
       <NodeLayout id={id} data={data} type="drop" title="Add a new node">
-        <Command className="rounded-lg">
-          <CommandInput placeholder="Type a command or search..." />
-          <CommandList>
+        <Command className="rounded-3xl shadow-xl w-[420px] max-h-[70vh] overflow-hidden bg-card">
+          <CommandInput placeholder="Type a command or search..." autoFocus />
+          <CommandList className="max-h-[58vh] overflow-auto">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup heading="Add node">
               {nodeButtons

@@ -187,7 +187,7 @@ export const NodeLayout = ({
       style={isResizable || desiredWidth || desiredHeight ? { width: desiredWidth, height: desiredHeight } : {}}
     >
       {/* Green window bar above the node */}
-      {!inInspector && !isFullscreen && (
+      {!inInspector && !isFullscreen && type !== 'drop' && (
         <div className="mb-3 flex w-full items-center justify-between rounded-lg bg-emerald-600 px-2 py-1 text-white shadow">
           <div className="flex items-center gap-1">
             <button
