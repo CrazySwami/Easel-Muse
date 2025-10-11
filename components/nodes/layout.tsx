@@ -214,7 +214,7 @@ export const NodeLayout = ({
         <div className="mb-3 flex w-full items-center justify-between rounded-lg bg-emerald-600 px-2 py-1 text-white shadow">
           <div className="flex items-center gap-1">
             <button
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
+              className="inline-flex h-6 w-6 items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
               title="Delete"
               onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
             >
@@ -235,9 +235,21 @@ export const NodeLayout = ({
             >
               <CodeIcon className="h-3 w-3" />
             </button>
+          </div>
+          {fullscreenSupported && (
+            <button
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
+              title="Enter fullscreen"
+              onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
+            >
+              <Maximize2Icon className="h-3 w-3" />
+            </button>
+          )}
+          {/* Right-side locks */}
+          <div className="flex items-center gap-1">
             {/* Position lock (move) */}
             <button
-              className={`inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600 ${isPositionLocked ? 'ring-2 ring-white/80' : ''}`}
+              className={cn('inline-flex h-6 w-6 items-center justify-center rounded bg-white text-emerald-700 hover:bg-white', isPositionLocked && 'ring-2 ring-white/80')}
               title={isPositionLocked ? 'Unlock position' : 'Lock position'}
               onClick={(e) => {
                 e.stopPropagation();
@@ -248,11 +260,12 @@ export const NodeLayout = ({
                 }
               }}
             >
-              <LockIcon className="h-3 w-3" />
+              {/* Use <> as a move/position indicator */}
+              <span className="text-[10px] font-bold">⇕</span>
             </button>
             {/* Content lock (edit) */}
             <button
-              className={`inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600 ${isContentLocked ? 'ring-2 ring-white/80' : ''}`}
+              className={cn('inline-flex h-6 w-6 items-center justify-center rounded bg-white text-emerald-700 hover:bg-white', isContentLocked && 'ring-2 ring-white/80')}
               title={isContentLocked ? 'Unlock content' : 'Lock content'}
               onClick={(e) => {
                 e.stopPropagation();
@@ -266,15 +279,6 @@ export const NodeLayout = ({
               <FileLock2Icon className="h-3 w-3" />
             </button>
           </div>
-          {fullscreenSupported && (
-            <button
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-emerald-600"
-              title="Enter fullscreen"
-              onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
-            >
-              <Maximize2Icon className="h-3 w-3" />
-            </button>
-          )}
         </div>
       )}
       {/* Hide the tiny title label when the window bar is visible */}

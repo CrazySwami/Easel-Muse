@@ -11,6 +11,7 @@ import { ProjectSelector } from './project-selector';
 import { CreditCounter } from './credits-counter';
 import { Menu } from './menu';
 import { ShareDialog } from './share-dialog';
+import { SaveIndicator } from './save-indicator';
 
 interface TopBarProps {
   projects: (typeof projects.$inferSelect)[];
@@ -76,6 +77,7 @@ export const TopBar = ({ projects, currentProject, profile }: TopBarProps) => {
           <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
             <Menu />
           </div>
+          <SaveIndicator />
         </div>
       </div>
     </div>

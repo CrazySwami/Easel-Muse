@@ -57,31 +57,24 @@ export const SaveIndicator = () => {
   const [{ isSaving, lastSaved }] = useSaveProject();
 
   return (
-    <Panel
-      position="bottom-right"
+    <div
       className={cn(
-        'm-4 flex max-w-[46px] items-center justify-end gap-1 overflow-hidden whitespace-nowrap rounded-full border bg-card/90 p-3 drop-shadow-xs backdrop-blur-sm',
+        'flex max-w-[46px] items-center justify-end gap-1 overflow-hidden whitespace-nowrap rounded-full border bg-card/90 p-2 drop-shadow-xs backdrop-blur-sm',
         'hover:max-w-none'
       )}
     >
       <Tooltip>
         <TooltipTrigger>
           {isSaving ? (
-            <Loader2Icon
-              size={16}
-              className="shrink-0 animate-spin text-primary"
-            />
+            <Loader2Icon size={16} className="shrink-0 animate-spin text-primary" />
           ) : (
             <CheckIcon size={16} className="shrink-0 text-primary" />
           )}
         </TooltipTrigger>
         <TooltipContent>
-          Last saved{' '}
-          {getFormattedTime(
-            lastSaved ?? project?.updatedAt ?? project?.createdAt
-          )}
+          Last saved {getFormattedTime(lastSaved ?? project?.updatedAt ?? project?.createdAt)}
         </TooltipContent>
       </Tooltip>
-    </Panel>
+    </div>
   );
 };
