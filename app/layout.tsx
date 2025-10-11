@@ -19,7 +19,7 @@ const RootLayout = ({ children }: RootLayoutProps) => (
         sans.variable,
         serif.variable,
         mono.variable,
-        'bg-background text-foreground antialiased'
+        'bg-background text-foreground antialiased [scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden'
       )}
     >
       <PostHogProvider>

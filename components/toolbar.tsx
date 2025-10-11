@@ -61,7 +61,7 @@ export const ToolbarInner = () => {
         >
           <div
             className={cn(
-              'flex flex-col items-center gap-2 overflow-auto transition-all duration-200 ease-out',
+              'flex flex-col items-center gap-2 overflow-auto transition-all duration-200 ease-out scrollbar-none',
               isOpen ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0'
             )}
           >
@@ -98,7 +98,7 @@ export const ToolbarInner = () => {
       </Panel>
 
       {/* Canvas controls: bottom-right above status checkmark */}
-      <Panel position="bottom-right" className="mr-4" style={{ bottom: 80 }}>
+      <Panel position="bottom-right" className="mr-4" style={{ bottom: 50 }}>
         <Controls />
       </Panel>
     </>
