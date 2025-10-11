@@ -147,7 +147,12 @@ export const NodeLayout = ({
         />
       )}
       {/* legacy inline fullscreen button removed; we render controls in the top bar */}
-      <div className={cn(type !== 'drop' ? 'overflow-hidden' : '', 'rounded-3xl bg-card', lock?.level === 'edit' && 'pointer-events-none', isFillFrame && 'h-full w-full')}>
+      <div className={cn(
+        type !== 'drop' ? 'overflow-hidden' : '',
+        'rounded-3xl bg-card',
+        (lock?.level === 'edit' || lock?.level === 'full') && 'pointer-events-none',
+        isFillFrame && 'h-full w-full'
+      )}>
         {/* Fullscreen-only gate */}
         {fullscreenOnly && !isFullscreen ? (
           <div className="flex h-full w-full items-center justify-center p-6 text-center">
