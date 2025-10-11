@@ -573,3 +573,89 @@ export const YourNode = (props: Props) => {
     - Palette defaults in `lib/node-buttons.ts` (so newly created nodes have it)
     - Component defaults in the node’s primitive via the `<NodeLayout data={...}>` call (so runtime always has it)
   - Existing nodes keep their original persisted `data`. Re‑add the node (or programmatically update its data) to pick up new flags.
+
+---
+
+## Node data production/consumption pattern (Perplexity example)
+
+Each node owns its `data` shape. To participate in data flow:
+
+- Producers write well‑named fields into `data` when work completes.
+- Consumers read their incomers and use shared extractors in `lib/xyflow.ts` to get typed content.
+
+### Producer: Perplexity node
+
+- Writes flattened outputs after searches/batch runs:
+  - `outputTexts: string[]` → entries of `"<title> — <snippet>"`
+  - `outputLinks: string[]` → result URLs
+- Also keeps detailed results (`searchSingleResults`, `searchBatchResults`) for UI.
+
+Snippet (inside the Perplexity node) – derive and persist outputs:
+
+```tsx
+// components/nodes/perplexity/primitive.tsx
+const deriveOutputsFromResults = (results: any[]) => {
+  const flat = Array.isArray(results) && results.length > 0 && 'query' in (results[0] as any)
+    ? (results as any[]).flatMap((g: any) => g.results ?? [])
+    : (results as any[]);
+  return {
+    texts: (flat ?? []).map((r: any) => [r?.title ?? '', r?.snippet ?? r?.text ?? ''].filter(Boolean).join(' — ')).filter(Boolean),
+    links: (flat ?? []).map((r: any) => r?.url).filter(Boolean),
+  };
+};
+
+// After fetching results
+const out = deriveOutputsFromResults(nextResults);
+updateNodeData(id, {
+  searchBatchResults: nextResults,
+  outputTexts: out.texts,
+  outputLinks: out.links,
+});
+```
+
+### Extractors for consumers
+
+Add minimal helpers so other nodes can read Perplexity outputs without knowing its internal shape:
+
+```ts
+// lib/xyflow.ts
+export const getTextFromPerplexityNodes = (nodes: Node[]) =>
+  nodes.filter(n => n.type === 'perplexity')
+       .flatMap(n => (n.data as any).outputTexts ?? [])
+       .filter(Boolean) as string[];
+
+export const getLinksFromPerplexityNodes = (nodes: Node[]) =>
+  nodes.filter(n => n.type === 'perplexity')
+       .flatMap(n => (n.data as any).outputLinks ?? [])
+       .filter(Boolean) as string[];
+```
+
+### Consumer: seeding from incomers (already in Perplexity)
+
+Perplexity can also act as a consumer by seeding its Batch queries from connected nodes when empty:
+
+```tsx
+const incomers = getIncomers({ id }, getNodes(), getEdges());
+const text = [
+  ...getTextFromTextNodes(incomers),
+  ...getMarkdownFromFirecrawlNodes(incomers),
+  ...getTextFromTiptapNodes(incomers),
+].filter(Boolean);
+if (text.length && (!queries || queries.every(q => !q))) {
+  updateNodeData(id, { queries: text.slice(0, 10), inputMode: 'batch' });
+}
+```
+
+### Checklist to make any node a producer/consumer
+
+- Producer
+  - Decide and document `data` fields (e.g., `outputTexts`, `outputLinks`).
+  - Write them via `updateNodeData(id, …)` when work completes.
+  - Add a `lib/xyflow.ts` extractor returning a simple typed array for others to consume.
+
+- Consumer
+  - Get incomers (`getIncomers` or `useNodeConnections` + `useNodesData`).
+  - Call the appropriate extractors (Text/Firecrawl/Tiptap/Perplexity/etc.).
+  - Guard for missing/partial data.
+
+This pattern keeps nodes loosely coupled and lets the “Show data” dialog reflect exactly what a node currently exposes for downstream use.
