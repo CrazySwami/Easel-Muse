@@ -110,7 +110,7 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
     <div ref={ref} className="relative z-[10010]">
       <NodeLayout id={id} data={data} type="drop" title="Add a new node">
         <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          <Command className="rounded-3xl shadow-xl w-[560px] max-h-[70vh] overflow-hidden bg-card">
+          <Command className="rounded-3xl shadow-xl w-[560px] max-h-[70vh] bg-card">
             <CommandInput ref={inputRef} placeholder="Type a command or search..." />
             <CommandList className="max-h-[58vh] overflow-auto">
             <CommandEmpty>No results found.</CommandEmpty>

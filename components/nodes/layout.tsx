@@ -106,7 +106,9 @@ export const NodeLayout = ({
   const NodeChrome = (
     <div
       className={cn(
-        'node-container rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
+        type === 'drop'
+          ? 'bg-transparent p-0 ring-0 rounded-none shadow-none'
+          : 'node-container rounded-[28px] bg-card p-2 ring-1 ring-border transition-all',
         isFillFrame ? 'flex h-full w-full flex-col' : 'inline-flex flex-col',
         lockedByOther && 'pointer-events-none',
         className
