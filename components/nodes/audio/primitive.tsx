@@ -224,50 +224,52 @@ export const AudioPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: 840, height: 520, resizable: false }} type={type} title={title}>
+    <NodeLayout id={id} data={{ ...data, width: 840, height: 480, resizable: false }} type={type} title={title}>
       {/* Options: two equal columns */}
       <div className="mb-3 grid grid-cols-2 gap-3">
         {/* Record column */}
-        <div className="rounded-2xl border bg-card/60 p-3 h-48 flex flex-col">
-          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <MicIcon className="h-4 w-4" />
-            <span>Record audio</span>
-          </div>
-          <div className="flex-1 min-h-0 flex flex-wrap items-center gap-2">
-            {!isRecording && (
-              <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
-                <MicIcon className="mr-1" size={14} /> Record
-              </Button>
-            )}
-            {isRecording && !isPaused && (
-              <Button size="sm" variant="destructive" onClick={stopRecording} className="rounded-full">
-                <SquareIcon className="mr-1" size={14} /> Stop
-              </Button>
-            )}
-            {isRecording && !isPaused && (
-              <Button size="sm" variant="secondary" onClick={pauseRecording} className="rounded-full">
-                Pause
-              </Button>
-            )}
-            {isRecording && isPaused && (
-              <Button size="sm" onClick={resumeRecording} className="rounded-full">
-                Resume
-              </Button>
-            )}
-            <span className="text-xs text-muted-foreground">
-              {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
-            </span>
-            {(isTranscribing || (data as any)?.transcribing) && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                <Loader2Icon className="size-3 animate-spin" />
-                Transcribing…
+        <div className="rounded-2xl border bg-card/60 p-3 h-44 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="rounded-full bg-emerald-600/10 p-3">
+              <MicIcon className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div className="text-sm text-muted-foreground">Record audio</div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {!isRecording && (
+                <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
+                  <MicIcon className="mr-1" size={14} /> Record
+                </Button>
+              )}
+              {isRecording && !isPaused && (
+                <Button size="sm" variant="destructive" onClick={stopRecording} className="rounded-full">
+                  <SquareIcon className="mr-1" size={14} /> Stop
+                </Button>
+              )}
+              {isRecording && !isPaused && (
+                <Button size="sm" variant="secondary" onClick={pauseRecording} className="rounded-full">
+                  Pause
+                </Button>
+              )}
+              {isRecording && isPaused && (
+                <Button size="sm" onClick={resumeRecording} className="rounded-full">
+                  Resume
+                </Button>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
               </span>
-            )}
+              {(isTranscribing || (data as any)?.transcribing) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+                  <Loader2Icon className="size-3 animate-spin" />
+                  Transcribing…
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Upload column */}
-        <div className="rounded-2xl border bg-card/60 p-3 h-48 flex flex-col">
+        <div className="rounded-2xl border bg-card/60 p-3 h-44 flex flex-col">
           <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
             <UploadIcon className="h-4 w-4" />
             <span>Upload a file</span>
