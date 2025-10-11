@@ -62,7 +62,7 @@ export const NodeLayout = ({
   title,
   className,
 }: NodeLayoutProps) => {
-  const { deleteElements, setCenter, getNode, updateNode } = useReactFlow();
+  const { deleteElements, setCenter, getNode, updateNode, fitView } = useReactFlow();
   const { duplicateNode } = useNodeOperations();
   const { getLock, acquire, release, me } = useLocks();
   const [showData, setShowData] = useState(false);
@@ -86,6 +86,12 @@ export const NodeLayout = ({
   const handleFocus = () => {
     const node = getNode(id);
     if (!node) return;
+    // Prefer fitView with padding so the camera doesn't get too tight
+    try {
+      fitView({ nodes: [{ id } as any], padding: 0.2, duration: 400 });
+      return;
+    } catch {}
+    // Fallback: center with a small visual margin based on current size
     const x = (node as any).positionAbsolute?.x ?? (node as any).position?.x ?? 0;
     const y = (node as any).positionAbsolute?.y ?? (node as any).position?.y ?? 0;
     const width = (node as any).width ?? desiredWidth ?? 0;
