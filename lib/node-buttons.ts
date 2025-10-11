@@ -94,7 +94,7 @@ export const nodeButtons = [
     data: {
       width: 1200,
       height: 800,
-      resizable: true,
+      resizable: false,
       minWidth: 400,
       minHeight: 300,
       fullscreenSupported: true,
