@@ -568,3 +568,8 @@ export const YourNode = (props: Props) => {
 ### Troubleshooting
 - “Fullscreen only fills the node, not the page”: ensure the overlay is not blocked by transforms. NodeLayout renders the fullscreen overlay into a portal (`document.body`) for this reason.
 - “I see two X buttons in the corner”: the inline chrome is hidden during fullscreen; if you implement additional buttons, hide them when fullscreen is active.
+- “Fullscreen button does not appear”: the control only renders when `data.fullscreenSupported === true`.
+  - Set the flag in BOTH places to be safe:
+    - Palette defaults in `lib/node-buttons.ts` (so newly created nodes have it)
+    - Component defaults in the node’s primitive via the `<NodeLayout data={...}>` call (so runtime always has it)
+  - Existing nodes keep their original persisted `data`. Re‑add the node (or programmatically update its data) to pick up new flags.
