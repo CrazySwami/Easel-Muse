@@ -74,10 +74,10 @@ export const TopBar = ({ projects, currentProject, profile }: TopBarProps) => {
             <AvatarStack />
           </div>
           <ShareDialog projectId={currentProject.id} />
+          <SaveIndicator />
           <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
             <Menu />
           </div>
-          <SaveIndicator />
         </div>
       </div>
     </div>

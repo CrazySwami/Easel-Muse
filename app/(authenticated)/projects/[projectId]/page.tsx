@@ -60,10 +60,9 @@ const Project = async ({ params }: ProjectProps) => {
             <LiveblocksRoomProvider projectId={projectId}>
               <ProjectProvider data={currentProject}>
                 <Canvas debug={profile.debug}>
-                <Toolbar />
-                <SaveIndicator />
-                <CursorsLayer />
-              </Canvas>
+                  <Toolbar />
+                  <CursorsLayer />
+                </Canvas>
               {/* Debug panel toggled per profile.debug */}
               {profile.debug ? <RoomDebugPanel projectId={projectId} /> : null}
             </ProjectProvider>
