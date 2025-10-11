@@ -72,7 +72,7 @@ export const Controls = () => {
 
   return (
     <TooltipProvider>
-      <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-1 rounded-xl border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
         {buttons.map((button, index) => (
           <Fragment key={index}>
             {button.tooltip ? (

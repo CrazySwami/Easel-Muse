@@ -50,7 +50,7 @@ export const ToolbarInner = () => {
   }, []);
 
   return (
-    <Panel position="bottom-left" className="mb-12 ml-4">
+    <Panel position="bottom-right" className="mb-24 mr-4">
       <div className="flex items-end gap-3">
         <div
           className={cn(
