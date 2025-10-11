@@ -66,24 +66,26 @@ export const ToolbarInner = () => {
     try {
       const nodes = getNodes?.() ?? [];
       let maxRight = 0;
-      let anchorCenterY: number | null = null;
+      let anchorTopY: number | null = null;
+      let anchorId: string | null = null;
       for (const n of nodes) {
         const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
         if (right >= maxRight) {
           maxRight = right;
-          const h = ((n.height as number) ?? 0);
-          anchorCenterY = (n.position?.y ?? 0) + (h / 2);
+          anchorTopY = (n.position?.y ?? 0);
+          anchorId = n.id as any;
         }
       }
       const GAP = 600;
       const flowCenter = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
       const est = getPaletteDefaults(type) ?? {};
       const estHeight = typeof est.height === 'number' ? est.height : 520;
-      const centerYForSpawn = anchorCenterY ?? flowCenter.y;
-      const position = { x: maxRight + GAP, y: centerYForSpawn - estHeight / 2 };
+      // Align top with the rightmost existing node; fallback to viewport center if none
+      const topYForSpawn = anchorTopY ?? (flowCenter.y - estHeight / 2);
+      const position = { x: maxRight + GAP, y: topYForSpawn };
       addNode(type, { position, data: est });
       setTimeout(() => {
-        try { fitView({ nodes: [{ id: (getNodes?.() ?? []).slice(-1)[0]?.id } as any], padding: 0.35, minZoom: 0.5, duration: 400 }); } catch {}
+        try { fitView({ nodes: [{ id: (getNodes?.() ?? []).slice(-1)[0]?.id } as any], padding: 0.45, minZoom: 0.4, duration: 450 }); } catch {}
       }, 10);
     } finally {
       closeCommandPalette();
