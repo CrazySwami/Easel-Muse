@@ -66,15 +66,21 @@ export const ToolbarInner = () => {
     try {
       const nodes = getNodes?.() ?? [];
       let maxRight = 0;
+      let anchorCenterY: number | null = null;
       for (const n of nodes) {
         const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
-        if (right > maxRight) maxRight = right;
+        if (right >= maxRight) {
+          maxRight = right;
+          const h = ((n.height as number) ?? 0);
+          anchorCenterY = (n.position?.y ?? 0) + (h / 2);
+        }
       }
       const GAP = 600;
       const flowCenter = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
       const est = getPaletteDefaults(type) ?? {};
       const estHeight = typeof est.height === 'number' ? est.height : 520;
-      const position = { x: maxRight + GAP, y: flowCenter.y - estHeight / 2 };
+      const centerYForSpawn = anchorCenterY ?? flowCenter.y;
+      const position = { x: maxRight + GAP, y: centerYForSpawn - estHeight / 2 };
       addNode(type, { position, data: est });
       setTimeout(() => {
         try { fitView({ nodes: [{ id: (getNodes?.() ?? []).slice(-1)[0]?.id } as any], padding: 0.35, minZoom: 0.5, duration: 400 }); } catch {}
