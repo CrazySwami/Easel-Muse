@@ -391,6 +391,30 @@ export const TextTransform = ({
           )}
         </div>
 
+        {/* 1b. Sources from connected Perplexity nodes (if any) */}
+        {(() => {
+          try {
+            const incomers = getIncomers({ id }, getNodes(), getEdges());
+            const links = getLinksFromPerplexityNodes(incomers);
+            if (!links?.length) return null;
+            return (
+              <div className="nowheel nodrag nopan mx-4 my-2 shrink-0 rounded-xl border bg-white p-3 text-xs"
+                   onPointerDown={(e) => e.stopPropagation()}>
+                <p className="mb-1 font-medium text-muted-foreground">Sources</p>
+                <div className="max-h-24 overflow-auto space-y-1">
+                  {links.map((u, i) => (
+                    <a key={i} href={u as any} target="_blank" rel="noreferrer" className="block truncate text-primary hover:underline">
+                      {String(u)}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          } catch {
+            return null;
+          }
+        })()}
+
         {/* 2. Instructions (Fixed Height) */}
         <Textarea
           value={data.instructions ?? ''}
