@@ -49,7 +49,7 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
     const { data: nodeData, ...rest } = options ?? {};
 
     // Add the new node of the selected type, offset to the right of the far-right anchor
-    const NODE_GAP_X = 240; // distance from anchor to new node left edge
+    const NODE_GAP_X = 360; // distance from anchor to new node left edge (more space)
     const NODE_GAP_Y = 0;
     const spawn = { x: position.x + NODE_GAP_X, y: position.y + NODE_GAP_Y };
     addNodes({

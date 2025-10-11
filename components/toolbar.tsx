@@ -58,33 +58,35 @@ export const ToolbarInner = () => {
       let maxRight = 0;
       let centerY = 0;
       if (nodes.length) {
-        // Find farthest-right node and use its vertical center for alignment
-        let idx = 0;
+        // Find farthest-right node
         let bestRight = -Infinity;
         for (let i = 0; i < nodes.length; i++) {
           const n = nodes[i];
           const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
-          if (right > bestRight) { bestRight = right; idx = i; }
+          if (right > bestRight) { bestRight = right; }
         }
-        const anchor = nodes[idx];
         maxRight = Math.max(0, bestRight);
-        const anchorCenterY = (anchor?.position?.y ?? 0) + (((anchor?.height as number) ?? 0) / 2);
-        centerY = anchorCenterY;
+        // Vertically center in viewport (not anchor) per spec
+        const vp = getViewport();
+        centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
       } else {
         const vp = getViewport();
         maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
         centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
       }
       // Desired screen-centered location (flow coords)
-      const targetCenterX = maxRight + 640; // push further away from existing content
+      const RIGHT_GAP = 560; // distance from rightmost node to palette center
+      const targetCenterX = maxRight + RIGHT_GAP;
       const targetCenterY = centerY;
       // Zoom/center first so the palette appears in view
-      setCenter(targetCenterX, targetCenterY, { duration: 350, zoom: 0.9 });
-      // Place the drop node so its UI is visually centered (approximate dims)
-      const paletteW = 640; // slightly wider to better center
-      const paletteH = 420; // tune for vertical center visual alignment
-      const topLeft = { x: targetCenterX - paletteW / 2, y: targetCenterY - paletteH / 2 };
-      addNode('drop', { position: topLeft, data: { position: topLeft } });
+      setCenter(targetCenterX, targetCenterY, { duration: 350, zoom: 0.85 });
+      // Place the drop node after pan to better match final transform
+      const paletteW = 640;
+      const paletteH = 420;
+      setTimeout(() => {
+        const topLeft = { x: targetCenterX - paletteW / 2, y: targetCenterY - paletteH / 2 };
+        addNode('drop', { position: topLeft, data: { position: topLeft } });
+      }, 180);
     } catch (e) {
       // fallback: just toggle open list if something goes wrong
       setIsOpen(true);
