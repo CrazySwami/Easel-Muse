@@ -18,6 +18,34 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
 -   **New Web Renderer Node**
     -   Added a new **Web Renderer Node** that can render HTML from a connected `Code` node or a URL, built on the new robust "Fill Frame" layout pattern.
 
+-   **Perplexity Node Updates**
+    -   Palette defaults: `width: 1200`, `height: 800`, `resizable: true`, `fullscreenSupported: true`, `fullscreenOnly: false`.
+    -   Data flow: seeds Batch queries automatically from connected Text/Tiptap/Firecrawl incomers via `lib/xyflow` helpers when its list is empty.
+    -   Batch UI: left pane edit/done toggle; per-query status indicators (running/done/error); progressive runner updates statuses live; right pane renders results for the selected query.
+    -   Single UI: 2‑column results; "Search with Perplexity" button in accent color with icon.
+    -   Generate UI: editable list of generated questions; "Send to Batch" only (accent). Removed "Send & Run" to simplify flow.
+
+-   **Fullscreen Support (NodeLayout)**
+    -   New flags in node data:
+        -   `fullscreenSupported`: enables fullscreen control and context‑menu item.
+        -   `fullscreenOnly`: gates content until entering fullscreen.
+    -   Fullscreen overlay renders in a portal to `document.body` with a green frame; exit via circular green button (white X). Inline node controls/toolbar are hidden while fullscreen is active.
+
+-   **Sizing & Scrolling Rules**
+    -   Keep creation defaults (`lib/node-buttons.ts`) and component fallbacks identical.
+    -   Fill Frame nodes: pass `width`/`height` to `NodeLayout`; direct child uses `flex h-full flex-col`.
+    -   Hug Content nodes: omit `height`; direct child uses `flex flex-col` only (no `flex-1`/`h-full`).
+    -   Scroll containers: `min-h-0 overflow-auto` + `nowheel nodrag nopan` and `onPointerDown(e.stopPropagation())` to prevent canvas pan.
+    -   Canvas: use `touch-none`/`overscroll-contain` and non‑passive `ctrl+wheel`/`gesture*` handlers to avoid page zoom.
+
+-   **Toolbar / Registry**
+    -   Palette entries live in `lib/node-buttons.ts`; node components are registered in `components/nodes/index.tsx`.
+    -   Toolbar now scrolls (up to 70vh) so all nodes remain accessible.
+    -   Toolbar actions: add node at viewport center; palette icons reflect node types; window bar introduced for nodes with (delete, duplicate, show data, position lock, content lock, fullscreen when enabled).
+
+-   **Documentation**
+    -   UI guide expanded with: Fill Frame vs Hug Content, NodeLayout contract, scrolling/pan prevention, toolbar/registry workflow and checklist, and the new window‑chrome/fullscreen flags with examples and troubleshooting.
+
 ## v0.0.8 — New Nodes, Canvas UX, & Locking Refinements (2025-09-23 → 2025-10-04)
 
 -   **New Nodes for Data Ingestion**
@@ -95,7 +123,6 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
 
 -   **Authentication & Permissions**
     -   Implemented ***Supabase user authentication*** for all Liveblocks sessions, introducing robust access control based on user roles. Read-only tokens are now generated for guests, securing project data.
-    -   Greatly improved Liveblocks auth error handling and logging, and refined the entire session preparation flow for a smoother, more reliable connection experience.
 -   **Collaboration & Presence**
     -   Rebuilt our Liveblocks integration to use a <span class="text-accent">Zustand</span> store for state management, mirroring best practices for cleaner, more maintainable code.
     -   Merged Liveblocks Storage and Presence into this new system. Users can now seamlessly join a room directly from the Canvas, with fully functional live cursors and a synchronized React Flow board.

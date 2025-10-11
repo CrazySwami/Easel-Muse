@@ -10,6 +10,8 @@ export type WebRendererNodeProps = {
     resizable?: boolean;
     html?: string;
     url?: string;
+    mode?: 'url' | 'code';
+    viewport?: 'mobile' | 'tablet' | 'desktop';
   };
 };
 

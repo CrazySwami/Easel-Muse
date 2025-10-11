@@ -207,8 +207,8 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
   const reactFlow = useReactFlow();
   
   // Allow per-node overrides via data.width/height
-  const width = (props.data as any)?.width ?? 680;
-  const height = (props.data as any)?.height ?? 840;
+  const width = (props.data as any)?.width ?? 920;
+  const height = (props.data as any)?.height ?? 1160;
   const { getLock } = useLocks();
   const lock = getLock(props.id);
   const isEditLocked = lock?.level === 'edit';
@@ -265,7 +265,7 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
             className="h-full"
           >
             <div
-              className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none h-full"
+              className="nodrag nopan h-full"
               onPointerDown={(event) => event.stopPropagation()}
             >
               {provider ? (

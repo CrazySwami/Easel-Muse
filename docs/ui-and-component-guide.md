@@ -301,3 +301,270 @@ After creating or editing a node, verify the following:
 - [ ] **Connectors & Label**: Are the left/right connectors and the bottom title label perfectly aligned with the node's frame, with no extra space?
 - [ ] **Resizing (if applicable)**: If `resizable: true`, does dragging the handle correctly resize the node and its content?
 - [ ] **No Visual Glitches**: Is there any unexpected empty space inside or outside the node's frame?
+
+---
+
+## Scrolling, Canvas Pan, and Size Constraints
+
+Misconfigured scroll containers are a common source of bugs: the canvas pans instead of the node scrolling, node sections expand unexpectedly, or connectors misalign due to unconstrained growth. Use the patterns below to make scrolling predictable and keep the canvas static while interacting with a node.
+
+### Why this happens
+- The canvas listens to pointer/gesture events. If inner scrollable areas do not stop propagation, the canvas interprets wheel/drag as pan/zoom.
+- Flex children without proper constraints (min-h-0, overflow-auto) will stretch instead of scroll, pushing the node frame and connectors.
+- Nodes without min/max limits can grow beyond intended bounds during content spikes.
+
+### Rules to follow (always)
+- Direct child of `NodeLayout`:
+  - Hug Content pattern: `flex flex-col` (no `h-full` / `flex-1`).
+  - Fill Frame pattern: `flex h-full flex-col`.
+- Scrollable sections:
+  - Add `min-h-0 overflow-auto` to the scroll region.
+  - Add `nowheel nodrag nopan` and stop propagation on pointer down.
+- Prevent page/canvas gestures inside nodes:
+  - On scrollable wrappers and text inputs, add `onPointerDown={(e) => e.stopPropagation()}`.
+- Keep sizes consistent across creation and runtime:
+  - Define `width`, `height`, `resizable`, and (when needed) `minWidth`, `maxWidth`, `minHeight`, `maxHeight` in both `lib/node-buttons.ts` and the node component defaults.
+
+### Canonical Fill Frame layout with scrolling
+```tsx
+<NodeLayout id={id} data={{ width: 680, height: 520, resizable: false }}>
+  {/* Direct child must fill the frame */}
+  <div className="flex h-full flex-col min-h-0 p-3">
+    {/* Fixed header */}
+    <div className="shrink-0 rounded-2xl border bg-white p-2">…</div>
+
+    {/* Scrollable content area */}
+    <div
+      className="nowheel nodrag nopan flex-1 min-h-0 overflow-auto rounded-2xl border bg-white p-3"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      …
+    </div>
+
+    {/* Fixed footer / inputs (may scroll if tall) */}
+    <Textarea
+      className="nowheel nodrag nopan shrink-0 max-h-48 overflow-auto rounded-none border-x-0 border-b-0 border-t"
+      onPointerDown={(e) => e.stopPropagation()}
+      rows={5}
+    />
+  </div>
+</NodeLayout>
+```
+
+### Canonical Hug Content layout with a scrollable section
+```tsx
+<NodeLayout id={id} data={{ width: 560, resizable: false }}>
+  {/* Direct child hugs content; do NOT add flex-1/h-full here */}
+  <div className="flex flex-col gap-3 p-3">
+    <div className="shrink-0">…controls…</div>
+    <div
+      className="nowheel nodrag nopan max-h-80 overflow-auto rounded-xl border bg-white"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      …content…
+    </div>
+    <div className="shrink-0">…footer…</div>
+  </div>
+</NodeLayout>
+```
+
+### Node constraints (min/max) and resizing
+- If a node is resizable, pass limits through `data` and let `NodeLayout` forward them to `NodeResizer`:
+```ts
+// lib/node-buttons.ts
+{
+  id: 'example',
+  label: 'Example',
+  data: { width: 720, height: 480, resizable: true, minWidth: 480, maxWidth: 1280, minHeight: 360, maxHeight: 960 }
+}
+```
+```tsx
+// components/nodes/example/primitive.tsx
+<NodeLayout data={{ ...data, width: data.width ?? 720, height: data.height ?? 480, resizable: true, minWidth: 480, maxWidth: 1280, minHeight: 360, maxHeight: 960 }}>
+  …
+</NodeLayout>
+```
+- Keep these values identical between creation defaults and component fallbacks to avoid frame/content mismatches.
+
+### Prevent whole‑page zoom when pinching on the canvas
+If two‑finger pinch gestures zoom the browser instead of the canvas:
+- Wrap the canvas in `touch-none overscroll-contain` and add non‑passive wheel/gesture listeners to prevent default when `e.ctrlKey` (macOS pinch reports as ctrl+wheel) or Safari `gesture*` events fire.
+
+```tsx
+const containerRef = useRef<HTMLDivElement>(null);
+useEffect(() => {
+  const el = containerRef.current; if (!el) return;
+  const onWheel = (e: WheelEvent) => { if (e.ctrlKey) e.preventDefault(); };
+  const onGesture = (e: Event) => e.preventDefault();
+  el.addEventListener('wheel', onWheel, { passive: false });
+  el.addEventListener('gesturestart', onGesture as any, { passive: false });
+  el.addEventListener('gesturechange', onGesture as any, { passive: false });
+  el.addEventListener('gestureend', onGesture as any, { passive: false });
+  return () => {
+    el.removeEventListener('wheel', onWheel as any);
+    el.removeEventListener('gesturestart', onGesture as any);
+    el.removeEventListener('gesturechange', onGesture as any);
+    el.removeEventListener('gestureend', onGesture as any);
+  };
+}, []);
+```
+
+Following these rules eliminates canvas‑pan on scroll, keeps nodes within predictable bounds, and maintains connector alignment across all node types.
+
+---
+
+## Node Toolbar (Toggle) and Node Registry
+
+The vertical toggle palette on the canvas is fully data‑driven. Adding/removing a node type involves two places:
+
+1) The palette list (what appears in the toggle) — `lib/node-buttons.ts`
+2) The node registry (how a type id resolves to a React component) — `components/nodes/index.tsx`
+
+### 1) Add a node to the palette
+Edit `lib/node-buttons.ts` and add an entry to the exported `nodeButtons` array. Each entry defines:
+- `id`: unique type id (used by React Flow and the registry)
+- `label`: display name in the palette tooltip/menu
+- `icon`: a `lucide-react` (or app) icon component
+- `data`: default node data at creation time (width/height/constraints/etc.)
+
+Example (Hug Content):
+```ts
+// lib/node-buttons.ts
+import { FileTextIcon } from 'lucide-react';
+
+export const nodeButtons = [
+  // …existing nodes…
+  {
+    id: 'my-node',
+    label: 'My Node',
+    icon: FileTextIcon,
+    data: {
+      // Hug Content → omit height, only width
+      width: 560,
+      resizable: false,
+    },
+  },
+];
+```
+
+Example (Fill Frame):
+```ts
+{
+  id: 'renderer',
+  label: 'Renderer',
+  icon: GlobeIcon,
+  data: {
+    width: 1280,
+    height: 720,
+    resizable: true,
+    minWidth: 640,
+    maxWidth: 1920,
+    minHeight: 360,
+    maxHeight: 1080,
+  },
+}
+```
+
+Sizing must match your component’s internal defaults (see “Consistent Sizing” above). If the palette says `width: 1280` and the component falls back to `width: 1024`, you will see frame/content mismatches.
+
+### 2) Register the node component
+Map the `id` to a component in `components/nodes/index.tsx` so the canvas can render it:
+```tsx
+// components/nodes/index.tsx
+import { MyNode } from './my-node';
+
+export const nodeTypes = {
+  // …existing types…
+  'my-node': MyNode,
+};
+```
+
+The component is expected to follow one of the two patterns:
+- Hug Content: `<NodeLayout data={{ ...data, width, resizable }}>` and direct child is `flex flex-col`
+- Fill Frame: `<NodeLayout data={{ ...data, width, height, resizable }}>` and direct child is `flex h-full flex-col`
+
+### 3) Verify in the palette
+The toggle palette reads directly from `nodeButtons`. If your node doesn’t appear:
+- Ensure the `id` is unique
+- Ensure the icon is imported and valid
+- Ensure the `nodeTypes` registry includes your id
+- Check that any feature flags aren’t filtering the item (if you add such logic)
+
+### Quick checklist when adding a node
+- [ ] Add to `nodeButtons` with matching size defaults (and min/max if resizable)
+- [ ] Register in `components/nodes/index.tsx`
+- [ ] Choose correct pattern and apply the Golden Rule for the direct child
+- [ ] Configure scroll regions with `min-h-0 overflow-auto` + `nowheel nodrag nopan` + `onPointerDown` stopPropagation
+- [ ] Confirm connectors/label align, and that the canvas doesn’t pan when scrolling inside the node
+
+---
+
+## Window Chrome and Fullscreen Mode
+
+NodeLayout provides optional window chrome and a true fullscreen mode that overlays the entire page. This is controlled per‑node via simple data flags. You can enable it at creation time (in `lib/node-buttons.ts`) and/or in the node’s component defaults.
+
+### Flags (data)
+- `fullscreenSupported?: boolean` (default: true)
+  - Enables the window control (↗︎) and context‑menu item to enter fullscreen.
+  - Set to `false` to hide fullscreen controls entirely.
+- `fullscreenOnly?: boolean` (default: false)
+  - When true, the node shows a gate screen until the user enters fullscreen. Useful for nodes that require maximum canvas space.
+
+These flags live in the node’s `data` object alongside `width`, `height`, and `resizable`.
+
+### How it behaves
+- Enter/exit fullscreen via:
+  - The inline window control (top‑right of the node) OR
+  - The node’s context menu → “Enter fullscreen” / “Exit fullscreen”
+- Fullscreen renders in a React portal to `document.body` (not inside the canvas), so it truly overlays the app with a green frame and a circular green exit button (white X) in the top‑right.
+- While fullscreen is active, inline chrome and the floating toolbar are hidden to avoid stacked buttons.
+- Fill Frame nodes expand to the overlay bounds; Hug Content nodes keep content sized as authored.
+
+### Example: enable fullscreen for a node (palette defaults)
+```ts
+// lib/node-buttons.ts
+{
+  id: 'renderer',
+  label: 'Renderer',
+  icon: GlobeIcon,
+  data: {
+    width: 1280,
+    height: 720,
+    resizable: false,
+    fullscreenSupported: true,   // enable in chrome and context menu
+    fullscreenOnly: false,       // show content without gating
+  },
+}
+```
+
+### Example: enable fullscreen‑only from the component
+```tsx
+// components/nodes/your-node/primitive.tsx
+export const YourNode = (props: Props) => {
+  const width = props.data?.width ?? 800;
+  const height = props.data?.height ?? 600;
+  return (
+    <NodeLayout
+      {...props}
+      data={{
+        ...props.data,
+        width,
+        height,
+        fullscreenSupported: true,
+        fullscreenOnly: true,   // gate until user chooses fullscreen
+      }}
+    >
+      {/* Your content goes here */}
+    </NodeLayout>
+  );
+};
+```
+
+### UX guidelines
+- Use `fullscreenOnly: true` for experiences that need uninterrupted focus (e.g., complex editors, renderers).
+- Keep sizing rules consistent: the palette (`lib/node-buttons.ts`) width/height must match your internal component defaults to avoid frame/content mismatch.
+- Fill Frame nodes typically work best in fullscreen. Ensure the direct child `div` of `<NodeLayout>` uses `flex h-full flex-col`.
+
+### Troubleshooting
+- “Fullscreen only fills the node, not the page”: ensure the overlay is not blocked by transforms. NodeLayout renders the fullscreen overlay into a portal (`document.body`) for this reason.
+- “I see two X buttons in the corner”: the inline chrome is hidden during fullscreen; if you implement additional buttons, hide them when fullscreen is active.

@@ -60,8 +60,8 @@ export const ToolbarInner = () => {
         >
           <div
             className={cn(
-              'flex flex-col items-center gap-2 overflow-hidden transition-all duration-200 ease-out',
-              isOpen ? 'max-h-[520px] opacity-100' : 'max-h-0 opacity-0'
+              'flex flex-col items-center gap-2 overflow-auto transition-all duration-200 ease-out',
+              isOpen ? 'max-h-[70vh] opacity-100' : 'max-h-0 opacity-0'
             )}
           >
             {nodeButtons.map((nodeButton) => (

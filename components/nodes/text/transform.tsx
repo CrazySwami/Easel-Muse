@@ -343,7 +343,7 @@ export const TextTransform = ({
   return (
     <NodeLayout
       id={id}
-      data={{ ...data, width: 560, height: 420, resizable: false }}
+      data={{ ...data, width: 680, height: 520, resizable: false }}
       type={type}
       title={title}
       toolbar={toolbar}
@@ -352,7 +352,10 @@ export const TextTransform = ({
       <div className="flex h-full flex-col">
 
         {/* 1. Main Content Area (Scrollable) */}
-        <div className="nowheel flex-1 bg-secondary/50 p-4 overflow-auto">
+        <div
+          className="nowheel nodrag nopan flex-1 bg-secondary/50 p-4 overflow-auto"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           {status === 'submitted' && (
             <div className="flex flex-col gap-2 py-2">
               <Skeleton className="h-3 w-[90%] animate-pulse rounded-md" />
@@ -381,8 +384,9 @@ export const TextTransform = ({
           value={data.instructions ?? ''}
           onChange={handleInstructionsChange}
           placeholder="Add additional context or guidance"
-          rows={4}
-          className="shrink-0 resize-none rounded-none border-x-0 border-b-0 border-t border-border bg-muted/30 px-4 py-3 text-sm placeholder:text-muted-foreground/60 shadow-none transition-colors focus-visible:bg-muted/50 focus-visible:ring-0"
+          rows={5}
+          className="nowheel nodrag nopan shrink-0 resize-none rounded-none border-x-0 border-b-0 border-t border-border bg-muted/30 px-4 py-3 text-sm placeholder:text-muted-foreground/60 shadow-none transition-colors focus-visible:bg-muted/50 focus-visible:ring-0 max-h-48 overflow-auto"
+          onPointerDown={(e) => e.stopPropagation()}
         />
         
         <ReasoningTunnel.In>

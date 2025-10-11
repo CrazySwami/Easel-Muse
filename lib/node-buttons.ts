@@ -4,6 +4,7 @@ import {
   FileIcon,
   FileTextIcon,
   MicIcon,
+  SearchIcon,
   VideoIcon,
 } from 'lucide-react';
 
@@ -18,8 +19,8 @@ export const nodeButtons = [
     data: {
       source: 'primitive',
       text: '',
-      width: 560,
-      height: 420,
+      width: 680,
+      height: 520,
       resizable: false,
     },
     className: 'bg-primary/20 text-primary',
@@ -44,8 +45,9 @@ export const nodeButtons = [
     label: 'Editor',
     icon: FileTextIcon,
     data: {
+      width: 920,
+      height: 1160,
       resizable: false,
-      width: 640,
     },
   },
   {
@@ -96,6 +98,32 @@ export const nodeButtons = [
     data: {
       resizable: false,
       width: 560,
+    },
+  },
+  {
+    id: 'perplexity',
+    label: 'Perplexity',
+    icon: SearchIcon,
+    data: {
+      width: 1200,
+      height: 800,
+      resizable: true,
+      minWidth: 400,
+      minHeight: 300,
+      fullscreenSupported: true,
+      fullscreenOnly: false,
+    },
+  },
+  {
+    id: 'fullscreen-demo',
+    label: 'Fullscreen Demo',
+    icon: GlobeIcon,
+    data: {
+      width: 800,
+      height: 600,
+      resizable: false,
+      fullscreenSupported: true,
+      fullscreenOnly: true,
     },
   },
 ];
