@@ -4,12 +4,12 @@ import {
   FileIcon,
   FileTextIcon,
   MicIcon,
-  SearchIcon,
   VideoIcon,
 } from 'lucide-react';
 
 import { CodeIcon, ImageIcon, TextIcon } from 'lucide-react';
 import { GlobeIcon } from 'lucide-react';
+import { PerplexityIcon } from '@/lib/icons';
 
 export const nodeButtons = [
   {
@@ -92,18 +92,9 @@ export const nodeButtons = [
     data: { resizable: false, width: 1920, height: 1080 },
   },
   {
-    id: 'custom',
-    label: 'Custom',
-    icon: FileTextIcon,
-    data: {
-      resizable: false,
-      width: 560,
-    },
-  },
-  {
     id: 'perplexity',
     label: 'Perplexity',
-    icon: SearchIcon,
+    icon: PerplexityIcon,
     data: {
       width: 1200,
       height: 800,
