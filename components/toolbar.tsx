@@ -76,10 +76,13 @@ export const ToolbarInner = () => {
           anchorId = n.id as any;
         }
       }
-      const GAP = 600;
       const flowCenter = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
       const est = getPaletteDefaults(type) ?? {};
       const estHeight = typeof est.height === 'number' ? est.height : 520;
+      const estWidth = typeof est.width === 'number' ? est.width : 680;
+      // Horizontal spacing considers the next node's width to avoid overlap on large nodes
+      const BASE_GAP = 220; // minimal spacing between nodes
+      const GAP = BASE_GAP + Math.round(estWidth * 0.25);
       // Align top with the rightmost existing node; fallback to viewport center if none
       const topYForSpawn = anchorTopY ?? (flowCenter.y - estHeight / 2);
       const position = { x: maxRight + GAP, y: topYForSpawn };
