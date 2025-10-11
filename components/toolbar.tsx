@@ -5,13 +5,14 @@ import { useNodeOperations } from '@/providers/node-operations';
 import { cn } from '@/lib/utils';
 import { Panel, useReactFlow } from '@xyflow/react';
 import { memo, useCallback, useState } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Controls } from './controls';
 
 export const ToolbarInner = () => {
-  const { getViewport } = useReactFlow();
+  const { getViewport, getNodes, setCenter } = useReactFlow();
   const { addNode } = useNodeOperations();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -49,6 +50,40 @@ export const ToolbarInner = () => {
     setIsOpen((prev) => !prev);
   }, []);
 
+  // Compute a clear spot to the right of existing nodes and open the command palette there
+  const openCommandPalette = useCallback(() => {
+    try {
+      const nodes = getNodes?.() ?? [];
+      // Find farthest right edge among nodes
+      let maxRight = 0;
+      let centerY = 0;
+      if (nodes.length) {
+        const rights = nodes.map((n) => (n.position?.x ?? 0) + ((n.width as number) ?? 0));
+        maxRight = Math.max(0, ...rights);
+        // Middle Y of current viewport
+        const vp = getViewport();
+        centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
+      } else {
+        const vp = getViewport();
+        maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
+        centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
+      }
+      const position = { x: maxRight + 400, y: centerY };
+      addNode('drop', { position, data: { position } });
+      // Zoom/center on the new area with a comfortable zoom
+      setCenter(position.x, position.y, { duration: 350, zoom: 1 });
+    } catch (e) {
+      // fallback: just toggle open list if something goes wrong
+      setIsOpen(true);
+    }
+  }, [addNode, getNodes, getViewport, setCenter]);
+
+  // Global hotkey: Cmd/Ctrl+K opens the command/search palette
+  useHotkeys('meta+k,ctrl+k', (e) => {
+    e.preventDefault();
+    openCommandPalette();
+  }, { enableOnFormTags: true, preventDefault: true }, [openCommandPalette]);
+
   return (
     <>
       {/* Palette toggle and node list: bottom-left (original position) */}
@@ -83,17 +118,20 @@ export const ToolbarInner = () => {
               </div>
             ))}
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-expanded={isOpen}
-            aria-label={isOpen ? 'Close node toolbar' : 'Open node toolbar'}
-            className="h-10 w-10 rounded-full bg-emerald-500 text-white transition-colors hover:bg-emerald-600"
-            onClick={toggleToolbar}
-          >
-            {isOpen ? <XIcon size={16} /> : <PlusIcon size={16} />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-expanded={isOpen}
+              aria-label={'Open add node palette'}
+              className="h-10 w-10 rounded-full bg-emerald-500 text-white transition-colors hover:bg-emerald-600"
+              onClick={openCommandPalette}
+            >
+              <PlusIcon size={16} />
+            </Button>
+            <span className="select-none rounded-full border bg-card/80 px-2 py-1 text-[10px] text-muted-foreground">⌘K</span>
+          </div>
         </div>
       </Panel>
 
