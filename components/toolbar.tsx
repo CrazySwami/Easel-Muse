@@ -4,17 +4,20 @@ import { nodeButtons } from '@/lib/node-buttons';
 import { useNodeOperations } from '@/providers/node-operations';
 import { cn } from '@/lib/utils';
 import { Panel, useReactFlow } from '@xyflow/react';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Controls } from './controls';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { createPortal } from 'react-dom';
 
 export const ToolbarInner = () => {
-  const { getViewport, getNodes, setCenter } = useReactFlow();
+  const { getViewport, getNodes, setCenter, fitView, screenToFlowPosition } = useReactFlow();
   const { addNode } = useNodeOperations();
   const [isOpen, setIsOpen] = useState(false);
+  const [isCmdOpen, setIsCmdOpen] = useState(false);
 
   const handleAddNode = useCallback(
     (type: string, options?: Record<string, unknown>) => {
@@ -50,57 +53,36 @@ export const ToolbarInner = () => {
     setIsOpen((prev) => !prev);
   }, []);
 
-  // Compute a clear spot to the right of existing nodes and open the command palette there
+  // Open overlay command palette (viewport centered)
   const openCommandPalette = useCallback(() => {
+    setIsCmdOpen(true);
+  }, []);
+
+  const closeCommandPalette = useCallback(() => setIsCmdOpen(false), []);
+
+  const getPaletteDefaults = useCallback((type: string) => nodeButtons.find((b) => b.id === type)?.data as any, []);
+
+  const handleSelectType = useCallback((type: string) => {
     try {
       const nodes = getNodes?.() ?? [];
-      // Find farthest right edge among nodes
       let maxRight = 0;
-      let centerY = 0;
-      if (nodes.length) {
-        // Find farthest-right node
-        let bestRight = -Infinity;
-        for (let i = 0; i < nodes.length; i++) {
-          const n = nodes[i];
-          const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
-          if (right > bestRight) { bestRight = right; }
-        }
-        maxRight = Math.max(0, bestRight);
-        // Vertically center in viewport (not anchor) per spec
-        const vp = getViewport();
-        centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
-      } else {
-        const vp = getViewport();
-        maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
-        centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
+      for (const n of nodes) {
+        const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
+        if (right > maxRight) maxRight = right;
       }
-      // Desired flow-centered location (enforce a minimum gap to the right)
-      const RIGHT_GAP = 600; // flow units
-      const desiredCenterX = Math.max(centerY /*dummy*/, 0); // placeholder to satisfy ts
-      // compute viewport-based center in flow coords
-      const vp0 = getViewport();
-      const centerFlowX = -vp0.x / vp0.zoom + window.innerWidth / 2 / vp0.zoom;
-      const centerFlowY = -vp0.y / vp0.zoom + window.innerHeight / 2 / vp0.zoom;
-      const targetCenterX = Math.max(centerFlowX, maxRight + RIGHT_GAP);
-      const targetCenterY = centerFlowY;
-      // Zoom/center first so the palette appears in view
-      setCenter(targetCenterX, targetCenterY, { duration: 350, zoom: 0.85 });
-      // Place the drop node after pan with precise screen-to-flow centering
-      const paletteW = 640; const paletteH = 420;
+      const GAP = 600;
+      const flowCenter = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      const est = getPaletteDefaults(type) ?? {};
+      const estHeight = typeof est.height === 'number' ? est.height : 520;
+      const position = { x: maxRight + GAP, y: flowCenter.y - estHeight / 2 };
+      addNode(type, { position, data: est });
       setTimeout(() => {
-        const vp = getViewport();
-        // top-left flow coords corresponding to screen center minus half palette size
-        const topLeft = {
-          x: targetCenterX - (paletteW / 2) / vp.zoom,
-          y: targetCenterY - (paletteH / 2) / vp.zoom,
-        };
-        addNode('drop', { position: topLeft, data: { position: topLeft, anchorRight: maxRight } });
-      }, 200);
-    } catch (e) {
-      // fallback: just toggle open list if something goes wrong
-      setIsOpen(true);
+        try { fitView({ nodes: [{ id: (getNodes?.() ?? []).slice(-1)[0]?.id } as any], padding: 0.35, minZoom: 0.5, duration: 400 }); } catch {}
+      }, 10);
+    } finally {
+      closeCommandPalette();
     }
-  }, [addNode, getNodes, getViewport, setCenter]);
+  }, [addNode, closeCommandPalette, fitView, getNodes, getPaletteDefaults, screenToFlowPosition]);
 
   // Global hotkey: Cmd/Ctrl+K opens the command/search palette
   useHotkeys('meta+k,ctrl+k', (e) => {
@@ -163,6 +145,30 @@ export const ToolbarInner = () => {
       <Panel position="bottom-right" className="mr-4" style={{ bottom: 50 }}>
         <Controls />
       </Panel>
+
+      {isCmdOpen && createPortal(
+        (
+          <div className="fixed inset-0 z-[10050] flex items-center justify-center">
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" onClick={closeCommandPalette} />
+            <div className="relative z-[10051] w-[640px] max-w-[90vw]">
+              <Command className="rounded-3xl shadow-xl bg-card">
+                <CommandInput autoFocus placeholder="Type a command or search..." />
+                <CommandList className="max-h-[60vh] overflow-auto">
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  <CommandGroup heading="Add node">
+                    {nodeButtons.map((button) => (
+                      <CommandItem key={button.id} onSelect={() => handleSelectType(button.id)}>
+                        <button.icon size={16} />
+                        {button.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+          </div>
+        ), document.body)
+      }
     </>
   );
 }
