@@ -48,11 +48,14 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
     const newNodeId = nanoid();
     const { data: nodeData, ...rest } = options ?? {};
 
-    // Add the new node of the selected type
+    // Add the new node of the selected type, offset to the right of the far-right anchor
+    const NODE_GAP_X = 240; // distance from anchor to new node left edge
+    const NODE_GAP_Y = 0;
+    const spawn = { x: position.x + NODE_GAP_X, y: position.y + NODE_GAP_Y };
     addNodes({
       id: newNodeId,
       type,
-      position,
+      position: spawn,
       data: {
         ...(nodeData ? nodeData : {}),
       },
@@ -66,7 +69,7 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
         try {
           fitView({ nodes: [{ id: newNodeId } as any], padding: 0.3, duration: 400, minZoom: 0.5 });
         } catch {
-          setCenter(position.x + 200, position.y + 150, { duration: 350, zoom: 0.8 });
+          setCenter(spawn.x + 200, spawn.y + 150, { duration: 350, zoom: 0.8 });
         }
       }, 10);
     } catch {}

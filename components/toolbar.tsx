@@ -58,12 +58,18 @@ export const ToolbarInner = () => {
       let maxRight = 0;
       let centerY = 0;
       if (nodes.length) {
-        const rights = nodes.map((n) => (n.position?.x ?? 0) + ((n.width as number) ?? 0));
-        maxRight = Math.max(0, ...rights);
-        // Middle Y of current viewport
-      const vp = getViewport();
-      // target vertical center of current viewport
-      centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
+        // Find farthest-right node and use its vertical center for alignment
+        let idx = 0;
+        let bestRight = -Infinity;
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i];
+          const right = (n.position?.x ?? 0) + ((n.width as number) ?? 0);
+          if (right > bestRight) { bestRight = right; idx = i; }
+        }
+        const anchor = nodes[idx];
+        maxRight = Math.max(0, bestRight);
+        const anchorCenterY = (anchor?.position?.y ?? 0) + (((anchor?.height as number) ?? 0) / 2);
+        centerY = anchorCenterY;
       } else {
         const vp = getViewport();
         maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
