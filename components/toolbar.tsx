@@ -68,10 +68,16 @@ export const ToolbarInner = () => {
         maxRight = -vp.x / vp.zoom + window.innerWidth / 2 / vp.zoom + 400;
         centerY = -vp.y / vp.zoom + window.innerHeight / 2 / vp.zoom;
       }
-      const position = { x: maxRight + 400, y: centerY };
-      addNode('drop', { position, data: { position } });
-      // Zoom/center on the new area with a comfortable zoom
-      setCenter(position.x, position.y, { duration: 350, zoom: 1 });
+      // Desired screen-centered location (flow coords)
+      const targetCenterX = maxRight + 400;
+      const targetCenterY = centerY;
+      // Zoom/center first so the palette appears in view
+      setCenter(targetCenterX, targetCenterY, { duration: 350, zoom: 1 });
+      // Place the drop node so its UI is visually centered (approximate dims)
+      const paletteW = 560; // should match drop palette width
+      const paletteH = 360; // approximate
+      const topLeft = { x: targetCenterX - paletteW / 2, y: targetCenterY - paletteH / 2 };
+      addNode('drop', { position: topLeft, data: { position: topLeft } });
     } catch (e) {
       // fallback: just toggle open list if something goes wrong
       setIsOpen(true);
