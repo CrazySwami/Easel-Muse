@@ -153,9 +153,11 @@ export const ToolbarInner = () => {
         </div>
       </Panel>
 
-      {/* Canvas controls: bottom-left above the plus button */}
-      <Panel position="bottom-left" className="ml-4" style={{ bottom: 120 }}>
-        <Controls />
+      {/* Canvas controls: bottom-left near the plus button, slightly smaller */}
+      <Panel position="bottom-left" className="ml-4" style={{ bottom: 70 }}>
+        <div className="scale-90 origin-bottom-left">
+          <Controls />
+        </div>
       </Panel>
 
       {isCmdOpen && createPortal(
