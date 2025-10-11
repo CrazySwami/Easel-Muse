@@ -66,14 +66,19 @@ export const ToolbarInner = () => {
           >
             {nodeButtons.map((nodeButton) => (
               <div key={`toolbar-${nodeButton.id}`} className="relative">
-                <button
-                  type="button"
-                  title={nodeButton.label}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border-0 bg-transparent text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                  onClick={() => handleAddNode(nodeButton.id, nodeButton.data)}
-                >
-                  <nodeButton.icon size={16} />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      title={nodeButton.label}
+                      className="flex h-10 w-10 items-center justify-center rounded-full border-0 bg-transparent text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                      onClick={() => handleAddNode(nodeButton.id, nodeButton.data)}
+                    >
+                      <nodeButton.icon size={16} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{nodeButton.label}</TooltipContent>
+                </Tooltip>
               </div>
             ))}
           </div>

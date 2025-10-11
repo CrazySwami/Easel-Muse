@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import { CodeIcon, ImageIcon, TextIcon } from 'lucide-react';
-import { GlobeIcon } from 'lucide-react';
+import { GlobeIcon, MonitorIcon, Maximize2Icon } from 'lucide-react';
 import { PerplexityIcon } from '@/lib/icons';
 
 export const nodeButtons = [
@@ -87,8 +87,8 @@ export const nodeButtons = [
   },
   {
     id: 'web-renderer',
-    label: 'Web Renderer',
-    icon: GlobeIcon,
+    label: 'Web Renderer (HTML/URL)',
+    icon: MonitorIcon,
     data: { resizable: false, width: 1920, height: 1080 },
   },
   {
@@ -107,8 +107,8 @@ export const nodeButtons = [
   },
   {
     id: 'fullscreen-demo',
-    label: 'Fullscreen Demo',
-    icon: GlobeIcon,
+    label: 'Fullscreen (overlay demo)',
+    icon: Maximize2Icon,
     data: {
       width: 800,
       height: 600,
