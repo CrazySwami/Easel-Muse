@@ -423,14 +423,22 @@ export const NodeLayout = ({
         <Handle
           type="target"
           position={Position.Left}
-          style={{ width: 10, height: 72, borderRadius: 6, background: 'hsl(var(--primary))', border: 'none', opacity: 0.9 }}
+          className={cn(
+            'pointer-events-auto shadow-md ring-2 ring-background/80',
+            '!-translate-y-1/2 !rounded-full !bg-emerald-600/90 hover:!bg-emerald-600',
+            '!-left-2 !top-1/2 !h-28 !w-2.5'
+          )}
         />
       )}
       {type !== 'drop' && type !== 'video' && allowOutgoing && (
         <Handle
           type="source"
           position={Position.Right}
-          style={{ width: 10, height: 72, borderRadius: 6, background: 'hsl(var(--primary))', border: 'none', opacity: 0.9 }}
+          className={cn(
+            'pointer-events-auto shadow-md ring-2 ring-background/80',
+            '!-translate-y-1/2 !rounded-full !bg-emerald-600/90 hover:!bg-emerald-600',
+            '!-right-2 !top-1/2 !h-28 !w-2.5'
+          )}
         />
       )}
       <Dialog open={showData} onOpenChange={setShowData}>
