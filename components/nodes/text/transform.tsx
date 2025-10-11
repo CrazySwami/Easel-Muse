@@ -24,6 +24,8 @@ import {
   getTranscriptionFromAudioNodes,
   getTweetContentFromTweetNodes,
   getTextFromTiptapNodes,
+  getTextFromPerplexityNodes,
+  getLinksFromPerplexityNodes,
 } from '@/lib/xyflow';
 import { useGateway } from '@/providers/gateway/client';
 import { useProject } from '@/providers/project';
@@ -122,9 +124,11 @@ export const TextTransform = ({
     const images = getImagesFromImageNodes(incomers);
     const imageDescriptions = getDescriptionsFromImageNodes(incomers);
     const tweetContent = getTweetContentFromTweetNodes(incomers);
+    const perplexityTexts = getTextFromPerplexityNodes(incomers);
+    const perplexityLinks = getLinksFromPerplexityNodes(incomers);
     const files = getFilesFromFileNodes(incomers);
 
-    if (!textPrompts.length && !docPrompts.length && !audioPrompts.length && !data.instructions) {
+    if (!textPrompts.length && !docPrompts.length && !audioPrompts.length && !perplexityTexts.length && !data.instructions) {
       handleError('Error generating text', 'No prompts found');
       return;
     }
@@ -143,6 +147,10 @@ export const TextTransform = ({
       content.push('--- Doc Content ---', ...docPrompts);
     }
 
+    if (perplexityTexts.length) {
+      content.push('--- Search Results ---', ...perplexityTexts);
+    }
+
     if (audioPrompts.length) {
       content.push('--- Audio Prompts ---', ...audioPrompts);
     }
@@ -153,6 +161,10 @@ export const TextTransform = ({
 
     if (tweetContent.length) {
       content.push('--- Tweet Content ---', ...tweetContent);
+    }
+
+    if (perplexityLinks.length) {
+      content.push('--- Sources ---', ...perplexityLinks);
     }
 
     analytics.track('canvas', 'node', 'generate', {
