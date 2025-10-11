@@ -224,16 +224,16 @@ export const AudioPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false }} type={type} title={title}>
+    <NodeLayout id={id} data={{ ...data, width: 840, height: 520, resizable: false }} type={type} title={title}>
       {/* Options: two equal columns */}
       <div className="mb-3 grid grid-cols-2 gap-3">
         {/* Record column */}
-        <div className="rounded-2xl border bg-card/60 p-3">
+        <div className="rounded-2xl border bg-card/60 p-3 h-48 flex flex-col">
           <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
             <MicIcon className="h-4 w-4" />
             <span>Record audio</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex-1 min-h-0 flex flex-wrap items-center gap-2">
             {!isRecording && (
               <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
                 <MicIcon className="mr-1" size={14} /> Record
@@ -267,7 +267,7 @@ export const AudioPrimitive = ({
         </div>
 
         {/* Upload column */}
-        <div className="rounded-2xl border bg-card/60 p-3">
+        <div className="rounded-2xl border bg-card/60 p-3 h-48 flex flex-col">
           <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
             <UploadIcon className="h-4 w-4" />
             <span>Upload a file</span>
@@ -277,7 +277,8 @@ export const AudioPrimitive = ({
               <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
             </Skeleton>
           ) : (
-            <Dropzone
+            <div className="flex-1 min-h-0">
+              <Dropzone
               maxSize={1024 * 1024 * 10}
               minSize={1024}
               maxFiles={1}
@@ -301,10 +302,11 @@ export const AudioPrimitive = ({
                 handleError('Error uploading audio', message);
               }}
               className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
-            >
-              <DropzoneEmptyState />
-              <DropzoneContent />
-            </Dropzone>
+              >
+                <DropzoneEmptyState />
+                <DropzoneContent />
+              </Dropzone>
+            </div>
           )}
         </div>
       </div>
