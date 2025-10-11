@@ -32,6 +32,7 @@ export const AudioPrimitive = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [mode, setMode] = useState<'record' | 'upload'>(data?.content ? 'upload' : 'record');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -225,38 +226,48 @@ export const AudioPrimitive = ({
 
   return (
     <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false }} type={type} title={title}>
-      {/* Recording controls (primary action) */}
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        {!isRecording && (
-          <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
-            <MicIcon className="mr-1" size={14} /> Record
-          </Button>
-        )}
-        {isRecording && !isPaused && (
-          <Button size="sm" variant="destructive" onClick={stopRecording} className="rounded-full">
-            <SquareIcon className="mr-1" size={14} /> Stop
-          </Button>
-        )}
-        {isRecording && !isPaused && (
-          <Button size="sm" variant="secondary" onClick={pauseRecording} className="rounded-full">
-            Pause
-          </Button>
-        )}
-        {isRecording && isPaused && (
-          <Button size="sm" onClick={resumeRecording} className="rounded-full">
-            Resume
-          </Button>
-        )}
-        <span className="text-xs text-muted-foreground">
-          {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
-        </span>
+      {/* Mode toggle */}
+      <div className="mb-2 flex items-center gap-2">
+        <div className="inline-flex rounded-full border p-0.5">
+          <Button size="sm" variant={mode === 'record' ? 'default' : 'ghost'} onClick={() => setMode('record')}>Record</Button>
+          <Button size="sm" variant={mode === 'upload' ? 'default' : 'ghost'} onClick={() => setMode('upload')}>Upload</Button>
+        </div>
         {(isTranscribing || (data as any)?.transcribing) && (
-          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
             <Loader2Icon className="size-3 animate-spin" />
             Transcribing…
           </span>
         )}
       </div>
+
+      {/* Recording controls (primary action) */}
+      {mode === 'record' && (
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {!isRecording && (
+            <Button size="sm" onClick={startRecording} disabled={isUploading || isTranscribing} className="rounded-full">
+              <MicIcon className="mr-1" size={14} /> Record
+            </Button>
+          )}
+          {isRecording && !isPaused && (
+            <Button size="sm" variant="destructive" onClick={stopRecording} className="rounded-full">
+              <SquareIcon className="mr-1" size={14} /> Stop
+            </Button>
+          )}
+          {isRecording && !isPaused && (
+            <Button size="sm" variant="secondary" onClick={pauseRecording} className="rounded-full">
+              Pause
+            </Button>
+          )}
+          {isRecording && isPaused && (
+            <Button size="sm" onClick={resumeRecording} className="rounded-full">
+              Resume
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground">
+            {new Date(elapsedSeconds * 1000).toISOString().substring(14, 19)} / 20:00
+          </span>
+        </div>
+      )}
       {isUploading && (
         <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
           <Loader2Icon
@@ -296,7 +307,7 @@ export const AudioPrimitive = ({
         </div>
       )}
       {/* Upload section (second option) */}
-      {!isUploading && (
+      {!isUploading && mode === 'upload' && (
         <Dropzone
           maxSize={1024 * 1024 * 10}
           minSize={1024}
