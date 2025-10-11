@@ -576,86 +576,80 @@ export const YourNode = (props: Props) => {
 
 ---
 
-## Node data production/consumption pattern (Perplexity example)
+## Node Data I/O (Incoming and Outgoing)
 
-Each node owns its `data` shape. To participate in data flow:
+This section explains the minimal setup every node needs to output data for others to consume and to consume data from its incomers. It complements the deep dive in `docs/xyflow-data-consumption.md` and standardizes how nodes interoperate.
 
-- Producers write well‑named fields into `data` when work completes.
-- Consumers read their incomers and use shared extractors in `lib/xyflow.ts` to get typed content.
+### Concepts
+- Each node owns its `data` shape. The “Show data” dialog simply renders `JSON.stringify(node.data)`.
+- Outputs are written by the node itself to `data` via `updateNodeData`. Consumers never reach into component state; they only read `node.data`.
+- Consumption is done by reading incomers and using shared extractors in `lib/xyflow.ts` to return typed arrays (text, links, images, code, etc.).
 
-### Producer: Perplexity node
+### Producer (Outgoing) pattern
+1) Pick a clear, stable data shape for what your node produces (e.g., `generated`, `outputTexts`, `outputLinks`).
+2) Write results to `data` using `updateNodeData(id, { ... })` when work completes.
+3) If you want other nodes to consume your output, add a small extractor to `lib/xyflow.ts` that returns a simple typed array.
 
-- Writes flattened outputs after searches/batch runs:
-  - `outputTexts: string[]` → entries of `"<title> — <snippet>"`
-  - `outputLinks: string[]` → result URLs
-- Also keeps detailed results (`searchSingleResults`, `searchBatchResults`) for UI.
-
-Snippet (inside the Perplexity node) – derive and persist outputs:
-
+Example: node writes an array of strings for downstream text consumption
 ```tsx
-// components/nodes/perplexity/primitive.tsx
-const deriveOutputsFromResults = (results: any[]) => {
-  const flat = Array.isArray(results) && results.length > 0 && 'query' in (results[0] as any)
-    ? (results as any[]).flatMap((g: any) => g.results ?? [])
-    : (results as any[]);
-  return {
-    texts: (flat ?? []).map((r: any) => [r?.title ?? '', r?.snippet ?? r?.text ?? ''].filter(Boolean).join(' — ')).filter(Boolean),
-    links: (flat ?? []).map((r: any) => r?.url).filter(Boolean),
-  };
-};
-
-// After fetching results
-const out = deriveOutputsFromResults(nextResults);
+// inside your node component
 updateNodeData(id, {
-  searchBatchResults: nextResults,
-  outputTexts: out.texts,
-  outputLinks: out.links,
+  outputTexts: titlesAndSnippets, // string[]
 });
 ```
 
-### Extractors for consumers
-
-Add minimal helpers so other nodes can read Perplexity outputs without knowing its internal shape:
-
 ```ts
-// lib/xyflow.ts
-export const getTextFromPerplexityNodes = (nodes: Node[]) =>
-  nodes.filter(n => n.type === 'perplexity')
-       .flatMap(n => (n.data as any).outputTexts ?? [])
-       .filter(Boolean) as string[];
-
-export const getLinksFromPerplexityNodes = (nodes: Node[]) =>
-  nodes.filter(n => n.type === 'perplexity')
-       .flatMap(n => (n.data as any).outputLinks ?? [])
-       .filter(Boolean) as string[];
+// lib/xyflow.ts — add an extractor
+export const getTextFromYourNodes = (nodes: Node[]) =>
+  nodes
+    .filter((n) => n.type === 'your-node')
+    .flatMap((n) => (n.data as any).outputTexts ?? [])
+    .filter(Boolean) as string[];
 ```
 
-### Consumer: seeding from incomers (already in Perplexity)
+Guidelines for producers
+- Keep outputs small and typed (prefer arrays of strings/URLs/ids). Include rich detail elsewhere (e.g., in `generated`) but expose simple arrays for easy reuse.
+- Namespaced fields prevent collisions (e.g., `generated`, `outputTexts`, `outputLinks`).
+- Update palette defaults in `lib/node-buttons.ts` and keep component fallbacks identical (see “Consistent Sizing”).
 
-Perplexity can also act as a consumer by seeding its Batch queries from connected nodes when empty:
+### Consumer (Incoming) pattern
+1) Read incomers.
+2) Call one or more extractors from `lib/xyflow.ts`.
+3) Combine/guard; handle partial data.
 
+Example: seeding from incomers
 ```tsx
+import { getIncomers } from '@xyflow/react';
+import { getTextFromTextNodes, getMarkdownFromFirecrawlNodes, getTextFromTiptapNodes } from '@/lib/xyflow';
+
 const incomers = getIncomers({ id }, getNodes(), getEdges());
-const text = [
+const seedText = [
   ...getTextFromTextNodes(incomers),
   ...getMarkdownFromFirecrawlNodes(incomers),
   ...getTextFromTiptapNodes(incomers),
 ].filter(Boolean);
-if (text.length && (!queries || queries.every(q => !q))) {
-  updateNodeData(id, { queries: text.slice(0, 10), inputMode: 'batch' });
-}
+// use seedText as needed
 ```
 
-### Checklist to make any node a producer/consumer
+Example: consuming a custom producer (texts + links)
+```ts
+import { getTextFromYourNodes } from '@/lib/xyflow';
 
-- Producer
-  - Decide and document `data` fields (e.g., `outputTexts`, `outputLinks`).
-  - Write them via `updateNodeData(id, …)` when work completes.
-  - Add a `lib/xyflow.ts` extractor returning a simple typed array for others to consume.
+const texts = getTextFromYourNodes(incomers); // string[]
+```
 
-- Consumer
-  - Get incomers (`getIncomers` or `useNodeConnections` + `useNodesData`).
-  - Call the appropriate extractors (Text/Firecrawl/Tiptap/Perplexity/etc.).
-  - Guard for missing/partial data.
+### Where schemas live
+- There is no global schema registry. Each node defines its own `data` interface in its component file, and writes to it with `updateNodeData`.
+- Shared extractors in `lib/xyflow.ts` are the contract between producers and consumers. If you add a new producer type, add (or extend) an extractor there.
 
-This pattern keeps nodes loosely coupled and lets the “Show data” dialog reflect exactly what a node currently exposes for downstream use.
+### Persistence and the Show Data dialog
+- Whatever you put in `node.data` is saved with the project (React Flow’s `toObject()`), rehydrated on load, and shown in the “Show data” dialog.
+- Design `data` for stability and backward compatibility. Prefer adding fields over renaming.
+
+### Checklist for new nodes
+- [ ] Define a clear `data` interface in the component
+- [ ] Seed defaults in `lib/node-buttons.ts` and keep runtime fallbacks identical
+- [ ] Write outputs into `data` (e.g., `generated`, `outputTexts`, `outputLinks`)
+- [ ] Add/extend a `lib/xyflow.ts` extractor for any new output type
+- [ ] Consume incomers with existing extractors; add new ones if needed
+- [ ] Verify “Show data” displays the expected JSON
