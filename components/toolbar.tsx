@@ -98,7 +98,7 @@ export const ToolbarInner = () => {
       </Panel>
 
       {/* Canvas controls: bottom-right above status checkmark */}
-      <Panel position="bottom-right" className="mr-4" style={{ bottom: 120 }}>
+      <Panel position="bottom-right" className="mr-4" style={{ bottom: 80 }}>
         <Controls />
       </Panel>
     </>
