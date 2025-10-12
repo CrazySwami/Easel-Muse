@@ -5,7 +5,7 @@ import type { AICompareNodeProps } from './index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useReactFlow } from '@xyflow/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon, PlusIcon, XIcon } from 'lucide-react';
 
@@ -239,17 +239,38 @@ function buildCoverage(results: any, selectedIndex: number): Array<{ domain: str
 function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex: number }) {
   const payload = useMemo(() => getActivePayload(results, selectedIndex), [results, selectedIndex]);
   const sources = useMemo(() => extractUrlsByProvider(payload), [payload]);
+  const [resolved, setResolved] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    const all = [...sources.gemini];
+    const redirectors = all.filter((u) => { try { return new URL(u).hostname.endsWith('vertexaisearch.cloud.google.com'); } catch { return false; } });
+    if (!redirectors.length) { setResolved(new Map()); return; }
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(redirectors.map(async (u) => {
+        try {
+          const r = await fetch(`/api/resolve?url=${encodeURIComponent(u)}`).then((r) => r.json()).catch(() => null);
+          return [u, r?.finalUrl || u] as const;
+        } catch {
+          return [u, u] as const;
+        }
+      }));
+      if (!cancelled) setResolved(new Map(entries));
+    })();
+    return () => { cancelled = true; };
+  }, [sources.gemini.join('|')]);
   const renderGroup = (label: string, urls: string[]) => (
     <div className="mb-3">
       <p className="mb-1 text-xs font-semibold text-foreground/80">{label} <span className="text-muted-foreground">({urls.length})</span></p>
       <div className="space-y-1">
         {urls.slice(0, 30).map((u) => {
-          let host = ''; try { host = new URL(u).hostname.replace(/^www\./,''); } catch {}
+          const finalUrl = resolved.get(u) ?? u;
+          let host = ''; try { host = new URL(finalUrl).hostname.replace(/^www\./,''); } catch {}
           const fav = host ? `https://www.google.com/s2/favicons?domain=${host}&sz=16` : '';
           return (
-            <a key={u} href={u} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-primary hover:underline">
+            <a key={u} href={finalUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-primary hover:underline">
               {fav ? <img src={fav} alt="" width={14} height={14} className="rounded"/> : <span className="h-3.5 w-3.5 rounded bg-muted inline-block"/>}
-              <span className="truncate text-foreground/90">{host || u}</span>
+              <span className="truncate text-foreground/90">{host || finalUrl}</span>
             </a>
           );
         })}
