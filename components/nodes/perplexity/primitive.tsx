@@ -15,7 +15,6 @@ import type { ComponentProps } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useGateway } from '@/providers/gateway/client';
 import { ModelSelector } from '../model-selector';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { PerplexityIcon } from '@/lib/icons';
 
 // Helper copied from Text node to choose a sensible default
@@ -92,7 +91,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
   const searchSingleResults = props.data.searchSingleResults ?? [];
   const searchBatchResults = props.data.searchBatchResults ?? [];
   const generatedQuestions = props.data.generatedQuestions ?? [];
-  const batchStatuses = props.data.batchStatuses ?? [] as Array<'idle'|'running'|'done'|'error'>;
+  const batchStatuses = (props.data.batchStatuses ?? []) as Array<'idle'|'running'|'done'|'error'>;
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const batchEdit = (props.data as any)?.batchEdit ?? true;
   const modelSingleAnswer = (props.data as any)?.modelSingleAnswer ?? '';
@@ -320,10 +319,17 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     }
   };
 
-  // On mount or when switching to batch, try seeding
-  if (inputMode === 'batch') {
-    try { seedFromIncomers(); } catch {}
-  }
+  // On mount or when switching to batch, try seeding (defer to effect to avoid render-time side effects)
+  useEffect(() => {
+    if (inputMode === 'batch') {
+      try {
+        seedFromIncomers();
+      } catch (_err) {
+        // no-op
+      }
+    }
+    // We intentionally depend only on inputMode to avoid frequent reseeding
+  }, [inputMode]);
 
 
   return (
@@ -335,46 +341,46 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}
         <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-card/60 p-2">
-            <div className="inline-flex rounded-md border p-0.5">
-                <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
-                <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
-            </div>
-            {/* Mode within Single/Batch: Search API vs Perplexity model */}
-            {inputMode !== 'generate' && (
-              <div className="flex items-center gap-2">
-                <div className="inline-flex rounded-md border p-0.5">
-                  <Button
-                    variant={pxMode === 'search' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => updateNodeData(props.id, { pxMode: 'search', /* preserve other state */ })}
-                  >
-                    Search API
-                  </Button>
-                  <Button
-                    variant={pxMode === 'model' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => updateNodeData(props.id, { pxMode: 'model' })}
-                  >
-                    Perplexity model
-                  </Button>
-                </div>
-                {pxMode === 'model' && (
-                  <ModelSelector
-                    value={(props.data as any)?.pxModel ?? Object.keys(pxModels)[0]}
-                    options={pxModels}
-                    className="w-[220px] rounded-full"
-                    onChange={(v) => updateNodeData(props.id, { pxModel: v })}
-                  />
-                )}
+          <div className="inline-flex rounded-md border p-0.5">
+            <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
+            <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
+          </div>
+          {/* Mode within Single/Batch: Search API vs Perplexity model */}
+          {inputMode !== 'generate' ? (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex rounded-md border p-0.5">
+                <Button
+                  variant={pxMode === 'search' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => updateNodeData(props.id, { pxMode: 'search' })}
+                >
+                  Search API
+                </Button>
+                <Button
+                  variant={pxMode === 'model' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => updateNodeData(props.id, { pxMode: 'model' })}
+                >
+                  Perplexity model
+                </Button>
               </div>
-            )}
+              {pxMode === 'model' && (
+                <ModelSelector
+                  value={(props.data as any)?.pxModel ?? Object.keys(pxModels)[0]}
+                  options={pxModels}
+                  className="w-[220px] rounded-full"
+                  onChange={(v) => updateNodeData(props.id, { pxModel: v })}
+                />
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* Dynamic Input Area */}
         <div className={'shrink-0'}>
           {inputMode === 'single' && (
             <div className="flex items-center gap-2">
-              <Input value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your search query..."/>
+              <Input value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your search query..." />
               <Button
                 onClick={handleSearch}
                 disabled={isSearchDisabled}
@@ -386,69 +392,86 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
               </Button>
             </div>
           )}
-          {/* Generate questions panel is shown at top of Batch */}
         </div>
 
-        {/* Results View (hidden in Generate tab) */}
-        {inputMode !== 'generate' && (
+        {/* Results View */}
         <div className="nowheel flex-1 overflow-auto rounded-2xl border bg-card/60 p-3 min-h-0">
-            {isLoading && <p className="text-xs text-muted-foreground">Loading...</p>}
+          {isLoading && <p className="text-xs text-muted-foreground">Loading...</p>}
 
-            {inputMode === 'single' && (
-              pxMode === 'model' ? (
-                <div className="space-y-3">
-                  <div className="rounded-lg border bg-card/60 p-4">
-                    <ReactMarkdown>{modelSingleAnswer}</ReactMarkdown>
+          {inputMode === 'single' && (
+            pxMode === 'model' ? (
+              <div className="space-y-3">
+                <div className="rounded-lg border bg-card/60 p-4">
+                  <ReactMarkdown>{modelSingleAnswer}</ReactMarkdown>
+                </div>
+                {Array.isArray(modelSingleCitations) && modelSingleCitations.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {modelSingleCitations.slice(0, 6).map((u: string, i: number) => (
+                      <SearchResult key={i} result={{ title: u, snippet: u, url: u }} />
+                    ))}
                   </div>
-                  {Array.isArray(modelSingleCitations) && modelSingleCitations.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {modelSingleCitations.slice(0, 6).map((u: string, i: number) => (
-                        <SearchResult key={i} result={{ title: u, snippet: u, url: u }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {(searchSingleResults as any[]).map((res: any, i: number) => (
-                    <SearchResult key={i} result={res} variant="card" />
-                  ))}
-                </div>
-              )
-            )}
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {(searchSingleResults as any[]).map((res: any, i: number) => (
+                  <SearchResult key={i} result={res} variant="card" />
+                ))}
+              </div>
+            )
+          )}
 
-            {inputMode === 'batch' && (
-              <div className="flex h-full min-h-0 flex-col gap-3">
-                {/* Full-width generate panel */}
-                <div className="rounded-xl border bg-card/60 p-3">
-                      <div className="mb-2 flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">Generate questions</div>
-                        <ModelSelector value={model} options={filteredModels} className="w-[200px] rounded-full" onChange={(v)=> updateNodeData(props.id, { model: v })} />
-                      </div>
-                      <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e)=> updateNodeData(props.id, { generatePrompt: e.target.value })} />
-                      <div className="mt-2 flex items-center justify-end">
-                        <Button size="sm" onClick={async ()=>{ await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate to Batch'}</Button>
-                      </div>
+          {inputMode === 'batch' && (
+            <div className="flex h-full min-h-0 flex-col gap-3">
+              <div className="rounded-xl border bg-card/60 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">Generate questions</div>
+                  <ModelSelector value={model} options={filteredModels} className="w-[200px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
                 </div>
+                <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })} />
+                <div className="mt-2 flex items-center justify-end">
+                  <Button size="sm" onClick={async () => { await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate to Batch'}</Button>
+                </div>
+              </div>
 
-                <div className="grid h-full min-h-0 grid-cols-12 gap-3">
-                  <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
-                    <div className="flex items-center justify-between">
-                      <div />
-                      <Button variant="ghost" size="sm" onClick={() => updateNodeData(props.id, { batchEdit: !batchEdit })}>
-                        {batchEdit ? 'Done' : 'Edit'}
-                      </Button>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-auto space-y-2">
-                      {queries.map((q: string, idx: number) => (
-                        batchEdit ? (
-                          <div key={idx} className="flex items-center gap-2">
-                            <Input
-                              value={q}
-                              onChange={(e) => updateQuery(idx, e.target.value)}
-                              onFocus={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
-                            />
-                            {/* Status indicator */}
+              <div className="grid h-full min-h-0 grid-cols-12 gap-3">
+                <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
+                  <div className="flex items-center justify-between">
+                    <div />
+                    <Button variant="ghost" size="sm" onClick={() => updateNodeData(props.id, { batchEdit: !batchEdit })}>
+                      {batchEdit ? 'Done' : 'Edit'}
+                    </Button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-auto space-y-2">
+                    {queries.map((q: string, idx: number) => (
+                      batchEdit ? (
+                        <div key={idx} className="flex items-center gap-2">
+                          <Input
+                            value={q}
+                            onChange={(e) => updateQuery(idx, e.target.value)}
+                            onFocus={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
+                          />
+                          {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && (
+                            <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
+                          )}
+                          {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && (
+                            <CheckIcon className="h-4 w-4 text-green-600" />
+                          )}
+                          {Array.isArray(batchStatuses) && batchStatuses[idx] === 'error' && (
+                            <XIcon className="h-4 w-4 text-red-600" />
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}>
+                            <XIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          key={idx}
+                          className="flex w-full items-center justify-between rounded-xl border bg-card/60 px-3 py-2 text-left text-sm hover:bg-muted/50"
+                          onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
+                        >
+                          <span className="block truncate">{q || `Query #${idx + 1}`}</span>
+                          <span className="ml-2 inline-flex items-center">
                             {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && (
                               <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
                             )}
@@ -458,43 +481,22 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                             {Array.isArray(batchStatuses) && batchStatuses[idx] === 'error' && (
                               <XIcon className="h-4 w-4 text-red-600" />
                             )}
-                            <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}>
-                              <XIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <button
-                            key={idx}
-                            className="flex w-full items-center justify-between rounded-xl border bg-card/60 px-3 py-2 text-left text-sm hover:bg-muted/50"
-                            onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
-                          >
-                            <span className="block truncate">{q || `Query #${idx + 1}`}</span>
-                            <span className="ml-2 inline-flex items-center">
-                              {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && (
-                                <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
-                              )}
-                              {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && (
-                                <CheckIcon className="h-4 w-4 text-green-600" />
-                              )}
-                              {Array.isArray(batchStatuses) && batchStatuses[idx] === 'error' && (
-                                <XIcon className="h-4 w-4 text-red-600" />
-                              )}
-                            </span>
-                          </button>
-                        )
-                      ))}
-                    </div>
-                    <div className="flex shrink-0 items-center justify-between pt-2">
-                      <Button variant="outline" size="sm" onClick={addQuery}>
-                        <PlusIcon className="mr-2 h-4 w-4" /> Add Query
-                      </Button>
-                      <Button onClick={runBatchProgressive} disabled={isBatchSearchDisabled || isBatchRunning} size="sm" className="inline-flex items-center gap-2 text-white" style={{ backgroundColor: '#059669' }}>
-                        {isBatchRunning ? 'Running…' : 'Run Batch'}
-                        {!isBatchRunning && <PerplexityIcon className="h-4 w-4 text-white" />}
-                      </Button>
-                    </div>
+                          </span>
+                        </button>
+                      )
+                    ))}
                   </div>
-                  <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
+                  <div className="flex shrink-0 items-center justify-between pt-2">
+                    <Button variant="outline" size="sm" onClick={addQuery}>
+                      <PlusIcon className="mr-2 h-4 w-4" /> Add Query
+                    </Button>
+                    <Button onClick={runBatchProgressive} disabled={isBatchSearchDisabled || isBatchRunning} size="sm" className="inline-flex items-center gap-2 text-white" style={{ backgroundColor: '#059669' }}>
+                      {isBatchRunning ? 'Running…' : 'Run Batch'}
+                      {!isBatchRunning && <PerplexityIcon className="h-4 w-4 text-white" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   {(() => {
                     const idx = (props.data as any)?.selectedQueryIndex ?? 0;
                     if (pxMode === 'model') {
@@ -524,7 +526,6 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                         </div>
                       );
                     }
-                    // pxMode === 'search'
                     if (Array.isArray(searchBatchResults) && searchBatchResults.length > 0 && typeof searchBatchResults[0] === 'object' && 'query' in (searchBatchResults[0] as any)) {
                       const group = (searchBatchResults as any[])[idx];
                       return (
@@ -553,9 +554,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                   })()}
                 </div>
               </div>
-            )}
+            </div>
+          )}
         </div>
-        )}
       </div>
     </NodeLayout>
   );

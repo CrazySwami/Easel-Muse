@@ -685,6 +685,20 @@ This is useful for nodes that only produce data (e.g., a search/fetch node) and 
 
 ---
 
+## SerpApi node (Google Search + AI Overview)
+
+- Fill Frame pattern; defaults: `width: 1200`, `height: 800`, `resizable: false`.
+- Modes: Single, Batch, AI Overview.
+- Writes producer outputs:
+  - `outputTexts`: array of `title — snippet`
+  - `outputLinks`: array of URLs
+- API proxies live under `/api/serpapi/*`. Set `SERPAPI_API_KEY` in env.
+- Consumers can use helpers in `lib/xyflow.ts`:
+  - `getTextFromSerpapiNodes(nodes)`
+  - `getLinksFromSerpapiNodes(nodes)`
+
+---
+
 ## Audio node UI and behavior
 
 The `audio` node follows the Fill Frame pattern and provides two primary inputs with matched styling and a taller content area:

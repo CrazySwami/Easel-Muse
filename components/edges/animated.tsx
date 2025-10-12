@@ -101,8 +101,8 @@ export const AnimatedEdge = ({
 
   return (
     <>
-      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={{ stroke: 'hsl(var(--primary))', strokeWidth: 2 }} />
-      <circle r="4" fill="hsl(var(--primary))">
+      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
+      <circle r="4" fill="var(--primary)">
         <animateMotion dur="2s" repeatCount="indefinite" path={edgePath} />
       </circle>
     </>

@@ -1,4 +1,5 @@
-    'use client';
+'use client';
+import '@liveblocks/react-tiptap/styles.css';
 
 import { NodeLayout } from '@/components/nodes/layout';
 import { useYDoc } from '@/providers/liveblocks';
@@ -141,14 +142,14 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
 
 
     return (
-      <div className="w-full">
+      <div className="w-full nowheel nodrag nopan" onPointerDown={(e) => e.stopPropagation()}>
         {editor && (
           <Toolbar
             editor={editor}
             className="lb-toolbar-compact sticky top-0 z-10 flex h-9 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-border bg-card px-3 text-sm [&_*]:!text-sm [&_svg]:!h-4 [&_svg]:!w-4 [&_button]:!h-8 [&_button]:!px-1"
           />
         )}
-        <EditorContent editor={editor} className="w-full bg-card p-3" />
+        <EditorContent editor={editor} className="w-full bg-card p-3 nowheel nodrag nopan" />
         {/* Liveblocks threads UI */}
         {editor && (
           <>

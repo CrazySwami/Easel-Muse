@@ -26,6 +26,7 @@ import {
   getTextFromTiptapNodes,
   getTextFromPerplexityNodes,
   getLinksFromPerplexityNodes,
+  getAnswersFromPerplexityNodes,
 } from '@/lib/xyflow';
 import { useGateway } from '@/providers/gateway/client';
 import { useProject } from '@/providers/project';
@@ -126,6 +127,7 @@ export const TextTransform = ({
     const tweetContent = getTweetContentFromTweetNodes(incomers);
     const perplexityTexts = getTextFromPerplexityNodes(incomers);
     const perplexityLinks = getLinksFromPerplexityNodes(incomers);
+    const perplexityAnswers = getAnswersFromPerplexityNodes(incomers);
     const files = getFilesFromFileNodes(incomers);
 
     if (!textPrompts.length && !docPrompts.length && !audioPrompts.length && !perplexityTexts.length && !data.instructions) {
@@ -149,6 +151,10 @@ export const TextTransform = ({
 
     if (perplexityTexts.length) {
       content.push('--- Search Results ---', ...perplexityTexts);
+    }
+
+    if (perplexityAnswers.length) {
+      content.push('--- Answer ---', ...perplexityAnswers);
     }
 
     if (audioPrompts.length) {

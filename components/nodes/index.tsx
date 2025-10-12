@@ -9,6 +9,7 @@ import { VideoNode } from './video';
 import { FirecrawlNode } from './firecrawl';
 import { WebRendererNode } from './web-renderer';
 import { PerplexityNode } from './perplexity';
+import { SerpApiNode } from './serpapi';
 
 export const nodeTypes = {
   image: ImageNode,
@@ -22,4 +23,5 @@ export const nodeTypes = {
   firecrawl: FirecrawlNode,
   'web-renderer': WebRendererNode,
   perplexity: PerplexityNode,
+  serpapi: SerpApiNode,
 };

@@ -26,7 +26,7 @@ const creditsFetcher = async () => {
 
 const pluralize = (count: number) => (count === 1 ? 'credit' : 'credits');
 
-export const CreditCounter = () => {
+export const CreditCounter = ({ showLabel = false }: { showLabel?: boolean }) => {
   const subscription = useSubscription();
   const { data, error } = useSWR('credits', creditsFetcher, {
     revalidateOnMount: true,
@@ -56,6 +56,7 @@ export const CreditCounter = () => {
             <p>{tooltipLabel}</p>
           </TooltipContent>
         </Tooltip>
+        {showLabel && <span className="text-muted-foreground text-sm">credits</span>}
         {data.credits <= 0 && subscription.plan === 'hobby' && (
           <Button size="sm" className="rounded-full" asChild>
             <Link href="/pricing">Upgrade</Link>

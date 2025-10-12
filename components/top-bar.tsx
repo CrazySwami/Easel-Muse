@@ -12,6 +12,7 @@ import { CreditCounter } from './credits-counter';
 import { Menu } from './menu';
 import { ShareDialog } from './share-dialog';
 import { SaveIndicator } from './save-indicator';
+import { ControlsMenu } from './controls';
 
 interface TopBarProps {
   projects: (typeof projects.$inferSelect)[];
@@ -56,24 +57,28 @@ export const TopBar = ({ projects, currentProject, profile }: TopBarProps) => {
             isCollapsed ? 'opacity-0' : 'opacity-100'
           )}
         >
-          {profile.subscriptionId ? (
-            <div className="flex items-center rounded-full border bg-card/90 px-3 py-2 drop-shadow-xs backdrop-blur-sm">
+          <div className="flex h-10 items-center gap-2 rounded-full border bg-card/90 px-3 drop-shadow-xs backdrop-blur-sm">
+            {profile.subscriptionId ? (
               <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>
-                <CreditCounter />
+                <div className="pl-1">
+                  <CreditCounter showLabel />
+                </div>
               </Suspense>
-            </div>
-          ) : (
-            <div className="flex items-center rounded-full border bg-card/90 p-0.5 drop-shadow-xs backdrop-blur-sm">
-              <Button className="rounded-full" size="lg" asChild>
-                <Link href="/pricing">Claim your free AI credits</Link>
+            ) : (
+              <Button className="rounded-full" size="sm" asChild>
+                <Link href="/pricing">Claim free credits</Link>
               </Button>
+            )}
+            <span className="mx-1 h-5 w-px bg-border" />
+            <RoomStatus inline />
+            <div className="hidden md:flex">
+              <AvatarStack />
             </div>
-          )}
-          <div className="flex items-center gap-2 rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
-            <RoomStatus />
-            <AvatarStack />
+            <span className="mx-1 h-5 w-px bg-border" />
+            <ShareDialog projectId={currentProject.id} />
+            <span className="mx-1 h-5 w-px bg-border" />
+            <ControlsMenu />
           </div>
-          <ShareDialog projectId={currentProject.id} />
           <SaveIndicator />
           <div className="flex items-center rounded-full border bg-card/90 p-1 drop-shadow-xs backdrop-blur-sm">
             <Menu />

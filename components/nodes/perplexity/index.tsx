@@ -17,6 +17,14 @@ export type PerplexityNodeProps = {
     model?: string;
     results?: any[]; // Replace with a more specific type
     chatResponse?: string;
+    // UI/runtime state
+    searchSingleResults?: any[];
+    searchBatchResults?: any[];
+    generatedQuestions?: string[];
+    batchStatuses?: Array<'idle' | 'running' | 'done' | 'error'>;
+    selectedQueryIndex?: number;
+    outputTexts?: string[];
+    outputLinks?: string[];
   };
 };
 

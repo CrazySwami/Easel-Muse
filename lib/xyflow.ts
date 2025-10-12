@@ -207,6 +207,27 @@ export const getLinksFromPerplexityNodes = (nodes: Node[]) => {
   return links;
 };
 
+// Perplexity model answers only (markdown). Useful for consumers to render the answer text.
+export const getAnswersFromPerplexityNodes = (nodes: Node[]) => {
+  const answers = nodes
+    .filter((node) => node.type === 'perplexity')
+    .flatMap((node) => {
+      const d = (node.data as any) ?? {};
+      const out: string[] = [];
+      if (typeof d.modelSingleAnswer === 'string' && d.modelSingleAnswer.trim()) {
+        out.push(d.modelSingleAnswer);
+      }
+      if (Array.isArray(d.modelBatchAnswers)) {
+        for (const item of d.modelBatchAnswers) {
+          if (item?.answer) out.push(String(item.answer));
+        }
+      }
+      return out;
+    })
+    .filter(Boolean) as string[];
+  return answers;
+};
+
 // SerpApi helpers
 export const getTextFromSerpapiNodes = (nodes: Node[]) => {
   const texts = nodes

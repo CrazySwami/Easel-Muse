@@ -154,7 +154,7 @@ export const NodeLayout = ({
       )}
       {/* legacy inline fullscreen button removed; we render controls in the top bar */}
       <div className={cn(
-        type !== 'drop' ? 'overflow-hidden' : '',
+        type !== 'drop' && type !== 'tiptap' ? 'overflow-hidden' : '',
         'rounded-3xl bg-card',
         (lock?.level === 'edit' || lock?.level === 'full') && 'pointer-events-none',
         isFillFrame && 'h-full w-full'
@@ -460,8 +460,22 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      {type !== 'drop' && allowIncoming && <Handle type="target" position={Position.Left} />}
-      {type !== 'drop' && type !== 'video' && allowOutgoing && <Handle type="source" position={Position.Right} />}
+      {type !== 'drop' && allowIncoming && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="easel-handle-target !border-2 !border-emerald-500 !bg-emerald-500/10 !shadow-sm"
+          style={{ width: 22, height: 22, borderRadius: 8 }}
+        />
+      )}
+      {type !== 'drop' && type !== 'video' && allowOutgoing && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="easel-handle-source !border-2 !border-emerald-500 !bg-emerald-500/10 !shadow-sm"
+          style={{ width: 22, height: 22, borderRadius: 8 }}
+        />
+      )}
       <Dialog open={showData} onOpenChange={setShowData}>
         <DialogContent className="max-h-[70vh] max-w-[80vw] overflow-auto">
           <DialogHeader>

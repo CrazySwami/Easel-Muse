@@ -54,6 +54,10 @@ export const env = createEnv({
     AI_GATEWAY_API_KEY: z.string().min(1),
     // Liveblocks
     LIVEBLOCKS_SECRET_KEY: z.string().min(1),
+    // SerpApi (optional; required only if SerpApi node is used)
+    SERPAPI_API_KEY: z.string().min(1).optional(),
+    // Anthropic (optional; required for Claude Web Search)
+    ANTHROPIC_API_KEY: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1),
@@ -108,5 +112,7 @@ export const env = createEnv({
     LIVEBLOCKS_SECRET_KEY: process.env.LIVEBLOCKS_SECRET_KEY,
     GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
     FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
+    SERPAPI_API_KEY: process.env.SERPAPI_API_KEY,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   },
 });

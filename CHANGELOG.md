@@ -50,6 +50,17 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
     -   New `/api/proxy` endpoint for CORS‑safe HTML fetching used by Web Renderer.
     -   `lib/xyflow.ts` gained `getTextFromPerplexityNodes` and `getLinksFromPerplexityNodes`; Text Transform consumes both for better context.
 
+## v0.0.11 — AI Compare Citations & Redirect Resolver (2025-10-12)
+
+-   **AI Compare Page**
+    -   Added a Perplexity‑style citations list with favicons and a coverage table (ChatGPT, Gemini, Claude, SerpApi) that shows per‑URL checkmarks and totals.
+    -   Normalized URL extraction across providers (OpenAI web_search_preview, Gemini Search, Claude Web Search, SerpApi Organic/AI Overview) to populate citations consistently.
+-   **Redirect Resolution (Server)**
+    -   Implemented `/api/resolve` to follow known redirectors (e.g., `vertexaisearch.cloud.google.com/grounding-api-redirect`) server‑side and return the final URL, avoiding cross‑origin redirect/CORS issues in the browser.
+    -   AI compare page now resolves Vertex redirect links before rendering favicons/domains and the coverage table, eliminating `faviconvertexaisearch.cloud.google.com` noise.
+-   **Docs**
+    -   Updated changelog according to project policy; captured user‑visible impact and backend utility addition.
+
 
 ## v0.0.9 — Architectural UI Overhaul & Node Consistency (2025-10-05 → 2025-10-11)
 

@@ -125,7 +125,7 @@ export const ShareDialog = ({ projectId }: ShareDialogProps) => {
   const Inner = (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="ghost" size="sm" className="rounded-full">
           <ShareIcon className="h-4 w-4 mr-2" />
           Share
         </Button>
