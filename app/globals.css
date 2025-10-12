@@ -356,21 +356,60 @@
   .react-flow__node-toolbar * {
     cursor: default !important;
   }
-.react-flow__handle {
-  @apply !size-4 !border-2 !bg-background;
-  border-color: hsl(var(--primary)) !important;
-  z-index: 60; /* ensure handles sit above node chrome */
-  pointer-events: auto;
-}
+  .react-flow__handle {
+    /* Soft-square, glassy handle */
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 14px !important;
+    border: 1.5px solid color-mix(in oklch, var(--primary) 55%, white) !important;
+    background: color-mix(in oklch, var(--primary) 14%, transparent) !important;
+    box-shadow:
+      0 1px 1px rgba(0,0,0,0.06),
+      0 6px 18px color-mix(in oklch, var(--primary) 20%, transparent);
+    backdrop-filter: blur(2px);
+    z-index: 60;
+    pointer-events: auto;
+    transition: box-shadow .18s ease, transform .18s ease, background-color .18s ease;
+    position: relative;
+  }
+  .dark .react-flow__handle {
+    border-color: color-mix(in oklch, var(--primary) 65%, black) !important;
+    background: color-mix(in oklch, var(--primary) 18%, transparent) !important;
+    box-shadow:
+      0 1px 0 rgba(0,0,0,0.25),
+      0 8px 20px color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+  /* Inner dot indicator */
+  .react-flow__handle::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: color-mix(in oklch, var(--foreground) 85%, black);
+    opacity: .9;
+  }
+  .dark .react-flow__handle::before { background: oklch(0.93 0 0); }
+  .react-flow__handle:hover { transform: scale(1.06); box-shadow: 0 0 0 6px color-mix(in oklch, var(--primary) 18%, transparent); }
+  .react-flow__handle-connecting, .react-flow__handle-valid {
+    box-shadow: 0 0 0 8px color-mix(in oklch, var(--primary) 28%, transparent), 0 10px 24px color-mix(in oklch, var(--primary) 30%, transparent) !important;
+    background: color-mix(in oklch, var(--primary) 24%, transparent) !important;
+    animation: handle-pulse 1.2s ease-out infinite;
+  }
   .react-flow__handle:hover {
     /* Slight emphasis on hover */
     box-shadow: 0 0 0 3px hsl(var(--primary) / 0.18);
   }  
-  .react-flow__handle-left {
-    @apply !-left-2; /* bring closer to the card edge */
-  }
-  .react-flow__handle-right {
-    @apply !-right-2; /* bring closer to the card edge */
+  .react-flow__handle-left { left: -10px !important; }
+  .react-flow__handle-right { right: -10px !important; }
+
+  @keyframes handle-pulse {
+    0%   { transform: scale(1.0); }
+    60%  { transform: scale(1.08); }
+    100% { transform: scale(1.0); }
   }
 }
 
@@ -424,6 +463,11 @@
 /* Prefer icon-only buttons to avoid cramped labels */
 .lb-toolbar-compact [data-liveblocks-ui='Toolbar.Button'] span {
   display: none;
+}
+
+/* Hide native cursor over canvas when presence is active */
+.canvas-hide-native-cursor {
+  cursor: none !important;
 }
 
 /* Liveblocks comments UI fixes */

@@ -136,22 +136,17 @@ export const CursorsLayer = () => {
         pointerEvents: 'none',
       }}
     >
-      <div
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 9999,
-          background: color,
-          boxShadow: '0 0 0 2px white',
-        }}
-      />
+      {/* SVG pointer arrow – colored per user */}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill={color} stroke="white" strokeWidth="1.5" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.25))' }}>
+        <path d="M3 2l14 6-6 2 4 9-3 1-4-9-5 3z" />
+      </svg>
       {label ? (
         <div
           style={{
             marginTop: 6,
             padding: '2px 6px',
             borderRadius: 6,
-            background: color,
+            background: 'rgba(0,0,0,.65)',
             color: 'white',
             fontSize: 10,
             whiteSpace: 'nowrap',
@@ -179,7 +174,7 @@ export const CursorsLayer = () => {
             (me.presence.cursor as any).x,
             (me.presence.cursor as any).y,
             ((me.info as any)?.color as string) ?? '#06f',
-            'You'
+            ((me.info as any)?.name as string) ?? 'You'
           )
         : null}
     </div>
@@ -232,7 +227,7 @@ export const AvatarStack = () => {
   );
 };
 
-export const RoomStatus = () => {
+export const RoomStatus = ({ inline = false }: { inline?: boolean }) => {
   const room = useRoom();
   const [status, setStatus] = useState<string>(room.getStatus?.() ?? 'unknown');
   useEffect(() => {
@@ -244,7 +239,7 @@ export const RoomStatus = () => {
   }, [room]);
   const color = status === 'connected' ? '#22c55e' : status === 'connecting' ? '#eab308' : status === 'reconnecting' ? '#f97316' : '#ef4444';
   return (
-    <div className="flex items-center gap-1 rounded-full border bg-card/90 px-2 py-1 text-xs drop-shadow-xs backdrop-blur-sm">
+    <div className={inline ? 'flex items-center gap-2 text-xs' : 'flex items-center gap-1 rounded-full border bg-card/90 px-2 py-1 text-xs drop-shadow-xs backdrop-blur-sm'}>
       <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
       <span className="capitalize">{String(status)}</span>
     </div>
