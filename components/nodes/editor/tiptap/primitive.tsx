@@ -57,6 +57,126 @@ function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
   };
 }
 
+// Custom FontSize Extension
+const FontSize = Extension.create({
+  name: 'fontSize',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize || null,
+            renderHTML: attributes => {
+              if (!attributes.fontSize) return {};
+              return { style: `font-size: ${attributes.fontSize}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize: (fontSize: string) => ({ chain }: any) => {
+        return chain().setMark('textStyle', { fontSize }).run();
+      },
+      unsetFontSize: () => ({ chain }: any) => {
+        return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+      },
+    };
+  },
+});
+
+// Custom Comment Mark Extension
+const Comment = Mark.create({
+  name: 'comment',
+  addAttributes() {
+    return {
+      commentId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-comment-id'),
+        renderHTML: attributes => {
+          if (!attributes.commentId) return {};
+          return { 'data-comment-id': attributes.commentId };
+        },
+      },
+      userId: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-user-id'),
+        renderHTML: attributes => {
+          if (!attributes.userId) return {};
+          return { 'data-user-id': attributes.userId };
+        },
+      },
+      userName: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-user-name'),
+        renderHTML: attributes => {
+          if (!attributes.userName) return {};
+          return { 'data-user-name': attributes.userName };
+        },
+      },
+      userColor: {
+        default: null,
+        parseHTML: element => element.getAttribute('data-user-color'),
+        renderHTML: attributes => {
+          if (!attributes.userColor) return {};
+          return { 'data-user-color': attributes.userColor };
+        },
+      },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'span[data-comment-id]',
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const color = HTMLAttributes['data-user-color'] || '#fef08a';
+    return [
+      'span',
+      {
+        ...HTMLAttributes,
+        class: 'comment-highlight cursor-pointer rounded-sm px-0.5 transition-all hover:shadow-md',
+        style: `background-color: ${color}; background-opacity: 0.3;`,
+      },
+      0,
+    ];
+  },
+  addCommands() {
+    return {
+      setComment: (attributes: { commentId: string; userId: string; userName: string; userColor?: string }) => ({ commands }: any) => {
+        return commands.setMark(this.name, attributes);
+      },
+      unsetComment: () => ({ commands }: any) => {
+        return commands.unsetMark(this.name);
+      },
+    };
+  },
+});
+
+type CommentThread = {
+  id: string;
+  text: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  userColor?: string;
+  timestamp: string;
+  resolved: boolean;
+  replies: Array<{
+    id: string;
+    text: string;
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+    timestamp: string;
+  }>;
+};
 
 type TiptapEditorProps = TiptapNodeProps & {
   doc: Y.Doc;
@@ -72,23 +192,46 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
       Y.XmlFragment,
     ) as Y.XmlFragment;
 
+    const me = useSelf();
+    const [comments, setComments] = useState<Record<string, CommentThread>>({});
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+
+    // Set up Yjs Map for comments
+    const yCommentsMap = doc.getMap(`tiptap-comments-${id}`) as Y.Map<CommentThread>;
+
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
-            // Keep history enabled (default); no override needed
-            StarterKit.configure({}),
+            StarterKit.configure({
+                bulletList: {
+                    keepMarks: true,
+                    keepAttributes: false,
+                },
+                orderedList: {
+                    keepMarks: true,
+                    keepAttributes: false,
+                },
+            }),
             Placeholder.configure({
                 placeholder: 'Start typing your collaborative document...',
             }),
             Typography,
+            TextStyle,
+            FontFamily.configure({
+                types: ['textStyle'],
+            }),
+            FontSize,
+            Color,
             Underline,
-            Highlight,
+            Highlight.configure({
+                multicolor: true,
+            }),
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             Link.configure({
                 openOnClick: false,
             }),
-            // Keep to StarterKit-provided nodes for now to avoid v3 JSX runtime dependencies
-            // Liveblocks extension registered after mount to avoid setState during render
+            Comment,
         ],
         editorProps: {
             attributes: {
@@ -168,9 +311,123 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
         };
     }, [editor, id, updateNodeData]);
 
+    // Sync Yjs comments to local state
+    useEffect(() => {
+        const syncComments = () => {
+            const commentsObj: Record<string, CommentThread> = {};
+            yCommentsMap.forEach((value, key) => {
+                commentsObj[key] = value;
+            });
+            setComments(commentsObj);
+        };
+
+        syncComments();
+
+        const observer = () => {
+            syncComments();
+        };
+
+        yCommentsMap.observe(observer);
+
+        return () => {
+            yCommentsMap.unobserve(observer);
+        };
+    }, [yCommentsMap]);
+
+    // Comment management functions
+    const addComment = (commentText: string) => {
+        if (!editor || !me) return;
+        
+        const { from, to } = editor.state.selection;
+        if (from === to) return; // No selection
+
+        const commentId = nanoid();
+        const userInfo = me.info as any;
+        const userName = userInfo?.name || 'Anonymous';
+        const userAvatar = userInfo?.avatar;
+        const userColor = userInfo?.color || '#fef08a';
+
+        // Add comment mark to selected text
+        editor.chain().focus().setComment({
+            commentId,
+            userId: me.id as string,
+            userName,
+            userColor,
+        }).run();
+
+        // Store comment thread in Yjs
+        const thread: CommentThread = {
+            id: commentId,
+            text: commentText,
+            userId: me.id as string,
+            userName,
+            userAvatar,
+            userColor,
+            timestamp: new Date().toISOString(),
+            resolved: false,
+            replies: [],
+        };
+
+        yCommentsMap.set(commentId, thread);
+        setActiveCommentId(commentId);
+    };
+
+    const addReply = (commentId: string, replyText: string) => {
+        if (!me) return;
+
+        const thread = yCommentsMap.get(commentId);
+        if (!thread) return;
+
+        const userInfo = me.info as any;
+        const reply = {
+            id: nanoid(),
+            text: replyText,
+            userId: me.id as string,
+            userName: userInfo?.name || 'Anonymous',
+            userAvatar: userInfo?.avatar,
+            timestamp: new Date().toISOString(),
+        };
+
+        const updatedThread = {
+            ...thread,
+            replies: [...thread.replies, reply],
+        };
+
+        yCommentsMap.set(commentId, updatedThread);
+    };
+
+    const toggleResolve = (commentId: string) => {
+        const thread = yCommentsMap.get(commentId);
+        if (!thread) return;
+
+        yCommentsMap.set(commentId, {
+            ...thread,
+            resolved: !thread.resolved,
+        });
+    };
+
+    const deleteComment = (commentId: string) => {
+        yCommentsMap.delete(commentId);
+        
+        // Remove comment marks from editor
+        if (editor) {
+            editor.state.doc.descendants((node, pos) => {
+                if (node.marks) {
+                    node.marks.forEach(mark => {
+                        if (mark.type.name === 'comment' && mark.attrs.commentId === commentId) {
+                            editor.chain().focus().setTextSelection({ from: pos, to: pos + node.nodeSize }).unsetComment().run();
+                        }
+                    });
+                }
+            });
+        }
+    };
+
+
+    const hasSelection = editor && !editor.state.selection.empty;
 
     return (
-        <div className="lb-tiptap flex h-full w-full flex-col">
+        <div className="lb-tiptap flex h-full w-full">
             {editor && editor.view && !editor.isDestroyed && (
               <div className="sticky top-0 z-10 flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white rounded-t-3xl border-b border-cyan-700">
                 <button title="Undo" className="rounded-md p-2 hover:bg-cyan-700" onClick={() => editor.chain().focus().undo().run()}>
@@ -182,6 +439,8 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 {/* Headings dropdown */}
                 <HeadingDropdown editor={editor} />
+                <FontFamilyDropdown editor={editor} />
+                <FontSizeDropdown editor={editor} />
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 <button title="Bold" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('bold') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()}>
                   <BoldIcon className="h-4 w-4" />
@@ -232,6 +491,27 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 </button>
                 <button title="Align right" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'right' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
                   <AlignRightIcon className="h-4 w-4" />
+                </button>
+                <span className="mx-1 h-4 w-px bg-white/30" />
+                <button 
+                  title="Add Comment" 
+                  className={`rounded-md p-2 hover:bg-cyan-700 ${!hasSelection ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                  disabled={!hasSelection}
+                  onClick={() => {
+                    if (hasSelection) {
+                      const text = window.prompt('Enter your comment:');
+                      if (text) addComment(text);
+                    }
+                  }}
+                >
+                  <MessageSquarePlusIcon className="h-4 w-4" />
+                </button>
+                <button 
+                  title="Toggle Comments Sidebar" 
+                  className={`rounded-md p-2 hover:bg-cyan-700 ${sidebarOpen ? 'bg-cyan-700' : ''}`} 
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                >
+                  <MessageSquareIcon className="h-4 w-4" />
                 </button>
               </div>
             )}

@@ -442,7 +442,18 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
           </details>
         </div>
       )}
-      {!answers.openai && !answers.gemini && !answers.anthropic && (
+      {/* SerpApi static info (single mode as well) */}
+      <div className="mb-3 rounded border bg-card/60 p-2">
+        <details>
+          <summary className="cursor-pointer list-none">
+            <span className="inline-flex items-center gap-2 font-semibold"><GoogleIcon className="h-3.5 w-3.5"/> SerpApi</span>
+            <span className="ml-2 text-muted-foreground">Google results preview</span>
+          </summary>
+          <p className="mt-2 text-foreground/90">These links are extracted from Google results via SerpApi.</p>
+          {renderGroup('Sources', <GoogleIcon className="h-3.5 w-3.5" />, sources.serp)}
+        </details>
+      </div>
+      {!answers.openai && !answers.gemini && !answers.anthropic && sources.serp.length === 0 && (
         <div className="text-muted-foreground">Run to see provider answers.</div>
       )}
     </div>
