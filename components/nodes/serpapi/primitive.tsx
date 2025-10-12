@@ -248,7 +248,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
     >
       <div className="flex h-full flex-col min-h-0 p-3">
         {/* Header Controls */}
-        <div className="shrink-0 rounded-2xl border bg-card/60 p-2">
+        <div className="shrink-0 rounded-2xl border bg-card/60 p-2 mb-2">
           <div className="flex flex-nowrap items-center gap-2 overflow-hidden">
             {/* Single/Batch moved to toolbar to match AI Compare */}
             {/* Engine toggle */}
@@ -262,10 +262,10 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
                 value={location}
                 onChange={(e) => { setLocation(e.target.value); setLocQuery(e.target.value); }}
                 placeholder="Search locations…"
-                className="w-[220px]"
+                className="w-[160px]"
               />
               {!!locOptions.length && (
-                <div className="absolute z-50 mt-1 max-h-56 w-[220px] overflow-auto rounded-md border bg-card shadow">
+                <div className="absolute z-50 mt-1 max-h-56 w-[160px] overflow-auto rounded-md border bg-card shadow">
                   {locOptions.map((l, i) => (
                     <button key={i} className="block w-full truncate px-2 py-1 text-left hover:bg-accent" onClick={() => { setLocation(l.canonical_name); setLocOptions([]); setLocQuery(''); }}>
                       {l.canonical_name}
@@ -274,9 +274,9 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
                 </div>
               )}
             </div>
-            <Input value={hl} onChange={(e) => setHl(e.target.value)} placeholder="hl" className="w-[80px]" />
-            <Input value={gl} onChange={(e) => setGl(e.target.value)} placeholder="gl" className="w-[80px]" />
-            <Input value={googleDomain} onChange={(e)=> setGoogleDomain(e.target.value)} placeholder="google_domain" className="w-[140px]" />
+            <Input value={hl} onChange={(e) => setHl(e.target.value)} placeholder="hl" className="w-[64px]" />
+            <Input value={gl} onChange={(e) => setGl(e.target.value)} placeholder="gl" className="w-[64px]" />
+            <Input value={googleDomain} onChange={(e)=> setGoogleDomain(e.target.value)} placeholder="google.com" className="w-[120px]" />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={noCache} onChange={(e)=> setNoCache(e.target.checked)} /> Force fresh
             </label>

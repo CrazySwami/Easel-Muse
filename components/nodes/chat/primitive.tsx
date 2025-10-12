@@ -119,15 +119,20 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
           <ConversationContent>
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
-                {/* Citations block below the message */}
                 {message.parts?.map((part: any, i: number) => {
                   switch (part.type) {
                     case 'text':
                       return (
                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'}>
-                          <MessageContent>
-                            <Response>{part.text}</Response>
-                          </MessageContent>
+                          {message.role === 'user' ? (
+                            <MessageContent className="text-white">
+                              {part.text}
+                            </MessageContent>
+                          ) : (
+                            <MessageContent>
+                              <Response>{part.text}</Response>
+                            </MessageContent>
+                          )}
                         </Message>
                       );
                     case 'reasoning':
@@ -141,21 +146,18 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       return null;
                   }
                 })}
-                {message.role === 'assistant' && message.parts?.filter((p: any) => p.type === 'source-url').length > 0 && (
+                {message.role === 'assistant' && Array.isArray(message.parts) && message.parts.some((p: any) => p.type === 'source-url') && (
                   <Sources>
                     <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
-                    {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
-                      <SourcesContent key={`${message.id}-src-${i}`}>
-                        <Source href={part.url} title={part.url} />
-                      </SourcesContent>
-                    ))}
+                    <SourcesContent>
+                      {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
+                        <Source key={`${message.id}-src-${i}`} href={part.url} title={part.url} />
+                      ))}
+                    </SourcesContent>
                   </Sources>
                 )}
                 {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
                   <Actions className="mt-2">
-                    <Action onClick={() => regenerate?.()} label="Retry">
-                      <RefreshCcwIcon className="size-3" />
-                    </Action>
                     <Action
                       onClick={() => {
                         const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');
@@ -191,6 +193,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
           setIsSending(true);
           await sendMessage({ text: text || 'Sent with attachments', files }, { body: { model, webSearch } });
           setIsSending(false);
+          setDraft('');
         }}
       >
         <PromptInputBody>
