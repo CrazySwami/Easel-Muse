@@ -12,7 +12,7 @@ import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon, PaperclipIco
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useReactFlow } from '@xyflow/react';
-import { useSelf } from '@liveblocks/react';
+import { useSelf, useOthers, useUpdateMyPresence } from '@liveblocks/react';
 import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation';
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import {
@@ -48,10 +48,12 @@ type ChatPanelProps = {
 };
 
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
-  const { messages, status, sendMessage, regenerate } = useChat({
+  const { messages, status, sendMessage, regenerate, setMessages } = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
   });
   const me = useSelf();
+  const others = useOthers();
+  const updatePresence = useUpdateMyPresence();
   const [input, setInput] = useState('');
   const getDefaultModel = (ms: Record<string, any>) => {
     if (ms['gpt-5-mini']) return 'gpt-5-mini';
@@ -66,9 +68,20 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   if (typeof window !== 'undefined') { (window as any).__chatRecognitionRef = recognitionRef; }
   const micBaseInputRef = useRef<string>('');
   const micLastIndexRef = useRef<number>(-1);
+  const lastHydratedSessionIdRef = useRef<string | null>(null);
+  const [aiEnabled, setAiEnabled] = useState<boolean>(true);
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
+    try {
+      if (sessionId && lastHydratedSessionIdRef.current !== sessionId) {
+        const savedForSession = (sessions.find((s) => s.id === sessionId)?.messages ?? []) as any[];
+        if (savedForSession.length) {
+          setMessages(savedForSession as any);
+        }
+        lastHydratedSessionIdRef.current = sessionId;
+      }
+    } catch {}
     // Auto-name by first user message
     const firstUser = messages.find((m) => m.role === 'user');
     if (firstUser) {
@@ -113,6 +126,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, sessionId]);
+  useEffect(() => {
+    const nowTyping = Boolean(input);
+    updatePresence({ typing: nowTyping, draftText: input });
+    const t = setTimeout(() => updatePresence({ typing: false }), 800);
+    return () => clearTimeout(t);
+  }, [input, updatePresence]);
 
   const [isSending, setIsSending] = useState(false);
 
@@ -149,14 +168,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
   const handleSubmit = async (message: any) => {
     const hasText = Boolean(message.text);
-    const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
-    if (!(hasText || hasAttachments)) return;
-    const filesToSend: Array<File> = (message.files && message.files.length ? Array.from(message.files as FileList) : attachedFiles).slice(0, 3);
-    const dt = new DataTransfer();
-    filesToSend.forEach((f) => dt.items.add(f));
-    await sendMessage({ text: message.text, files: dt.files }, { body: { modelId: selectedModel, webSearch: search } });
+    if (!hasText) return;
+    // Clear synchronously to avoid the brief delay
+    const textToSend = message.text;
     setInput('');
     setAttachedFiles([]);
+    await sendMessage({ text: textToSend }, { body: { modelId: selectedModel, webSearch: search } });
   };
 
   return (
@@ -242,7 +259,23 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                     </div>
                   );
                 })()}
-                {/* copy action removed per design */}
+                {/* Hover actions under assistant reply */}
+                {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
+                  <div className="mt-1 max-w-[80%] opacity-0 transition-opacity hover:opacity-100">
+                    <Actions>
+                      <Action onClick={() => regenerate()} label="Retry">
+                        <RefreshCcwIcon className="size-3" />
+                      </Action>
+                      <Action onClick={() => {
+                        const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');
+                        const toCopy = textParts.map((p: any) => p.text).join('\n');
+                        navigator.clipboard?.writeText(toCopy);
+                      }} label="Copy">
+                        <CopyIcon className="size-3" />
+                      </Action>
+                    </Actions>
+                  </div>
+                )}
               </div>
             )})}
             {/* loader removed to avoid transient placeholder box */}
@@ -250,6 +283,32 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
           <ConversationScrollButton />
         </Conversation>
       </div>
+      {/* Typing indicator above the prompt input */}
+      {(() => {
+        const typingPeers: any[] = Array.from(others).filter((o: any) => o?.presence?.typing);
+        if (!typingPeers.length) return null;
+        return (
+          <div className="mt-1 mb-1 flex flex-wrap items-center gap-3 px-2 text-xs text-muted-foreground">
+            {typingPeers.slice(0, 4).map((o: any) => {
+              const name = (o.info as any)?.name || 'Someone';
+              const avatar = (o.info as any)?.avatar as string | undefined;
+              return (
+                <div key={o.id} className="inline-flex items-center gap-2">
+                  <span className="inline-flex items-center gap-2">
+                    {avatar ? (
+                      <img src={avatar} alt="" className="h-5 w-5 rounded-full" />
+                    ) : (
+                      <span className="h-5 w-5 rounded-full bg-muted inline-block" />
+                    )}
+                    <span className="truncate max-w-[120px]">{name}</span>
+                  </span>
+                  <span className="italic opacity-80">is typing…</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       <PromptInput className="mt-2 rounded-2xl border bg-muted/20" onSubmit={handleSubmit}>
         <PromptInputBody className="max-h-40 overflow-y-auto" onPointerDown={(e)=>e.stopPropagation()}>
@@ -274,45 +333,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
-            {(() => {
-              const id = (selectedModel || '').toLowerCase();
-              const imageCapable = /gpt-4o|gpt-4\.1|gpt-5|gemini-1\.5|flash|haiku|sonnet|vision|llama/.test(id);
-              const fileCapable = /gpt-4o|gpt-4\.1|gpt-5|gemini-1\.5|claude-3/.test(id);
-              const accept = [imageCapable ? 'image/*' : null, fileCapable ? 'application/pdf,text/plain' : null]
-                .filter(Boolean)
-                .join(',');
-              return (
-                <>
-                  <input
-                    type="file"
-                    multiple
-                    accept={accept || undefined}
-                    className="hidden"
-                    onChange={(e) => setAttachedFiles(Array.from(e.target.files ?? []))}
-                    id={`file-input-${nodeId}`}
-                  />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <PromptInputButton
-                          onClick={() => {
-                            const el = document.getElementById(`file-input-${nodeId}`) as HTMLInputElement | null;
-                            el?.click();
-                          }}
-                          disabled={!accept}
-                        >
-                          <PaperclipIcon size={16} />
-                          <span>{attachedFiles.length ? `${attachedFiles.length} file${attachedFiles.length>1?'s':''}` : 'Attach'}</span>
-                        </PromptInputButton>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <span>Accepted: {accept || 'None'}</span>
-                    </TooltipContent>
-                  </Tooltip>
-                </>
-              );
-            })()}
+            {/* Attach temporarily hidden */}
             <PromptInputButton
               variant={listening ? 'default' : 'ghost'}
               onClick={() => {
@@ -437,9 +458,9 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
           {/* Sidebar header removed per request */}
           <div className="space-y-1">
             {(sessions.length ? sessions : []).map((s) => (
-              <div key={s.id} className={`group flex items-center gap-1 rounded-lg border px-2 py-1 ${s.id === activeId ? 'bg-muted/60' : 'bg-background/50 hover:bg-muted/30'}`}>
+              <div key={s.id} className={`group flex items-center gap-1 rounded-lg border px-2 py-1 ${s.id === activeId ? 'bg-emerald-600 text-white' : 'bg-background/50 hover:bg-muted/30'}`}>
                 <button className="flex-1 truncate text-left text-xs" onClick={() => setActiveSession(s.id)}>{s.name || 'Untitled'}</button>
-                <Button size="icon" variant="ghost" className="opacity-0 transition-opacity group-hover:opacity-100" onClick={() => deleteSession(s.id)}>
+                <Button size="icon" variant="ghost" className={`opacity-0 transition-opacity group-hover:opacity-100 ${s.id===activeId ? 'text-white' : ''}`} onClick={() => deleteSession(s.id)}>
                   <Trash2Icon className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -452,20 +473,29 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
           {/* Always-on header for the chat pane */}
           <div className="mb-2 flex items-center justify-between rounded-2xl border bg-card/60 p-2">
             <div className="flex items-center gap-2">
-              <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: !(props.data as any)?.sidebarCollapsed })}>
+              <Button size="icon" className="rounded-md bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => updateNodeData(props.id, { sidebarCollapsed: !(props.data as any)?.sidebarCollapsed })}>
                 <span className="h-4 w-4">≡</span>
               </Button>
               <div className="truncate text-sm font-semibold text-foreground max-w-[360px]">
                 {(props.data.sessions ?? []).find((s)=> s.id === activeId)?.name || 'New chat'}
               </div>
             </div>
-            <Button size="icon" variant="ghost" onClick={() => {
-              const id = nanoid();
-              const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
-              updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
-            }}>
-              <PlusIcon className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                className={`px-2 py-1 text-xs rounded-md border ${true ? 'bg-emerald-600 text-white border-transparent' : 'bg-muted text-foreground'}`}
+                onClick={() => {}}
+                title={'AI responses on (click to pause)'}
+              >
+                {'AI On'}
+              </button>
+              <Button size="icon" className="rounded-md bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => {
+                const id = nanoid();
+                const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+                updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
+              }}>
+                <PlusIcon className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           {/* Controls */}
           <ChatPanel

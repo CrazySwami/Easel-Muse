@@ -141,6 +141,47 @@ const FontSize = Extension.create({
   },
 });
 
+// Custom LineHeight Extension
+const LineHeight = Extension.create({
+  name: 'lineHeight',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          lineHeight: {
+            default: null,
+            parseHTML: element => (element.style.lineHeight || null),
+            renderHTML: attributes => {
+              if (!attributes.lineHeight) return {};
+              return { style: `line-height: ${attributes.lineHeight}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setLineHeight: (lineHeight: string) => ({ chain }: any) => {
+        return chain()
+          .focus()
+          .extendMarkRange('textStyle')
+          .setMark('textStyle', { lineHeight })
+          .run();
+      },
+      unsetLineHeight: () => ({ chain }: any) => {
+        return chain()
+          .focus()
+          .extendMarkRange('textStyle')
+          .setMark('textStyle', { lineHeight: null })
+          .removeEmptyTextStyle()
+          .run();
+      },
+    } as any;
+  },
+});
+
 // Custom Comment Mark Extension
 const Comment = Mark.create({
   name: 'comment',
@@ -253,6 +294,8 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
     // Set up Yjs Map for comments
     const yCommentsMap = doc.getMap(`tiptap-comments-${id}`) as Y.Map<CommentThread>;
 
+    const liveblocksExtension = useLiveblocksExtension({ fragment: yXmlFragment } as any);
+
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [
@@ -269,6 +312,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             TextStyle,
             FontFamily,
             FontSize,
+            LineHeight,
             Color,
             Underline,
             Highlight.configure({ multicolor: true }),
@@ -277,6 +321,8 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 openOnClick: false,
             }),
             Comment,
+            // Liveblocks + Yjs collaborative binding
+            (liveblocksExtension as any),
         ],
         editorProps: {
             attributes: {
@@ -314,17 +360,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
         },
     });
 
-    useEffect(() => {
-        if (!editor) return;
-        // Defer Liveblocks extension until editor is ready
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (editor as any)?.registerPlugin?.(useLiveblocksExtension({
-            fragment: yXmlFragment,
-            allowExtension: ({ editor }: { editor: any }) => editor.isEditable,
-          } as any));
-        } catch {}
-    }, [editor, yXmlFragment]);
+    // Liveblocks extension is included directly in the extensions array above
 
     useEffect(() => {
         if (!editor) return;
@@ -502,6 +538,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 <HeadingDropdown editor={editor} />
                 <FontFamilyDropdown editor={editor} />
                 <FontSizeDropdown editor={editor} />
+                <LineHeightDropdown editor={editor} />
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 <button title="Bold" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('bold') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()}>
                   <BoldIcon className="h-4 w-4" />
@@ -756,6 +793,54 @@ const FontSizeDropdown = ({ editor }: { editor: any }) => {
   );
 };
 
+
+const LineHeightDropdown = ({ editor }: { editor: any }) => {
+  const options = ['1', '1.1', '1.15', '1.2', '1.25', '1.3', '1.35', '1.4', '1.5', '1.6', '1.75', '1.8', '2', '2.25', '2.5', '3'];
+  const getCurrent = () => {
+    try {
+      const attrs = editor.getAttributes('textStyle');
+      return attrs.lineHeight || 'Default';
+    } catch {
+      return 'Default';
+    }
+  };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button title="Line Height" className="rounded-md p-2 hover:bg-cyan-700">
+          <span className="text-xs">LH: {getCurrent()}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="z-[100] min-w-[180px] max-h-72 overflow-y-auto bg-cyan-600 text-white border border-cyan-700 p-1" sideOffset={6} align="start">
+        <DropdownMenuItem onSelect={() => (editor.chain().focus() as any).unsetLineHeight().run()}>Default</DropdownMenuItem>
+        {options.map(v => (
+          <DropdownMenuItem key={v} onSelect={() => (editor.chain().focus() as any).setLineHeight(v).run()} style={{ lineHeight: v }}>
+            {v}
+          </DropdownMenuItem>
+        ))}
+        <div className="px-2 py-1">
+          <div className="text-[10px] opacity-80 mb-1">Custom</div>
+          <input
+            type="number"
+            step="0.05"
+            min="0.8"
+            max="4"
+            placeholder="e.g. 1.35"
+            className="h-7 w-full rounded border border-white/20 bg-white/10 px-2 text-xs placeholder:text-white/60"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const v = (e.target as HTMLInputElement).value.trim();
+                if (v && !Number.isNaN(Number(v))) {
+                  (editor.chain().focus() as any).setLineHeight(v).run();
+                }
+              }
+            }}
+          />
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 const TextColorDropdown = ({ editor }: { editor: any }) => {
   const palette = [

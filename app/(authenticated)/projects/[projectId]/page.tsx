@@ -26,10 +26,12 @@ type ProjectProps = {
   params: Promise<{
     projectId: string;
   }>;
+  searchParams?: Promise<{ ro?: string }>;
 };
 
-const Project = async ({ params }: ProjectProps) => {
+const Project = async ({ params, searchParams }: ProjectProps) => {
   const { projectId } = await params;
+  const { ro } = (await (searchParams ?? Promise.resolve({}))) as { ro?: string };
   const profile = await currentUserProfile();
   const user = await currentUser();
 
@@ -42,15 +44,20 @@ const Project = async ({ params }: ProjectProps) => {
     return redirect('/welcome');
   }
 
-  const allProjects = await database.query.projects.findMany({
-    where: eq(projects.userId, user.id),
-  });
+  // Load the requested project directly (owner, member, or read-only via token)
+  const currentProject = await database.query.projects.findFirst({ where: eq(projects.id, projectId) });
+  if (!currentProject) notFound();
 
-  const currentProject = allProjects.find((p) => p.id === projectId);
+  const isOwner = currentProject.userId === user.id;
+  const isMember = Array.isArray(currentProject.members) && currentProject.members.includes(user.id);
+  const isReadOnlyToken = Boolean(ro && ro === (currentProject.readOnlyToken as any));
 
-  if (!currentProject) {
+  if (!isOwner && !isMember && !isReadOnlyToken) {
     notFound();
   }
+
+  // For the project selector, still list the user's own projects
+  const allProjects = await database.query.projects.findMany({ where: eq(projects.userId, user.id) });
 
 
   return (

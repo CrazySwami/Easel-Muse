@@ -140,19 +140,24 @@ export const CursorsLayer = () => {
         <div
           style={{
             position: 'absolute',
-            left: 14,
-            top: 12,
-            padding: '2px 6px',
-            borderRadius: 6,
+            left: 16,
+            top: 14,
+            padding: '4px 10px',
+            borderRadius: 9999,
             background: color,
             color: 'white',
-            fontSize: 10,
+            fontSize: 12,
+            lineHeight: 1,
             whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            width: 'max-content',
             boxShadow: '0 1px 2px rgba(0,0,0,.35)'
           }}
         >
           {avatar ? (
-            <img src={avatar} alt={label} style={{ width: 14, height: 14, borderRadius: 9999, marginRight: 6, verticalAlign: 'middle', display: 'inline-block' }} />
+            <img src={avatar} alt={label} style={{ width: 18, height: 18, borderRadius: 9999, display: 'inline-block' }} />
           ) : null}
           <span>{label}</span>
         </div>
