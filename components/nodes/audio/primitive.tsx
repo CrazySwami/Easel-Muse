@@ -269,17 +269,18 @@ export const AudioPrimitive = ({
         </div>
 
         {/* Upload column */}
-        <div className="rounded-2xl border bg-card/60 p-3 h-full flex flex-col">
-          <div className="mb-2 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <div className="rounded-2xl border bg-card/60 p-3 h-full flex items-center justify-center">
+          <div className="flex w-full max-w-[560px] flex-col items-center gap-3 text-center">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <div className="rounded-full bg-emerald-600 p-2 text-white"><UploadIcon className="h-4 w-4" /></div>
             <span>Upload a file</span>
-          </div>
+            </div>
           {isUploading ? (
             <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
               <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
             </Skeleton>
           ) : (
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 w-full">
               <Dropzone
               maxSize={1024 * 1024 * 10}
               minSize={1024}
@@ -305,11 +306,17 @@ export const AudioPrimitive = ({
               }}
               className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
               >
-                <DropzoneEmptyState className="flex items-center justify-center" />
+                <div className="w-full">
+                  <div className="w-full rounded-xl border bg-background/50 p-6">
+                    <p className="text-sm text-muted-foreground">Drag and drop or click to upload</p>
+                    <p className="mt-1 text-xs text-muted-foreground">MP3, WAV, WEBM, M4A/MP4, OGG — up to 10MB</p>
+                  </div>
+                </div>
                 <DropzoneContent />
               </Dropzone>
             </div>
           )}
+          </div>
         </div>
       </div>
       {!isUploading && data.content && (
