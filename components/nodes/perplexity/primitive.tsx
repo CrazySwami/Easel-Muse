@@ -107,7 +107,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     const currentH = (props.data as any)?.height;
     const updates: any = {};
     if (typeof currentW === 'number' && currentW !== 1200) updates.width = 1200;
-    if (typeof currentH === 'number' && currentH !== 640) updates.height = 640;
+    if (typeof currentH === 'number' && currentH !== 740) updates.height = 740;
     if (Object.keys(updates).length) {
       updateNodeData(props.id, updates);
     }
@@ -208,10 +208,14 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     const validQueries = queries.map((q: string) => q.trim()).filter(Boolean);
     if (!validQueries.length) return;
     setIsBatchRunning(true);
-    // initialize statuses and results containers; do not alter pxMode during run
+    // initialize statuses and results containers; preserve results from the other mode
     const initStatuses = validQueries.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
-    // clear previous results for a fresh run
-    updateNodeData(props.id, { batchStatuses: initStatuses, searchBatchResults: [], modelBatchAnswers: [] });
+    // clear only the active mode's container for a fresh run
+    if (pxMode === 'model') {
+      updateNodeData(props.id, { batchStatuses: initStatuses, modelBatchAnswers: [] });
+    } else {
+      updateNodeData(props.id, { batchStatuses: initStatuses, searchBatchResults: [] });
+    }
 
     const groups: any[] = [];
     const answers: Array<{ answer: string; citations: string[] }> = [];
@@ -326,7 +330,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     <NodeLayout
       {...props}
       toolbar={toolbar}
-      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 640, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
+      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 740, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}
