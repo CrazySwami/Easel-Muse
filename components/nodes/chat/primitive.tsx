@@ -11,28 +11,33 @@ import { nanoid } from 'nanoid';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
+import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation';
+import { Message, MessageContent } from '@/components/ai-elements/message';
 import {
-  AIConversation,
-  AIConversationContent,
-  AIConversationScrollButton,
-} from '@/components/ui/kibo-ui/ai/conversation';
-import {
-  AIMessage,
-  AIMessageContent,
-} from '@/components/ui/kibo-ui/ai/message';
-import {
-  AIInput,
-  AIInputTextarea,
-  AIInputToolbar,
-  AIInputTools,
-  AIInputButton,
-  AIInputSubmit,
-  AIInputModelSelect,
-  AIInputModelSelectContent,
-  AIInputModelSelectItem,
-  AIInputModelSelectTrigger,
-  AIInputModelSelectValue,
-} from '@/components/ui/kibo-ui/ai/input';
+  PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
+  PromptInputAttachment,
+  PromptInputAttachments,
+  PromptInputBody,
+  PromptInputButton,
+  PromptInputModelSelect,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectValue,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+} from '@/components/ai-elements/prompt-input';
+import { Actions, Action } from '@/components/ai-elements/actions';
+import { Response } from '@/components/ai-elements/response';
+import { Sources, SourcesContent, SourcesTrigger, Source } from '@/components/ai-elements/sources';
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
+import { Loader } from '@/components/ai-elements/loader';
 
 type ChatPanelProps = {
   nodeId: string;
@@ -42,9 +47,10 @@ type ChatPanelProps = {
   sessions: ChatSession[];
   renameSessionIfNeeded: (sessId: string, firstUserText: string) => void;
   updateNodeData: ReturnType<typeof useReactFlow>['updateNodeData'];
+  modelsMap: Record<string, any>;
 };
 
-const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData }: ChatPanelProps) => {
+const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
   const { messages, status, sendMessage } = useChat();
   const [draft, setDraft] = useState('');
 
@@ -75,50 +81,93 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-card/60" onPointerDown={(e) => e.stopPropagation()}>
-        <AIConversation className="h-full">
-          <AIConversationContent>
-            {(messages ?? []).map((m: any, i: number) => (
-              <AIMessage key={i} from={m.role === 'user' ? 'user' : 'assistant'}>
-                <AIMessageContent>
-                  <div className="whitespace-pre-wrap">{m.parts?.map((p: any) => (p.type === 'text' ? p.text : '')).join(' ')}</div>
-                </AIMessageContent>
-              </AIMessage>
+        <Conversation className="h-full">
+          <ConversationContent>
+            {(messages ?? []).map((message: any) => (
+              <div key={message.id}>
+                {message.role === 'assistant' && message.parts?.filter((p: any) => p.type === 'source-url').length > 0 && (
+                  <Sources>
+                    <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
+                    {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
+                      <SourcesContent key={`${message.id}-${i}`}>
+                        <Source href={part.url} title={part.url} />
+                      </SourcesContent>
+                    ))}
+                  </Sources>
+                )}
+                {message.parts?.map((part: any, i: number) => {
+                  switch (part.type) {
+                    case 'text':
+                      return (
+                        <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'}>
+                          <MessageContent>
+                            <Response>{part.text}</Response>
+                          </MessageContent>
+                        </Message>
+                      );
+                    case 'reasoning':
+                      return (
+                        <Reasoning key={`${message.id}-${i}`} className="w-full" isStreaming={status === 'streaming' && i === message.parts.length - 1 && message.id === (messages as any).at(-1)?.id}>
+                          <ReasoningTrigger />
+                          <ReasoningContent>{part.text}</ReasoningContent>
+                        </Reasoning>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+              </div>
             ))}
-          </AIConversationContent>
-          <AIConversationScrollButton />
-        </AIConversation>
+            {status === 'submitted' && <Loader />}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
       </div>
 
-      <AIInput
+      <PromptInput
         className="mt-2"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (isSending || !draft.trim()) return;
+        onSubmit={async (msg: any) => {
+          const text = (msg?.text as string) ?? draft;
+          const files = (msg as any)?.files;
+          if (isSending || !(text || files?.length)) return;
           setIsSending(true);
-          await sendMessage({ text: draft }, { body: { model, webSearch } });
-          setDraft('');
+          await sendMessage({ text: text || 'Sent with attachments', files }, { body: { model, webSearch } });
           setIsSending(false);
         }}
       >
-        <AIInputTextarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Ask anything…"
-        />
-        <AIInputToolbar>
-          <AIInputTools>
-            {/* Web Search toggle (visual only; state wired on send) */}
-            <AIInputButton variant={webSearch ? 'default' : 'ghost'} onClick={() => updateNodeData(nodeId, { webSearch: !webSearch })}>
+        <PromptInputBody>
+          <PromptInputAttachments>
+            {(attachment) => <PromptInputAttachment data={attachment} />}
+          </PromptInputAttachments>
+          <PromptInputTextarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ask anything…" />
+        </PromptInputBody>
+        <PromptInputToolbar>
+          <PromptInputTools>
+            <PromptInputActionMenu>
+              <PromptInputActionMenuTrigger />
+              <PromptInputActionMenuContent>
+                <PromptInputActionAddAttachments />
+              </PromptInputActionMenuContent>
+            </PromptInputActionMenu>
+            <PromptInputButton variant={webSearch ? 'default' : 'ghost'} onClick={() => updateNodeData(nodeId, { webSearch: !webSearch })}>
               Search
-            </AIInputButton>
-            {/* Model select */}
-            {/* Kept primary selector in header; optional quick-select could go here */}
-          </AIInputTools>
-          <AIInputSubmit status={status as any} disabled={!draft.trim() || isSending}>
-            Send
-          </AIInputSubmit>
-        </AIInputToolbar>
-      </AIInput>
+            </PromptInputButton>
+            <PromptInputModelSelect onValueChange={(value) => updateNodeData(nodeId, { model: value })} value={model}>
+              <PromptInputModelSelectTrigger>
+                <PromptInputModelSelectValue />
+              </PromptInputModelSelectTrigger>
+              <PromptInputModelSelectContent>
+                {Object.keys(modelsMap).map((id) => (
+                  <PromptInputModelSelectItem key={id} value={id}>
+                    {(modelsMap as any)[id]?.label ?? id}
+                  </PromptInputModelSelectItem>
+                ))}
+              </PromptInputModelSelectContent>
+            </PromptInputModelSelect>
+          </PromptInputTools>
+          <PromptInputSubmit disabled={!draft && status !== 'streaming'} status={status as any} />
+        </PromptInputToolbar>
+      </PromptInput>
     </div>
   );
 };
@@ -244,6 +293,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
             sessions={sessions}
             renameSessionIfNeeded={renameSessionIfNeeded}
             updateNodeData={updateNodeData}
+            modelsMap={chatModels}
           />
         </div>
       </div>

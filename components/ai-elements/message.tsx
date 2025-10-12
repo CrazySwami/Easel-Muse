@@ -27,18 +27,4 @@ export const MessageContent = ({ className, ...props }: MessageContentProps) => 
   <div className={cn('prose prose-sm dark:prose-invert', className)} {...props} />
 );
 
-import {
-  AIMessage,
-  AIMessageContent,
-} from '@/components/ui/kibo-ui/ai/message';
-import type { ComponentProps } from 'react';
-
-export type MessageProps = ComponentProps<typeof AIMessage>;
-export const Message = (props: MessageProps) => <AIMessage {...props} />;
-
-export type MessageContentProps = ComponentProps<typeof AIMessageContent>;
-export const MessageContent = (props: MessageContentProps) => (
-  <AIMessageContent {...props} />
-);
-
 

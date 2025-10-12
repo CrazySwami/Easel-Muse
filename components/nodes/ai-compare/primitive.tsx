@@ -28,6 +28,7 @@ export const AIComparePrimitive = (props: Props) => {
   const removeQuery = (i: number) => updateNodeData(props.id, { queries: queries.filter((_, idx) => idx !== i) });
 
   const [isRunning, setIsRunning] = useState(false);
+  const [isGeminiRunning, setIsGeminiRunning] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
   const runSingle = useCallback(async () => {
@@ -89,6 +90,18 @@ export const AIComparePrimitive = (props: Props) => {
     setIsBatchRunning(false);
   }, [queries, updateNodeData, props.id]);
 
+  const runGeminiOnly = useCallback(async () => {
+    const q = (queries[0] || '').trim();
+    if (!q) return;
+    setIsGeminiRunning(true);
+    try {
+      const g = await fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json());
+      updateNodeData(props.id, { results: { single: { openai: null, gemini: g, anthropic: null, serp: null } } });
+    } finally {
+      setIsGeminiRunning(false);
+    }
+  }, [queries, updateNodeData, props.id]);
+
   const toolbar = [
     {
       children: (
@@ -116,7 +129,8 @@ export const AIComparePrimitive = (props: Props) => {
           {inputMode === 'single' ? (
             <div className="flex w-full items-center gap-2">
               <Input className="w-full" value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
-              <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
+              <Button onClick={runSingle} disabled={isRunning || isGeminiRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
+              <Button variant="secondary" onClick={runGeminiOnly} disabled={isGeminiRunning || isRunning}>{isGeminiRunning ? 'Gemini…' : 'Gemini only'}</Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
