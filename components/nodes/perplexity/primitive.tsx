@@ -440,7 +440,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {(searchSingleResults as any[]).map((res: any, i: number) => (
-                    <SearchResult key={i} result={res} />
+                    <SearchResult key={i} result={res} variant="card" />
                   ))}
                 </div>
               )
@@ -541,7 +541,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                       return (
                         <div className="grid grid-cols-2 gap-3">
                           {group?.results?.map((res: any, j: number) => (
-                            <SearchResult key={`${idx}-${j}`} result={res} />
+                            <SearchResult key={`${idx}-${j}`} result={res} variant="card" />
                           ))}
                         </div>
                       );
@@ -550,7 +550,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                     return (
                       <div className="grid grid-cols-2 gap-3">
                         {flat.map((res: any, j: number) => (
-                          <SearchResult key={j} result={res} />
+                          <SearchResult key={j} result={res} variant="card" />
                         ))}
                       </div>
                     );
