@@ -54,7 +54,7 @@ export const AIComparePrimitive = (props: Props) => {
   const { updateNodeData } = useReactFlow();
   const { models } = useGateway();
 
-  const inputMode = props.data.inputMode ?? 'single';
+  const inputMode: 'single'|'batch'|'settings' = (props.data.inputMode as any) ?? 'single';
   const queries = props.data.queries ?? [''];
   const batchStatuses = (props.data.batchStatuses ?? []) as Array<'idle'|'running'|'done'|'error'>;
   const generatePrompt = (props.data as any)?.generatePrompt ?? '';
@@ -64,7 +64,7 @@ export const AIComparePrimitive = (props: Props) => {
   const geminiModel = (props.data as any)?.geminiModel ?? 'gemini-2.5-flash';
   const anthropicModel = (props.data as any)?.anthropicModel ?? 'claude-3-5-sonnet-20241022';
 
-  const setInputMode = (value: 'single'|'batch') => updateNodeData(props.id, { inputMode: value });
+  const setInputMode = (value: 'single'|'batch'|'settings') => updateNodeData(props.id, { inputMode: value });
   const updateQuery = (i: number, v: string) => {
     const next = [...queries];
     next[i] = v;
@@ -144,43 +144,8 @@ export const AIComparePrimitive = (props: Props) => {
         <div className="inline-flex rounded-md border p-0.5">
           <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
           <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
+          <Button variant={inputMode === 'settings' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('settings' as any)}>Settings</Button>
         </div>
-      ),
-    },
-    {
-      children: (
-        <details className="ml-2 rounded-md border bg-card/60 p-2">
-          <summary className="cursor-pointer text-xs font-medium">Options</summary>
-          <div className="mt-2 grid grid-cols-1 gap-2 text-xs">
-            <div className="flex items-center gap-2">
-              <OpenAiIcon className="h-3.5 w-3.5" />
-              <input
-                className="w-full rounded border bg-background px-2 py-1"
-                value={openaiModel}
-                onChange={(e) => updateNodeData(props.id, { openaiModel: e.target.value })}
-                placeholder="OpenAI model (e.g. gpt-4o-mini)"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <GeminiIcon className="h-3.5 w-3.5" />
-              <input
-                className="w-full rounded border bg-background px-2 py-1"
-                value={geminiModel}
-                onChange={(e) => updateNodeData(props.id, { geminiModel: e.target.value })}
-                placeholder="Gemini model (e.g. gemini-2.5-flash)"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <AnthropicIcon className="h-3.5 w-3.5" />
-              <input
-                className="w-full rounded border bg-background px-2 py-1"
-                value={anthropicModel}
-                onChange={(e) => updateNodeData(props.id, { anthropicModel: e.target.value })}
-                placeholder="Claude model (e.g. claude-3-5-sonnet-20241022)"
-              />
-            </div>
-          </div>
-        </details>
       ),
     },
   ] as any;
@@ -225,7 +190,7 @@ export const AIComparePrimitive = (props: Props) => {
               <Input className="w-full" value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
               <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
             </div>
-          ) : (
+          ) : inputMode === 'batch' ? (
             <div className="flex w-full items-center gap-2">
               <ModelSelector
                 value={model}
@@ -241,10 +206,45 @@ export const AIComparePrimitive = (props: Props) => {
               />
               <Button onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
             </div>
+          ) : (
+            <div className="grid w-full grid-cols-1 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-20 text-xs text-muted-foreground">OpenAI</span>
+                <ModelSelector
+                  value={openaiModel}
+                  options={Object.fromEntries(Object.entries(models).filter(([_, m]: any)=> m?.chef?.id==='openai' || (Array.isArray(m?.providers) && m.providers.some((p: any)=> p.id==='openai'))))}
+                  className="w-[260px] rounded-full"
+                  onChange={(v) => updateNodeData(props.id, { openaiModel: v })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-20 text-xs text-muted-foreground">Gemini</span>
+                <ModelSelector
+                  value={geminiModel}
+                  options={Object.fromEntries(Object.entries(models).filter(([_, m]: any)=> m?.chef?.id==='google' || (Array.isArray(m?.providers) && m.providers.some((p: any)=> p.id==='google'))))}
+                  className="w-[260px] rounded-full"
+                  onChange={(v) => updateNodeData(props.id, { geminiModel: v })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-20 text-xs text-muted-foreground">Claude</span>
+                <ModelSelector
+                  value={anthropicModel}
+                  options={Object.fromEntries(Object.entries(models).filter(([_, m]: any)=> m?.chef?.id==='anthropic' || (Array.isArray(m?.providers) && m.providers.some((p: any)=> p.id==='anthropic'))))}
+                  className="w-[260px] rounded-full"
+                  onChange={(v) => updateNodeData(props.id, { anthropicModel: v })}
+                />
+              </div>
+            </div>
           )}
         </div>
 
         {/* Content */}
+        {inputMode === 'settings' ? (
+          <div className="flex-1 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-3 text-xs text-muted-foreground">
+            Choose default models per provider. These are used for both Single and Batch runs.
+          </div>
+        ) : (
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
           {/* Left: sources in single mode; generator + questions list in batch mode */}
           <div
@@ -298,6 +298,7 @@ export const AIComparePrimitive = (props: Props) => {
             </table>
           </div>
         </div>
+        )}
       </div>
     </NodeLayout>
   );

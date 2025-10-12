@@ -235,20 +235,9 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
               <GlobeIcon size={16} />
               <span>Search</span>
             </PromptInputButton>
-            <PromptInputModelSelect onValueChange={(value) => setSelectedModel(value)} value={selectedModel}>
-              <PromptInputModelSelectTrigger>
-                <PromptInputModelSelectValue />
-              </PromptInputModelSelectTrigger>
-              <PromptInputModelSelectContent>
-                {Object.entries(modelsMap || {})
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([id, m]: any) => (
-                  <PromptInputModelSelectItem key={id} value={id}>
-                    {m?.label ?? id}
-                  </PromptInputModelSelectItem>
-                ))}
-              </PromptInputModelSelectContent>
-            </PromptInputModelSelect>
+            <div className="min-w-[240px]">
+              <ModelSelector value={selectedModel} options={modelsMap as any} onChange={(v: string) => setSelectedModel(v)} className="w-full" />
+            </div>
           </PromptInputTools>
           <PromptInputSubmit disabled={!input && !status} status={status as any} />
         </PromptInputToolbar>
