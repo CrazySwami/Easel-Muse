@@ -746,6 +746,13 @@ Pattern overview
   - Local `generateMode` flag (user‑toggled).
 - The toolbar exposes a “Generate” switch in BOTH modes so users can switch back and forth without hunting for it.
 
+Labels and window chrome
+- The green window bar shows a title derived from `title` or `data.titleOverride`.
+- Use descriptive labels per mode so users know where they are:
+  - Plain: e.g., `Text`, `Image`, `Video`, `Audio`.
+  - Generate: e.g., `Text generation`, `Image generation`, `Video generation`, `Audio generation`.
+- Add `data.titleOverride` to control the visible title without changing the component name.
+
 Implementation checklist
 1) State flag
 ```ts
@@ -787,12 +794,19 @@ return <Component key={(hasIncomers || props.data.generateMode) ? 'transform' : 
 - Order: left → model/size selectors; right → action button.
 - The toolbar is visible on selection and is width‑constrained to the node.
 
-6) Size variance by mode
+6) Enabling at the layout level
+- Set `dualModeSupported: true` in the node’s `data` to surface the top‑bar Plain/Generate toggle.
+- The toggle updates both `data.mode` and `data.generateMode` for backward compatibility.
+- Keep per‑node toggles removed to avoid duplicated controls.
+
+7) Size variance by mode
 - It’s OK for modes to have different internal compositions (e.g., editor vs preview), but keep the frame size consistent across modes by passing `width`/`height` in both components.
 
 Troubleshooting
 - Toggle missing in generate mode: ensure the switch is included in the transform toolbar.
 - Canvas panning while scrolling prompts: add `nowheel nodrag nopan` and stop propagation on pointer down.
+- Duplicate toggles: if you see both a top‑bar toggle and an in‑node/toolbar toggle, remove the per‑node toggles. The layout‑level toggle is canonical.
+- Per‑node action vs toolbar: some nodes (e.g., Firecrawl) keep their primary action inside the node; remove the floating Play button from the toolbar to avoid duplication.
 
 ---
 
