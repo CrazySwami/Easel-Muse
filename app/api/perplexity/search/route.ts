@@ -150,7 +150,7 @@ export async function POST(req: Request) {
   }
 
   if (mode === 'chat') {
-    const { messages } = reqBody as any;
+    const { messages, system } = reqBody as any;
     let { model } = reqBody as any;
     if (typeof model !== 'string' || !/sonar|perplexity|online/i.test(model)) {
       model = 'sonar-small-online';
@@ -158,13 +158,15 @@ export async function POST(req: Request) {
     model = String(model).replace(/^perplexity\//i, '');
 
     try {
+      const chatMessages = Array.isArray(messages) ? messages : [];
+      const finalMessages = system ? [{ role: 'system', content: String(system) }, ...chatMessages] : chatMessages;
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${pxKey}`,
         },
-        body: JSON.stringify({ model, messages }),
+        body: JSON.stringify({ model, messages: finalMessages }),
       });
 
       if (!response.ok) {

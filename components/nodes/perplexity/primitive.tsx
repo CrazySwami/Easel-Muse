@@ -418,9 +418,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                     <ReactMarkdown>{modelSingleAnswer}</ReactMarkdown>
                   </div>
                   {Array.isArray(modelSingleCitations) && modelSingleCitations.length > 0 && (
-                    <div className="grid grid-cols-2 gap-3">
-                      {modelSingleCitations.map((u: string, i: number) => (
-                        <SearchResult key={i} result={{ title: new URL(u).hostname, snippet: u, url: u }} />
+                    <div className="flex flex-wrap gap-2">
+                      {modelSingleCitations.slice(0, 6).map((u: string, i: number) => (
+                        <SearchResult key={i} result={{ title: u, snippet: u, url: u }} />
                       ))}
                     </div>
                   )}
@@ -510,9 +510,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                             <ReactMarkdown>{ans.answer}</ReactMarkdown>
                           </div>
                           {Array.isArray(ans.citations) && ans.citations.length > 0 && (
-                            <div className="grid grid-cols-2 gap-3">
-                              {ans.citations.map((u: string, j: number) => (
-                                <SearchResult key={j} result={{ title: new URL(u).hostname, snippet: u, url: u }} />
+                            <div className="flex flex-wrap gap-2">
+                              {ans.citations.slice(0, 6).map((u: string, j: number) => (
+                                <SearchResult key={j} result={{ title: u, snippet: u, url: u }} />
                               ))}
                             </div>
                           )}
