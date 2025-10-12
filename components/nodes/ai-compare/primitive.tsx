@@ -259,9 +259,13 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
     })();
     return () => { cancelled = true; };
   }, [sources.gemini.join('|')]);
-  const renderGroup = (label: string, urls: string[]) => (
-    <div className="mb-3">
-      <p className="mb-1 text-xs font-semibold text-foreground/80">{label} <span className="text-muted-foreground">({urls.length})</span></p>
+  const renderGroup = (label: string, icon: React.ReactNode, urls: string[]) => (
+    <div className="mb-4">
+      <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-foreground/80">
+        {icon}
+        <span>{label}</span>
+        <span className="text-muted-foreground">({urls.length})</span>
+      </div>
       <div className="space-y-1">
         {urls.slice(0, 30).map((u) => {
           const finalUrl = resolved.get(u) ?? u;
@@ -279,11 +283,11 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
   );
   if (!payload) return <div className="text-xs text-muted-foreground">Run to see sources.</div>;
   return (
-    <div className="text-xs">
-      {renderGroup('ChatGPT', sources.openai)}
-      {renderGroup('Gemini', sources.gemini)}
-      {renderGroup('Claude', sources.anthropic)}
-      {renderGroup('SerpApi', sources.serp)}
+    <div className="text-xs h-full min-h-0 overflow-auto pr-1">
+      {renderGroup('ChatGPT', <OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}
+      {renderGroup('Gemini', <GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}
+      {renderGroup('Claude', <AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}
+      {renderGroup('SerpApi', <GoogleIcon className="h-3.5 w-3.5" />, sources.serp)}
     </div>
   );
 }
