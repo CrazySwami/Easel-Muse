@@ -28,7 +28,7 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
             <div key={idx} className="group flex items-center gap-2">
             <button
               onClick={() => onSelect?.(idx)}
-              className={`shrink-0 rounded border px-2 py-1 text-xs ${(() => {
+              className={`shrink-0 rounded border px-2 py-1 text-xs transition-colors duration-200 ${(() => {
                 const s = statuses[idx];
                 if (s === 'running') return 'bg-emerald-100 border-emerald-500 text-emerald-800';
                 if (s === 'done') return 'bg-emerald-600 border-emerald-600 text-white';

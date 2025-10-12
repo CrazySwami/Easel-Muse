@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid';
 import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
+import { useSelf } from '@liveblocks/react';
 import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation';
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import {
@@ -52,6 +53,7 @@ type ChatPanelProps = {
 
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
   const { messages, status, sendMessage, regenerate } = useChat();
+  const me = useSelf();
   const [input, setInput] = useState('');
   const getDefaultModel = (ms: Record<string, any>) => {
     if (ms['gpt-5-mini']) return 'gpt-5-mini';
@@ -140,7 +142,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                   switch (part.type) {
                      case 'text':
                        return (
-                        <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? (typeof (globalThis as any)?.currentUserAvatar === 'string' ? (globalThis as any).currentUserAvatar : undefined) : '/Easel-Logo.svg'}>
+                        <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
                            {message.role === 'user' ? (
                              <div className="text-white">{part.text}</div>
                            ) : (
@@ -193,7 +195,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                   );
                 })()}
                 {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
-                  <div className="mt-1 pl-9 max-w-[80%]">
+                  <div className="mt-1 max-w-[80%]">
                   <Actions className="">
                     <Action
                       onClick={() => {
@@ -313,7 +315,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
       toolbar={toolbar}
       data={{ ...props.data, width: props.data.width ?? 1400, height: props.data.height ?? 980, resizable: false, fullscreenSupported: true, allowIncoming: true, allowOutgoing: true, titleOverride: 'Chat' }}
     >
-      <div className={`flex h-full min-h-0 ${((props.data as any)?.sidebarCollapsed ? 'gap-0' : 'gap-3')} p-3`}>
+      <div className={`flex h-full min-h-0 ${((props.data as any)?.sidebarCollapsed ? 'gap-0' : 'gap-3')} p-2`}>
         {/* Sidebar */}
         <div className={`nowheel nodrag nopan shrink-0 overflow-hidden rounded-2xl border bg-card/60 p-2 transition-all duration-300 ${ (props.data as any)?.sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-64 opacity-100' }`} onPointerDown={(e) => e.stopPropagation()}>
           {/* Sidebar header removed per request */}
