@@ -142,19 +142,8 @@ export const getTextFromTiptapNodes = (nodes: Node[]) => {
 
 export const getAudioFromAudioNodes = (nodes: Node[]) => {
   const audioFiles = nodes
-    .filter(
-      (node) => node.type === 'audio' && node.data.transcript
-    )
-    .map((node) => {
-      const data = node.data as AudioNodeProps['data'];
-      if (data.transcript) {
-        return {
-          url: '', // No direct URL for audio transcript, but could be a placeholder
-          type: 'audio/wav', // Assuming a common audio type
-        };
-      }
-      return null;
-    })
+    .filter((node) => node.type === 'audio')
+    .map((node) => (node.data as AudioNodeProps['data']).content)
     .filter(Boolean) as { url: string; type: string }[];
   return audioFiles;
 };
@@ -189,7 +178,23 @@ export const getMarkdownFromFirecrawlNodes = (nodes: Node[]) => {
 export const getTextFromPerplexityNodes = (nodes: Node[]) => {
   const texts = nodes
     .filter((node) => node.type === 'perplexity')
-    .flatMap((node) => (node.data as any).outputTexts ?? [])
+    .flatMap((node) => {
+      const d = (node.data as any) ?? {};
+      const out: string[] = [];
+      // Primary flattened outputs
+      if (Array.isArray(d.outputTexts)) out.push(...d.outputTexts);
+      // Model-mode single answer (not always mirrored into outputTexts)
+      if (typeof d.modelSingleAnswer === 'string' && d.modelSingleAnswer.trim()) {
+        out.push(d.modelSingleAnswer);
+      }
+      // Model-mode batch answers
+      if (Array.isArray(d.modelBatchAnswers)) {
+        for (const item of d.modelBatchAnswers) {
+          if (item?.answer) out.push(String(item.answer));
+        }
+      }
+      return out;
+    })
     .filter(Boolean) as string[];
   return texts;
 };
@@ -197,6 +202,23 @@ export const getTextFromPerplexityNodes = (nodes: Node[]) => {
 export const getLinksFromPerplexityNodes = (nodes: Node[]) => {
   const links = nodes
     .filter((node) => node.type === 'perplexity')
+    .flatMap((node) => (node.data as any).outputLinks ?? [])
+    .filter(Boolean) as string[];
+  return links;
+};
+
+// SerpApi helpers
+export const getTextFromSerpapiNodes = (nodes: Node[]) => {
+  const texts = nodes
+    .filter((node) => node.type === 'serpapi')
+    .flatMap((node) => (node.data as any).outputTexts ?? [])
+    .filter(Boolean) as string[];
+  return texts;
+};
+
+export const getLinksFromSerpapiNodes = (nodes: Node[]) => {
+  const links = nodes
+    .filter((node) => node.type === 'serpapi')
     .flatMap((node) => (node.data as any).outputLinks ?? [])
     .filter(Boolean) as string[];
   return links;

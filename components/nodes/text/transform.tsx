@@ -402,11 +402,17 @@ export const TextTransform = ({
                    onPointerDown={(e) => e.stopPropagation()}>
                 <p className="mb-1 font-medium text-muted-foreground">Sources</p>
                 <div className="max-h-24 overflow-auto space-y-1">
-                  {links.map((u, i) => (
-                    <a key={i} href={u as any} target="_blank" rel="noreferrer" className="block truncate text-primary hover:underline">
-                      {String(u)}
-                    </a>
-                  ))}
+                  {links.map((u, i) => {
+                    let hostname = '';
+                    try { hostname = new URL(String(u)).hostname; } catch {}
+                    const favicon = hostname ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=16` : undefined;
+                    return (
+                      <a key={i} href={u as any} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-primary hover:underline">
+                        {favicon ? <img src={favicon} alt="" width={14} height={14} className="rounded"/> : <span className="h-3.5 w-3.5 rounded bg-muted inline-block"/>}
+                        <span className="truncate">{String(u)}</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             );
