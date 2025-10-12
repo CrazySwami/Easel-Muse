@@ -16,11 +16,13 @@ export async function POST(req: Request) {
         'x-api-key': env.ANTHROPIC_API_KEY,
         'content-type': 'application/json',
         'anthropic-version': '2023-06-01',
+        // Required to access web search tool
+        'anthropic-beta': 'web-search-2024-10-22',
       },
       body: JSON.stringify({
         model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
-        tools: [{ type: 'web_search_20241022', name: 'web_search' }],
+        tools: [{ type: 'web_search' }],
         tool_choice: 'auto',
         messages: [
           { role: 'user', content: q }

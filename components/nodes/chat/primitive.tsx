@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ModelSelector } from '../model-selector';
 import { useGateway } from '@/providers/gateway/client';
 import { nanoid } from 'nanoid';
-import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon, PaperclipIcon } from 'lucide-react';
+import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon, PaperclipIcon, MicIcon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
 import { useSelf } from '@liveblocks/react';
@@ -50,7 +50,6 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const { messages, status, sendMessage, regenerate } = useChat();
   const me = useSelf();
   const [input, setInput] = useState('');
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const getDefaultModel = (ms: Record<string, any>) => {
     if (ms['gpt-5-mini']) return 'gpt-5-mini';
     const entry = Object.entries(ms).find(([id]) => id.includes('gpt-5') || id.includes('mini'));
@@ -58,6 +57,10 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   };
   const [selectedModel, setSelectedModel] = useState<string>(model || getDefaultModel(modelsMap || {}));
   const [search, setSearch] = useState<boolean>(false);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [listening, setListening] = useState<boolean>(false);
+  const recognitionRef = (typeof window !== 'undefined') ? (window as any).__chatRecognitionRef || { current: null } : { current: null };
+  if (typeof window !== 'undefined') { (window as any).__chatRecognitionRef = recognitionRef; }
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
@@ -272,6 +275,37 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                 </>
               );
             })()}
+            <PromptInputButton
+              variant={listening ? 'default' : 'ghost'}
+              onClick={() => {
+                try {
+                  const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                  if (!SR) return;
+                  if (recognitionRef.current) {
+                    recognitionRef.current.stop();
+                    recognitionRef.current = null;
+                    setListening(false);
+                    return;
+                  }
+                  const rec = new SR();
+                  rec.lang = 'en-US';
+                  rec.interimResults = true;
+                  rec.continuous = true;
+                  rec.onresult = (e: any) => {
+                    const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join(' ');
+                    setInput((prev) => prev ? `${prev} ${transcript}` : transcript);
+                  };
+                  rec.onend = () => { setListening(false); recognitionRef.current = null; };
+                  rec.onerror = () => { setListening(false); recognitionRef.current = null; };
+                  recognitionRef.current = rec;
+                  setListening(true);
+                  rec.start();
+                } catch {}
+              }}
+            >
+              <MicIcon size={16} />
+              <span>{listening ? 'Listening…' : 'Voice'}</span>
+            </PromptInputButton>
             <PromptInputButton variant={search ? 'default' : 'ghost'} onClick={() => setSearch(!search)}>
               <GlobeIcon size={16} />
               <span>Search</span>

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const m = model || 'gemini-2.5-flash';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${env.GOOGLE_GENERATIVE_AI_API_KEY}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${env.GOOGLE_GENERATIVE_AI_API_KEY}`;
     const body: any = {
       contents: [{ role: 'user', parts: [{ text: q }]}],
       tools: [{ google_search: {} }],
@@ -28,6 +28,10 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
     const json = await res.json();
+    // Provide error details for easier debugging in dev
+    if (!res.ok) {
+      return NextResponse.json({ error: 'Gemini error', details: json }, { status: res.status });
+    }
     return NextResponse.json(json, { status: res.status });
   } catch (e: any) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

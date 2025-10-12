@@ -42,6 +42,9 @@ export async function POST(req: Request) {
       });
     }
     const json = await res.json();
+    if (!res.ok) {
+      return NextResponse.json({ error: 'OpenAI error', details: json }, { status: res.status });
+    }
     return NextResponse.json(json, { status: res.status });
   } catch (e: any) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
