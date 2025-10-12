@@ -111,7 +111,7 @@ export const nodeButtons = [
     icon: SearchIcon,
     data: {
       width: 1200,
-      height: 800,
+      height: 680,
       resizable: false,
       minWidth: 400,
       minHeight: 300,
