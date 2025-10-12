@@ -314,27 +314,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
   // useChat is now scoped inside ChatPanel and remounted via key on session change
 
-  const toolbar = [
-    {
-      children: (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: !(props.data as any)?.sidebarCollapsed })}>
-            <span className="h-4 w-4">≡</span>
-          </Button>
-          <div className="truncate max-w-[220px]">
-            {(props.data.sessions ?? []).find((s)=> s.id === activeId)?.name || 'New chat'}
-          </div>
-          <Button size="icon" variant="ghost" onClick={() => {
-            const id = nanoid();
-            const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
-            updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
-          }}>
-            <PlusIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
-  ] as any;
+  const toolbar = undefined as any;
 
   return (
     <NodeLayout
@@ -342,24 +322,10 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
       toolbar={toolbar}
       data={{ ...props.data, width: props.data.width ?? 1400, height: props.data.height ?? 980, resizable: false, fullscreenSupported: true, allowIncoming: true, allowOutgoing: true, titleOverride: 'Chat' }}
     >
-      <div className="flex h-full min-h-0 gap-3 p-3">
+      <div className={`flex h-full min-h-0 ${((props.data as any)?.sidebarCollapsed ? 'gap-0' : 'gap-3')} p-3`}>
         {/* Sidebar */}
         <div className={`nowheel nodrag nopan shrink-0 overflow-hidden rounded-2xl border bg-card/60 p-2 transition-all duration-300 ${ (props.data as any)?.sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-64 opacity-100' }`} onPointerDown={(e) => e.stopPropagation()}>
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Chats</div>
-            <div className="inline-flex items-center gap-1">
-            <Button size="icon" variant="ghost" onClick={() => {
-              const id = nanoid();
-              const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
-              updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
-            }}>
-              <PlusIcon className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: true })}>
-              <span className="h-4 w-4">≡</span>
-            </Button>
-            </div>
-          </div>
+          {/* Sidebar header removed per request */}
           <div className="space-y-1">
             {(sessions.length ? sessions : []).map((s) => (
               <div key={s.id} className={`group flex items-center gap-1 rounded-lg border px-2 py-1 ${s.id === activeId ? 'bg-muted/60' : 'bg-background/50 hover:bg-muted/30'}`}>
@@ -374,16 +340,25 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
         {/* Main */}
         <div className="flex min-h-0 flex-1 flex-col">
-          {(props.data as any)?.sidebarCollapsed ? (
-            <div className="mb-2 flex items-center gap-2">
-              <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: false })}>
+          {/* Always-on header for the chat pane */}
+          <div className="mb-2 flex items-center justify-between rounded-2xl border bg-card/60 p-2">
+            <div className="flex items-center gap-2">
+              <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: !(props.data as any)?.sidebarCollapsed })}>
                 <span className="h-4 w-4">≡</span>
               </Button>
-              <div className="text-xs text-muted-foreground">Chats hidden</div>
+              <div className="truncate text-sm font-semibold text-foreground max-w-[360px]">
+                {(props.data.sessions ?? []).find((s)=> s.id === activeId)?.name || 'New chat'}
+              </div>
             </div>
-          ) : null}
+            <Button size="icon" variant="ghost" onClick={() => {
+              const id = nanoid();
+              const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+              updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
+            }}>
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </div>
           {/* Controls */}
-          {/* Removed top controls per spec to avoid redundancy */}
           <ChatPanel
             key={activeId || 'no-session'}
             nodeId={props.id}

@@ -452,6 +452,8 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                     onSelect={(i)=> updateNodeData(props.id, { selectedQueryIndex: i })}
                     onAdd={addQuery}
                     onRun={runBatchProgressive}
+                    statuses={batchStatuses as any}
+                    running={isBatchRunning}
                   />
                 </div>
                 <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">

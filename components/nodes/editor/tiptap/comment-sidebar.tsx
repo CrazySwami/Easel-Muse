@@ -60,7 +60,10 @@ export const CommentSidebar = ({
   };
 
   return (
-    <div className="absolute right-0 top-2 h-[calc(100%-8px)] w-80 border-l border-border shadow-lg z-10 bg-white/90 dark:bg-neutral-900/90">
+    <div
+      className="absolute right-0 w-80 border-l border-border shadow-lg z-10 bg-white/90 dark:bg-neutral-900/90"
+      style={{ top: 44, height: 'calc(100% - 44px)' }}
+    >
       <div className="flex h-full flex-col overflow-hidden">
         {/* Header */}
         <div className="border-b border-border p-4">

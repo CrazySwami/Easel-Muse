@@ -348,6 +348,8 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
                 onSelect={()=>{}}
                 onAdd={() => setQueries([...queries, ''])}
                 onRun={run}
+                statuses={[]}
+                running={loading}
               />
             </div>
             {/* Right: results */}

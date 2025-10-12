@@ -13,9 +13,11 @@ type QueryListProps = {
   onAdd?: () => void;
   onRun?: () => void;
   stickyFooter?: boolean;
+  statuses?: Array<'idle'|'running'|'done'|'error'>;
+  running?: boolean;
 };
 
-export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAdd, onRun, stickyFooter = true }: QueryListProps) {
+export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAdd, onRun, stickyFooter = true, statuses = [], running = false }: QueryListProps) {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   return (
     <div className="relative flex h-full min-h-0 flex-col">
@@ -26,7 +28,13 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
             <div key={idx} className="group flex items-center gap-2">
             <button
               onClick={() => onSelect?.(idx)}
-              className={`shrink-0 rounded border px-2 py-1 text-xs ${selectedIndex===idx ? 'bg-primary/10 border-primary' : 'border-border'}`}
+              className={`shrink-0 rounded border px-2 py-1 text-xs ${(() => {
+                const s = statuses[idx];
+                if (s === 'running') return 'bg-emerald-100 border-emerald-500 text-emerald-800';
+                if (s === 'done') return 'bg-emerald-600 border-emerald-600 text-white';
+                if (s === 'error') return 'bg-red-600 border-red-600 text-white';
+                return selectedIndex===idx ? 'bg-primary/10 border-primary' : 'border-border';
+              })()}`}
             >{idx+1}</button>
             {editIndex === idx ? (
               <Input
@@ -53,7 +61,7 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
         <div className="absolute bottom-2 right-2">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
-            <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
+            <Button size="sm" onClick={onRun} disabled={running}><CheckIcon className="mr-1 h-3 w-3"/>{running ? 'Running…' : 'Run Batch'}</Button>
           </div>
         </div>
       )}

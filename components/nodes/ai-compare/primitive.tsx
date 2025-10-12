@@ -221,6 +221,8 @@ export const AIComparePrimitive = (props: Props) => {
                     onSelect={(i) => updateNodeData(props.id, { selectedQueryIndex: i })}
                     onAdd={addQuery}
                     onRun={runBatch}
+                    statuses={batchStatuses}
+                    running={isBatchRunning}
                   />
                 </div>
               </div>
