@@ -13,7 +13,7 @@ import { useState, type ChangeEventHandler, useMemo, useEffect, useCallback } fr
 import { toast } from 'sonner';
 import type { FirecrawlNodeProps, FirecrawlMode } from './index';
 import { getIncomers, useReactFlow } from '@xyflow/react';
-import { CopyIcon } from 'lucide-react';
+import { CopyIcon, PlayIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 type FirecrawlPrimitiveProps = FirecrawlNodeProps & {

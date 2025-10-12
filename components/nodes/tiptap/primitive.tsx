@@ -11,7 +11,7 @@ import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
-import { useEffect, type ComponentProps } from 'react';
+import { useEffect, type ComponentProps, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import * as Y from 'yjs';
 import type { TiptapNodeProps } from '.';
@@ -61,10 +61,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             }),
             // Type definitions may vary across versions; cast to any to satisfy TS
             // Type definitions may vary across versions; cast to any to satisfy TS
-            useLiveblocksExtension({
-                fragment: yXmlFragment,
-                allowExtension: ({ editor }: { editor: any }) => editor.isEditable,
-            } as any),
+            // Defer Liveblocks side-effects to after initial mount to avoid setState during render
         ],
         editorProps: {
             attributes: {
@@ -87,6 +84,16 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             ],
         },
     });
+
+    useEffect(() => {
+        if (!yXmlFragment) return;
+        // Attach the Liveblocks extension after render
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (editor as any)?.registerPlugin?.(useLiveblocksExtension({
+            fragment: yXmlFragment,
+            allowExtension: ({ editor }: { editor: any }) => editor.isEditable,
+        } as any));
+    }, [editor, yXmlFragment]);
 
     useEffect(() => {
         if (!editor) return;
@@ -138,10 +145,17 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
         {editor && (
           <Toolbar
             editor={editor}
-            className="lb-toolbar-compact flex h-9 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-border px-3 text-sm [&_*]:!text-sm [&_svg]:!h-4 [&_svg]:!w-4 [&_button]:!h-8 [&_button]:!px-1"
+            className="lb-toolbar-compact sticky top-0 z-10 flex h-9 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-border bg-card px-3 text-sm [&_*]:!text-sm [&_svg]:!h-4 [&_svg]:!w-4 [&_button]:!h-8 [&_button]:!px-1"
           />
         )}
         <EditorContent editor={editor} className="w-full bg-card p-3" />
+        {/* Liveblocks threads UI */}
+        {editor && (
+          <>
+            <FloatingThreads editor={editor as any} threads={threads as any} className="!max-w-[420px] !rounded-2xl !border !bg-card !text-foreground [&_*]:!text-sm" />
+            <FloatingComposer editor={editor as any} className="!max-w-[420px] !rounded-2xl !border !bg-card !text-foreground" />
+          </>
+        )}
       </div>
     );
 };
@@ -154,11 +168,11 @@ type TiptapPrimitiveProps = TiptapNodeProps & {
 export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
   const { doc, provider } = useYDoc();
   const reactFlow = useReactFlow();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   
-  // Allow per-node overrides; prefer width default only so height is content-driven
-  const width = (props.data as any)?.width ?? 680;
-  // Intentionally ignore persisted height to keep content-driven sizing
-  const height = undefined as number | undefined;
+  // Fill Frame pattern: explicit width/height so inner area can scroll
+  const width = (props.data as any)?.width ?? 920;
+  const height = (props.data as any)?.height ?? 1160;
   const { getLock } = useLocks();
   const lock = getLock(props.id);
   const isEditLocked = lock?.level === 'edit';
@@ -183,8 +197,24 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
     }
   }, [props.id, width, height, reactFlow]);
 
-  // Strip any persisted height from incoming data
-  const { height: _dropHeight, ...restData } = (props.data as any) ?? {};
+  const restData = (props.data as any) ?? {};
+
+  // Stop canvas pan/zoom when interacting with the editor scroll region
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const stop = (e: Event) => {
+      e.stopPropagation();
+    };
+    el.addEventListener('wheel', stop, { passive: true }); // allow native scroll, stop bubbling
+    el.addEventListener('touchmove', stop, { passive: true });
+    el.addEventListener('pointerdown', stop, { passive: true });
+    return () => {
+      el.removeEventListener('wheel', stop as any);
+      el.removeEventListener('touchmove', stop as any);
+      el.removeEventListener('pointerdown', stop as any);
+    };
+  }, []);
 
   return (
     <NodeLayout
@@ -194,8 +224,8 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
       title={props.title}
       toolbar={createToolbar()}
     >
-      {/* Wrapper per guide: flex-col, no flex-1/h-full */}
-      <div className="flex flex-col gap-3 p-3">
+      {/* Fill Frame pattern */}
+      <div className="flex h-full flex-col min-h-0 p-3">
         {/* Fixed header */}
         <div className="shrink-0 flex items-center justify-between rounded-2xl border border-border bg-card/60 px-3 py-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -209,29 +239,28 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
           ) : null}
         </div>
 
-        {/* Main content (grows only when node is tall) */}
-        <div className="overflow-hidden rounded-3xl border border-border bg-card">
-          <div className="overflow-hidden group-data-[selected=true]:overflow-auto group-data-[lock-level=edit]:overflow-hidden">
-            <div
-              className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none"
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              {provider ? (
-                <TiptapEditor
-                  data={props.data}
-                  id={props.id}
-                  type={props.type}
-                  doc={doc}
-                  provider={provider}
-                  readOnly={isEditLocked}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                  <Loader2Icon className="h-6 w-6 animate-spin" />
-                </div>
-              )}
+        {/* Scrollable editor area */}
+        <div
+          ref={scrollRef}
+          className="nowheel nodrag nopan overscroll-contain flex-1 min-h-0 overflow-auto rounded-3xl border border-border bg-card"
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          {provider ? (
+            <TiptapEditor
+              data={props.data}
+              id={props.id}
+              type={props.type}
+              doc={doc}
+              provider={provider}
+              readOnly={isEditLocked}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+              <Loader2Icon className="h-6 w-6 animate-spin" />
             </div>
-          </div>
+          )}
         </div>
       </div>
     </NodeLayout>
