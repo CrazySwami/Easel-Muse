@@ -85,6 +85,10 @@ The `NodeLayout` component (`components/nodes/layout.tsx`) provides the essentia
 -   **Backgrounds**: Use semi-transparent backgrounds to create a sense of depth.
     -   Main content: `bg-secondary/50`
     -   Instructions Textarea: `bg-muted/30`
+-   **Buttons**: Use subtle rounding via the shared `Button` component.
+    -   Default: small radius from theme (do not override per-node).
+    -   Avoid `rounded-full` in node headers/controls; reserve for special pills only.
+    -   Segmented toggles: container `rounded-md` with default buttons inside (no extra rounding).
 -   **Typography**: For generated markdown content, use the `prose` classes for consistent typography (`prose prose-sm dark:prose-invert ...`).
 -   **Skeleton Loaders**: Use `Skeleton` components with percentage-based widths (`w-[90%]`, `w-[75%]`) for more realistic loading states.
 

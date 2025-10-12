@@ -241,7 +241,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
   return (
     <NodeLayout
       id={props.id}
-      data={{ ...props.data, width: 1200, height: 880, resizable: false, allowIncoming: false, allowOutgoing: true, titleOverride: 'Google Search Results' }}
+      data={{ ...props.data, width: 1280, height: 880, resizable: false, allowIncoming: false, allowOutgoing: true, titleOverride: 'Google Search Results' }}
       type={props.type}
       title={props.title}
       toolbar={toolbar}
@@ -249,12 +249,12 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
       <div className="flex h-full flex-col min-h-0 p-3">
         {/* Header Controls */}
         <div className="shrink-0 rounded-2xl border bg-card/60 p-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-nowrap items-center gap-2 overflow-hidden">
             {/* Single/Batch moved to toolbar to match AI Compare */}
             {/* Engine toggle */}
             <div className="inline-flex rounded-md border p-0.5">
-              <Button size="sm" variant={engine==='search'?'default':'ghost'} className="rounded-full" onClick={() => setEngine('search')}>Search</Button>
-              <Button size="sm" variant={engine==='aio'?'default':'ghost'} className="rounded-full" onClick={() => setEngine('aio')}>AI Overview</Button>
+              <Button size="sm" variant={engine==='search'?'default':'ghost'} onClick={() => setEngine('search')}>Search</Button>
+              <Button size="sm" variant={engine==='aio'?'default':'ghost'} onClick={() => setEngine('aio')}>AI Overview</Button>
             </div>
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter query…" className="w-[320px]" />
             <div className="relative">
@@ -280,7 +280,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={noCache} onChange={(e)=> setNoCache(e.target.checked)} /> Force fresh
             </label>
-            <Button onClick={() => void run()} disabled={loading} className="rounded-full"><SearchIcon className="mr-2 h-4 w-4"/>Run</Button>
+            <Button onClick={() => void run()} disabled={loading}><SearchIcon className="mr-2 h-4 w-4"/>Run</Button>
           </div>
         </div>
 

@@ -345,7 +345,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     <NodeLayout
       {...props}
       toolbar={toolbar}
-      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 800, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
+      data={{ ...props.data, width: props.data.width ?? 1280, height: props.data.height ?? 880, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}

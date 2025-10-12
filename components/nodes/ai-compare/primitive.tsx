@@ -145,8 +145,8 @@ export const AIComparePrimitive = (props: Props) => {
     },
   ] as any;
 
-  const width = (props.data.width ?? 1200);
-  const height = (props.data.height ?? 800);
+  const width = (props.data.width ?? 1280);
+  const height = (props.data.height ?? 880);
 
   const isGenerateDisabled = isGenerating || !generatePrompt.trim();
 

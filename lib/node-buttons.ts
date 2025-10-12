@@ -124,8 +124,8 @@ export const nodeButtons = [
     label: 'Perplexity',
     icon: SearchIcon,
     data: {
-      width: 1200,
-      height: 800,
+      width: 1280,
+      height: 880,
       resizable: false,
       minWidth: 400,
       minHeight: 300,
@@ -138,7 +138,7 @@ export const nodeButtons = [
     label: 'Google Search Results',
     icon: GlobeIcon,
     data: {
-      width: 1200,
+      width: 1280,
       height: 880,
       resizable: false,
       fullscreenSupported: true,
@@ -150,7 +150,7 @@ export const nodeButtons = [
     label: 'AI Compare',
     icon: SearchIcon,
     data: {
-      width: 1200,
+      width: 1280,
       height: 880,
       resizable: false,
       fullscreenSupported: true,
