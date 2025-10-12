@@ -628,14 +628,18 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                             setActiveCommentId(commentId);
                             // Find and highlight the comment in the editor
                             if (editor) {
+                                let found = false;
                                 editor.state.doc.descendants((node, pos) => {
+                                    if (found) return false;
                                     if (node.marks) {
                                         node.marks.forEach(mark => {
                                             if (mark.type.name === 'comment' && mark.attrs.commentId === commentId) {
                                                 editor.commands.setTextSelection({ from: pos, to: pos + node.nodeSize });
+                                                found = true;
                                             }
                                         });
                                     }
+                                    return !found;
                                 });
                             }
                         }}

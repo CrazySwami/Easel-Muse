@@ -20,7 +20,7 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
   return (
     <div className="space-y-2 min-h-0">
       <div className="text-xs text-muted-foreground">Batch queries</div>
-      <div className="space-y-2 pb-12">
+      <div className="space-y-2 pb-16">
         {queries.map((q, idx) => (
           <div key={idx} className="group flex items-center gap-2">
             <button
@@ -47,9 +47,11 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
           </div>
         ))}
       </div>
-      <div className={`flex items-center justify-between ${stickyFooter ? 'sticky bottom-0 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-t pt-2 pb-2' : 'pt-2'}`}>
-        <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
-        <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
+      <div className={`${stickyFooter ? 'sticky bottom-0 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-t p-2' : 'pt-2'}`}>
+        <div className="flex w-full items-center justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
+          <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
+        </div>
       </div>
     </div>
   );
