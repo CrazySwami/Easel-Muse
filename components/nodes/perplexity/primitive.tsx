@@ -55,6 +55,18 @@ const filterPerplexityModels = (models: Record<string, any>) =>
     })
   );
 
+// Map gateway ids like "perplexity/sonar-pro" -> API ids like "sonar-pro"
+const normalizePxModel = (id: string | undefined) => {
+  if (!id) return 'sonar-small-online';
+  const clean = id.replace(/^perplexity\//i, '');
+  if (/pro/i.test(clean)) return 'sonar-pro';
+  if (/medium/i.test(clean) && /online/i.test(clean)) return 'sonar-medium-online';
+  if (/small/i.test(clean) && /online/i.test(clean)) return 'sonar-small-online';
+  if (/online/i.test(clean)) return clean.toLowerCase();
+  // default to a safe online model
+  return 'sonar-small-online';
+};
+
 type PerplexityPrimitiveProps = PerplexityNodeProps & { title: string };
 
 export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
@@ -77,7 +89,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
   const generatePrompt = props.data.generatePrompt ?? '';
   const model = props.data.model ?? getDefaultModel(filteredModels);
   const pxModels = filterPerplexityModels(models);
-  const pxModel = (props.data as any)?.pxModel ?? Object.keys(pxModels)[0];
+  const pxModel = normalizePxModel((props.data as any)?.pxModel ?? Object.keys(pxModels)[0]);
   const pxMode = (props.data as any)?.pxMode ?? 'search'; // 'search' | 'model'
   const searchSingleResults = props.data.searchSingleResults ?? [];
   const searchBatchResults = props.data.searchBatchResults ?? [];
@@ -310,7 +322,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                 </div>
                 {pxMode === 'model' && (
                   <ModelSelector
-                    value={pxModel}
+                    value={(props.data as any)?.pxModel ?? Object.keys(pxModels)[0]}
                     options={pxModels}
                     className="w-[220px] rounded-full"
                     onChange={(v) => updateNodeData(props.id, { pxModel: v })}

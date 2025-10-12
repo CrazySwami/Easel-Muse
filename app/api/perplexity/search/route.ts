@@ -155,6 +155,7 @@ export async function POST(req: Request) {
     if (typeof model !== 'string' || !/sonar|perplexity|online/i.test(model)) {
       model = 'sonar-small-online';
     }
+    model = String(model).replace(/^perplexity\//i, '');
 
     try {
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
