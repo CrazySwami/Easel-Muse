@@ -29,6 +29,11 @@ export const nodeButtons = [
     id: 'image',
     label: 'Image',
     icon: ImageIcon,
+    data: {
+      width: 840,
+      height: 560,
+      resizable: false,
+    },
   },
   {
     id: 'audio',
@@ -50,12 +55,20 @@ export const nodeButtons = [
     id: 'video',
     label: 'Video',
     icon: VideoIcon,
+    data: {
+      width: 1280,
+      height: 720,
+      resizable: false,
+    },
   },
   {
     id: 'code',
     label: 'Code',
     icon: CodeIcon,
     data: {
+      width: 920,
+      height: 640,
+      resizable: false,
       content: { language: 'javascript' },
     },
   },

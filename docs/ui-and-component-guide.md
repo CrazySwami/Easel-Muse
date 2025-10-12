@@ -682,3 +682,50 @@ Example: make a node “output-only”
 ```
 
 This is useful for nodes that only produce data (e.g., a search/fetch node) and should not accept incomers.
+
+---
+
+## Audio node UI and behavior
+
+The `audio` node follows the Fill Frame pattern and provides two primary inputs with matched styling and a taller content area:
+
+- Record column (left)
+- Upload column (right)
+
+Both sit inside a scrollable middle section with a fixed header and footer:
+
+- Header: an "Auto transcribe" `Switch` (`data.autoTranscribe`), and a transient "Transcribing…" pill while work is in progress (`data.transcribing`).
+- Footer: an audio preview (from `data.content.url`) and a transcript viewer (from `data.transcript`) with copy button.
+
+Behavior:
+- Recording writes an audio file to `data.content` and, if `autoTranscribe` is true, triggers transcription and writes `data.transcript`.
+- Uploading validates type/size immediately in-node, writes to `data.content`, and, if `autoTranscribe` is true, transcribes and writes `data.transcript`.
+- Allowed types shown in‑UI and enforced: MP3, WAV, WEBM, M4A/MP4, OGG. Max size 10MB.
+
+Outputs and extractors:
+- `data.content` is the produced audio file `{ url, type }`.
+- `data.transcript` is the produced text.
+- `lib/xyflow.ts#getAudioFromAudioNodes` returns audio files from `data.content`.
+- `lib/xyflow.ts#getTranscriptionFromAudioNodes` returns transcripts.
+
+Sizing defaults:
+- Palette (`lib/node-buttons.ts`): `{ width: 840, height: 480, resizable: false }`.
+- Component fallbacks mirror the same sizing in both `audio/primitive.tsx` and `audio/transform.tsx`.
+
+---
+
+## Image, Video, and Code node sizes
+
+Keep palette defaults in `lib/node-buttons.ts` in sync with component fallbacks in the node primitives:
+
+- Image: `width: 840`, `height: 560`, `resizable: false`
+  - Palette: `image.data = { width: 840, height: 560, resizable: false }`
+  - Component: `<NodeLayout data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false }}>`
+- Video: `width: 1280`, `height: 720`, `resizable: false`
+  - Palette: `video.data = { width: 1280, height: 720, resizable: false }`
+  - Component: `<NodeLayout data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }}>`
+- Code: `width: 920`, `height: 640`, `resizable: false`
+  - Palette: `code.data = { width: 920, height: 640, resizable: false }`
+  - Component: `<NodeLayout data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false }}>`
+
+These sizes expand the working area while keeping frame/content sizes consistent to avoid connector misalignment. Adjust if needed, but always keep palette and component fallbacks identical.

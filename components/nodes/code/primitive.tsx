@@ -81,14 +81,14 @@ export const CodePrimitive = ({
   }, [isEditLocked]);
 
   return (
-    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar} className="w-96 min-h-[260px]">
-      <div className="h-full min-h-[260px] overflow-hidden group-data-[selected=true]:overflow-auto group-data-[lock-level=edit]:overflow-hidden">
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false }} title={title} type={type} toolbar={toolbar}>
+      <div className="h-full min-h-[640px] overflow-hidden group-data-[selected=true]:overflow-auto group-data-[lock-level=edit]:overflow-hidden">
         <div
           className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none"
           onPointerDown={(event) => event.stopPropagation()}
         >
           <Editor
-            className="h-[260px] min-h-[260px] w-full"
+            className="h-[640px] min-h-[640px] w-full"
             language={data.content?.language}
             value={data.content?.text}
             onChange={handleCodeChange}

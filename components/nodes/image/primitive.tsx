@@ -67,7 +67,7 @@ export const ImagePrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false }} type={type} title={title}>
       {isUploading && (
         <Skeleton className="flex aspect-video w-full animate-pulse items-center justify-center">
           <Loader2Icon
