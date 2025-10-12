@@ -404,9 +404,9 @@ export const TextTransform = ({
             const links = getLinksFromPerplexityNodes(incomers);
             if (!links?.length) return null;
             return (
-              <div className="nowheel nodrag nopan mx-4 my-2 shrink-0 rounded-xl border bg-white p-3 text-xs"
+              <div className="nowheel nodrag nopan mx-4 my-2 shrink-0 rounded-xl border border-border bg-card/60 p-3 text-xs"
                    onPointerDown={(e) => e.stopPropagation()}>
-                <p className="mb-1 font-medium text-muted-foreground">Sources</p>
+                <p className="mb-1 font-medium text-foreground/80">Sources</p>
                 <div className="max-h-24 overflow-auto space-y-1">
                   {links.map((u, i) => {
                     let hostname = '';
@@ -415,7 +415,7 @@ export const TextTransform = ({
                     return (
                       <a key={i} href={u as any} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-primary hover:underline">
                         {favicon ? <img src={favicon} alt="" width={14} height={14} className="rounded"/> : <span className="h-3.5 w-3.5 rounded bg-muted inline-block"/>}
-                        <span className="truncate">{String(u)}</span>
+                        <span className="truncate text-foreground/90">{String(u)}</span>
                       </a>
                     );
                   })}
