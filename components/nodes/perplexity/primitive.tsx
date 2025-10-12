@@ -198,9 +198,11 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     setIsBatchRunning(true);
     // initialize statuses and results containers
     const initStatuses = validQueries.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
-    updateNodeData(props.id, { batchStatuses: initStatuses, searchBatchResults: [] });
+    // clear previous results for a fresh run
+    updateNodeData(props.id, { batchStatuses: initStatuses, searchBatchResults: [], modelBatchAnswers: [] });
 
     const groups: any[] = [];
+    const answers: Array<{ answer: string; citations: string[] }> = [];
     for (let i = 0; i < validQueries.length; i++) {
       const q = validQueries[i];
       // mark running
@@ -221,20 +223,17 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
           throw new Error(txt || 'API error');
         }
         const data = await resp.json();
-        const results = pxMode === 'model'
-          ? (() => {
-              const text = data?.choices?.[0]?.message?.content ?? '';
-              const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
-              groups[i] = { query: q, results: [{ title: 'Answer', snippet: text }, ...citations.map((u: string) => ({ title: new URL(u).hostname, snippet: u, url: u }))] };
-              const out = deriveOutputsFromResults(groups as any);
-              updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: [text, ...out.texts], outputLinks: citations });
-              const doneStatuses = [...nextStatuses];
-              doneStatuses[i] = 'done';
-              updateNodeData(props.id, { batchStatuses: doneStatuses });
-              return groups[i].results;
-            })()
-          : (data.results ?? []);
-        if (pxMode !== 'model') {
+        if (pxMode === 'model') {
+          const text = data?.choices?.[0]?.message?.content ?? '';
+          const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
+          answers[i] = { answer: text, citations };
+          // surface outputs for downstream nodes
+          updateNodeData(props.id, { modelBatchAnswers: [...answers], outputTexts: [text], outputLinks: citations });
+          const doneStatuses = [...nextStatuses];
+          doneStatuses[i] = 'done';
+          updateNodeData(props.id, { batchStatuses: doneStatuses });
+        } else {
+          const results = (data.results ?? []);
           groups[i] = { query: q, results };
           const out = deriveOutputsFromResults(groups as any);
           updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: out.texts, outputLinks: out.links });
