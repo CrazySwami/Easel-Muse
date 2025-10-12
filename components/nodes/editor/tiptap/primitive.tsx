@@ -3,7 +3,7 @@
 import { NodeLayout } from '@/components/nodes/layout';
 import { useYDoc } from '@/providers/liveblocks';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
-import { useLiveblocksExtension, Toolbar, FloatingComposer, FloatingThreads } from '@liveblocks/react-tiptap';
+import { useLiveblocksExtension, Toolbar } from '@liveblocks/react-tiptap';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
@@ -16,7 +16,7 @@ import { useReactFlow } from '@xyflow/react';
 import * as Y from 'yjs';
 import type { TiptapNodeProps } from '.';
 import { FileTextIcon, Loader2Icon, BoldIcon, ItalicIcon, StrikethroughIcon, Heading1Icon, Heading2Icon } from 'lucide-react';
-import { useThreads } from '@liveblocks/react';
+// Comments removed for now
 import { useLocks } from '@/providers/locks';
 
 // A simple debounce function
@@ -37,7 +37,6 @@ type TiptapEditorProps = TiptapNodeProps & {
 
 const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEditorProps) => {
     const { updateNodeData } = useReactFlow();
-    const { threads } = useThreads();
 
     const yXmlFragment = doc.get(
       `tiptap-${id}`,
@@ -143,7 +142,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
     return (
         <div className="lb-tiptap flex h-full w-full flex-col">
             {editor && editor.view && !editor.isDestroyed && (
-                <div className="sticky top-0 z-10 bg-primary text-primary-foreground [&_svg]:text-primary-foreground [&_button]:text-primary-foreground">
+                <div className="sticky top-0 z-10 bg-cyan-600 text-white [&_svg]:text-white [&_button]:text-white">
                     <Toolbar
                       editor={editor}
                       className="lb-toolbar-compact flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-2 text-sm leading-none
@@ -193,12 +192,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             )}
             <div className="relative h-full w-full">
                 <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
-                {editor && editor.view && !editor.isDestroyed && (
-                    <>
-                        <FloatingThreads threads={threads ?? []} editor={editor} className="lb-threads" />
-                        <FloatingComposer editor={editor} className="lb-composer w-[350px]" />
-                    </>
-                )}
+                {/* Comments UI removed for now */}
             </div>
         </div>
     );
@@ -251,17 +245,7 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
     >
       {/* "Fill Frame" Pattern: Direct child has h-full */}
       <div className="flex h-full flex-col gap-3 p-3">
-        <div className="shrink-0 flex items-center justify-between rounded-2xl border border-border bg-card/60 px-3 py-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <FileTextIcon className="h-4 w-4" />
-            <span>Live collaborative document</span>
-          </div>
-          {props.data?.updatedAt ? (
-            <span className="text-xs text-muted-foreground">
-              Last edited {new Date(props.data.updatedAt).toLocaleString()}
-            </span>
-          ) : null}
-        </div>
+        {/* Header removed per request */}
 
         {/* Editor Content: flex-1 makes it grow and overflow-auto enables scrolling */}
         <div
