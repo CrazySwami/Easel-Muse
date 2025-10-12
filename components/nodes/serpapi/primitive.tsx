@@ -378,6 +378,33 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
                 onSelect={setSelectedIndex}
                 onAdd={() => setQueries([...queries, ''])}
                 onRun={runBatch}
+                onRerun={async (i) => {
+                  const q = (queries[i] || '').trim();
+                  if (!q) return;
+                  setLoading(true);
+                  setSelectedIndex(i);
+                  setBatchStatuses((prev) => { const next = [...prev]; next[i] = 'running'; return next; });
+                  try {
+                    if (engine === 'search') {
+                      const res = await fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
+                      const json = await res.json();
+                      const results = json?.organic_results ?? [];
+                      const groups = [...batchGroups];
+                      groups[i] = { query: q, results };
+                      setBatchGroups(groups);
+                    } else {
+                      const res = await fetch('/api/serpapi/ai-overview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
+                      const json = await res.json();
+                      const groups = [...batchGroups];
+                      groups[i] = { query: q, results: [json] };
+                      setBatchGroups(groups);
+                    }
+                    setBatchStatuses((prev) => { const next = [...prev]; next[i] = 'done'; return next; });
+                  } catch {
+                    setBatchStatuses((prev) => { const next = [...prev]; next[i] = 'error'; return next; });
+                  }
+                  setLoading(false);
+                }}
                 statuses={batchStatuses}
                 running={loading}
               />

@@ -2,7 +2,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { CheckIcon, PencilIcon, XIcon } from 'lucide-react';
+import { CheckIcon, PencilIcon, XIcon, RotateCcwIcon } from 'lucide-react';
 import { useState } from 'react';
 
 type QueryListProps = {
@@ -11,13 +11,14 @@ type QueryListProps = {
   selectedIndex?: number;
   onSelect?: (i: number) => void;
   onAdd?: () => void;
+  onRerun?: (i: number) => void;
   onRun?: () => void;
   stickyFooter?: boolean;
   statuses?: Array<'idle'|'running'|'done'|'error'>;
   running?: boolean;
 };
 
-export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAdd, onRun, stickyFooter = true, statuses = [], running = false }: QueryListProps) {
+export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAdd, onRun, onRerun, stickyFooter = true, statuses = [], running = false }: QueryListProps) {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   return (
     <div className="relative flex h-full min-h-0 flex-col">
@@ -52,6 +53,7 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
                 title={q}
               >{q || `Query #${idx+1}`}</div>
             )}
+            <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onRerun?.(idx)} title="Rerun this query"><RotateCcwIcon className="h-4 w-4"/></Button>
             <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onChange(queries.filter((_,i)=>i!==idx))}><XIcon className="h-4 w-4"/></Button>
             </div>
           ))}

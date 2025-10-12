@@ -451,6 +451,41 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                     onSelect={(i)=> updateNodeData(props.id, { selectedQueryIndex: i })}
                     onAdd={addQuery}
                     onRun={runBatchProgressive}
+                    onRerun={async (i)=>{
+                      const q = (queries[i] || '').trim();
+                      if (!q) return;
+                      setIsBatchRunning(true);
+                      const statuses = Array.isArray(props.data.batchStatuses) ? [...props.data.batchStatuses] : [];
+                      statuses[i] = 'running';
+                      updateNodeData(props.id, { batchStatuses: statuses, selectedQueryIndex: i });
+                      try {
+                        const payload = pxMode === 'model'
+                          ? { mode: 'chat', messages: [{ role: 'user', content: q }], model: pxModel }
+                          : { mode: 'search', query: q };
+                        const resp = await fetch('/api/perplexity/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await resp.json();
+                        if (pxMode === 'model') {
+                          const text = data?.choices?.[0]?.message?.content ?? '';
+                          const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
+                          const answers = Array.isArray(modelBatchAnswers) ? [...modelBatchAnswers] : [];
+                          answers[i] = { answer: text, citations };
+                          statuses[i] = 'done';
+                          updateNodeData(props.id, { modelBatchAnswers: answers, batchStatuses: statuses });
+                        } else {
+                          const results = (data.results ?? []);
+                          const groups = Array.isArray(searchBatchResults) ? [...searchBatchResults] : [];
+                          groups[i] = { query: q, results };
+                          statuses[i] = 'done';
+                          updateNodeData(props.id, { searchBatchResults: groups, batchStatuses: statuses });
+                        }
+                      } catch {
+                        const next = Array.isArray(props.data.batchStatuses) ? [...props.data.batchStatuses] : [];
+                        next[i] = 'error';
+                        updateNodeData(props.id, { batchStatuses: next });
+                      } finally {
+                        setIsBatchRunning(false);
+                      }
+                    }}
                     statuses={batchStatuses as any}
                     running={isBatchRunning}
                   />

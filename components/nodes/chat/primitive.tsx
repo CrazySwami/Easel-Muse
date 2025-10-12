@@ -123,9 +123,16 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const saved = (session?.messages ?? []) as any[];
     const liveArr = (messages as any[]) ?? [];
     if (saved.length === 0) return liveArr;
-    // If we switched sessions, prefer saved history unless live has same ids
+    // Merge: prefer saved order, overlay any live with same id, then append new live ids
     const liveById = new Map(liveArr.map((m) => [m.id, m]));
-    const merged = saved.map((m) => liveById.get(m.id) ?? m);
+    const seen = new Set<string>();
+    const merged: any[] = saved.map((m) => {
+      seen.add(m.id);
+      return liveById.get(m.id) ?? m;
+    });
+    for (const m of liveArr) {
+      if (!seen.has(m.id)) merged.push(m);
+    }
     return merged;
   })();
 
@@ -142,7 +149,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const hasText = Boolean(message.text);
     const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
     if (!(hasText || hasAttachments)) return;
-    const filesToSend = (message.files && message.files.length ? message.files : attachedFiles);
+    const filesToSend = (message.files && message.files.length ? message.files : attachedFiles).slice(0,3);
     // Send using the transport's attachment path; do NOT clear local history here
     void sendMessage({ text: message.text || 'Sent with attachments', files: filesToSend }, { body: { modelId: selectedModel, webSearch: search } });
     setInput('');

@@ -287,6 +287,33 @@ export const AIComparePrimitive = (props: Props) => {
                     onSelect={(i) => updateNodeData(props.id, { selectedQueryIndex: i })}
                     onAdd={addQuery}
                     onRun={runBatch}
+                    onRerun={async (i) => {
+                      const q = (queries[i] || '').trim();
+                      if (!q) return;
+                      updateNodeData(props.id, { selectedQueryIndex: i });
+                      setIsBatchRunning(true);
+                      const current = Array.isArray(props.data.batchStatuses) ? [...props.data.batchStatuses] : [];
+                      current[i] = 'running';
+                      updateNodeData(props.id, { batchStatuses: current });
+                      try {
+                        const [o, g, a, s] = await Promise.all([
+                          fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: openaiModel }) }).then(r=>r.json()),
+                          fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: geminiModel }) }).then(r=>r.json()),
+                          fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
+                          fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
+                        ]);
+                        const groups = Array.isArray(props.data.results?.groups) ? [...props.data.results.groups] : [];
+                        groups[i] = { query: q, openai: o, gemini: g, anthropic: a, serp: s };
+                        current[i] = 'done';
+                        updateNodeData(props.id, { results: { groups }, batchStatuses: current });
+                      } catch {
+                        const next = Array.isArray(props.data.batchStatuses) ? [...props.data.batchStatuses] : [];
+                        next[i] = 'error';
+                        updateNodeData(props.id, { batchStatuses: next });
+                      } finally {
+                        setIsBatchRunning(false);
+                      }
+                    }}
                     statuses={batchStatuses}
                     running={isBatchRunning}
                   />
