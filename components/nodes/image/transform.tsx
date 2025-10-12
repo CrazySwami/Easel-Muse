@@ -264,44 +264,33 @@ export const ImageTransform = ({
   }, [data.size]);
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar}>
-      {loading && (
-        <Skeleton
-          className="flex w-full animate-pulse items-center justify-center rounded-b-xl"
-          style={{ aspectRatio }}
-        >
-          <Loader2Icon
-            size={16}
-            className="size-4 animate-spin text-muted-foreground"
-          />
-        </Skeleton>
-      )}
-      {!loading && !data.generated?.url && (
-        <div
-          className="flex w-full items-center justify-center rounded-b-xl bg-secondary p-4"
-          style={{ aspectRatio }}
-        >
-          <p className="text-muted-foreground text-sm">
-            Press <PlayIcon size={12} className="-translate-y-px inline" /> to
-            create an image
-          </p>
-        </div>
-      )}
-      {!loading && data.generated?.url && (
-        <Image
-          src={data.generated.url}
-          alt="Generated image"
-          width={1000}
-          height={1000}
-          className="w-full rounded-b-xl object-cover"
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false }} type={type} title={title} toolbar={toolbar}>
+      <div className="flex h-full min-h-0 flex-col p-3">
+        {loading && (
+          <Skeleton className="flex flex-1 min-h-0 items-center justify-center rounded-2xl">
+            <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
+          </Skeleton>
+        )}
+        {!loading && !data.generated?.url && (
+          <div className="flex flex-1 min-h-0 items-center justify-center rounded-2xl border bg-card">
+            <p className="text-muted-foreground text-sm">
+              Press <PlayIcon size={12} className="-translate-y-px inline" /> to create an image
+            </p>
+          </div>
+        )}
+        {!loading && data.generated?.url && (
+          <div className="flex flex-1 min-h-0 items-center justify-center overflow-hidden rounded-2xl border bg-card">
+            <Image src={data.generated.url} alt="Generated image" width={1600} height={1200} className="h-full w-full object-contain" />
+          </div>
+        )}
+        <Textarea
+          value={data.instructions ?? ''}
+          onChange={handleInstructionsChange}
+          placeholder="Enter instructions"
+          className="nowheel nodrag nopan mt-3 shrink-0 max-h-48 overflow-auto rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm shadow-none"
+          onPointerDown={(e) => e.stopPropagation()}
         />
-      )}
-      <Textarea
-        value={data.instructions ?? ''}
-        onChange={handleInstructionsChange}
-        placeholder="Enter instructions"
-        className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
-      />
+      </div>
     </NodeLayout>
   );
 };

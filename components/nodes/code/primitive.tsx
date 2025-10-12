@@ -4,6 +4,7 @@ import { type ComponentProps, useCallback, useEffect, useRef } from 'react';
 import type { CodeNodeProps } from '.';
 import { NodeLayout } from '../layout';
 import { LanguageSelector } from './language-selector';
+import { Switch } from '@/components/ui/switch';
 import { useLocks } from '@/providers/locks';
 
 type CodePrimitiveProps = CodeNodeProps & {
@@ -35,6 +36,7 @@ export const CodePrimitive = ({
   };
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    { children: <div className="px-2 text-xs text-muted-foreground">Plain code</div> },
     {
       children: (
         <LanguageSelector
@@ -42,6 +44,18 @@ export const CodePrimitive = ({
           onChange={handleLanguageChange}
           className="w-[200px] rounded-full"
         />
+      ),
+    },
+    {
+      tooltip: 'Generate mode',
+      children: (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Generate</span>
+          <Switch
+            checked={Boolean((data as any)?.generateMode)}
+            onCheckedChange={(v) => updateNodeData(id, { generateMode: v })}
+          />
+        </div>
       ),
     },
   ];

@@ -262,11 +262,11 @@ export const CodeTransform = ({
   const nonUserMessages = messages.filter((message) => message.role !== 'user');
 
   return (
-    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar} className="w-96 min-h-[380px]">
-      <div className="flex flex-col gap-3" style={{ touchAction: 'manipulation', overscrollBehavior: 'none' }}>
-        <div className="overflow-hidden rounded-3xl border bg-card">
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false }} title={title} type={type} toolbar={toolbar}>
+      <div className="flex h-full flex-col min-h-0 gap-3 p-3" style={{ touchAction: 'manipulation', overscrollBehavior: 'none' }}>
+        <div className="flex-1 min-h-0 overflow-hidden rounded-3xl border bg-card">
           <Editor
-            className="h-[300px] min-h-[300px] w-full"
+            className="h-full min-h-[300px] w-full"
             language={language}
             value={
               nonUserMessages.length
@@ -277,7 +277,7 @@ export const CodeTransform = ({
             onChange={handleCodeChange}
             theme="vs-dark"
             loading={
-              <div className="dark h-[300px] w-full">
+              <div className="dark h-full w-full">
                 <Skeleton className="size-full" />
               </div>
             }
@@ -296,7 +296,8 @@ export const CodeTransform = ({
           value={data.instructions ?? ''}
           onChange={handleInstructionsChange}
           placeholder="Enter instructions"
-          className="min-h-[110px] resize-y rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground shadow-none transition focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="nowheel nodrag nopan shrink-0 max-h-48 overflow-auto rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground shadow-none transition focus-visible:ring-2 focus-visible:ring-primary/60"
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </div>
     </NodeLayout>

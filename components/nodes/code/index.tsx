@@ -16,6 +16,8 @@ export type CodeNodeProps = {
       text?: string;
       language?: string;
     };
+    // Local UI toggle: when true and not connected, show generate UI
+    generateMode?: boolean;
   };
   id: string;
 };
@@ -25,7 +27,7 @@ export const CodeNode = (props: CodeNodeProps) => {
     id: props.id,
     handleType: 'target',
   });
-  const Component = connections.length ? CodeTransform : CodePrimitive;
-
-  return <Component {...props} title="Code" />;
+  const hasIncomers = connections.length > 0;
+  const Component = hasIncomers || props.data.generateMode ? CodeTransform : CodePrimitive;
+  return <Component key={(hasIncomers || props.data.generateMode) ? 'transform' : 'primitive'} {...props} title="Code" />;
 };

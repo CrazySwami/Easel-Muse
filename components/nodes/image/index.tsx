@@ -20,6 +20,8 @@ export type ImageNodeProps = {
     model?: string;
     description?: string;
     instructions?: string;
+    // Local UI toggle: when true and not connected, show generate UI
+    generateMode?: boolean;
   };
   id: string;
 };
@@ -29,7 +31,7 @@ export const ImageNode = (props: ImageNodeProps) => {
     id: props.id,
     handleType: 'target',
   });
-  const Component = connections.length ? ImageTransform : ImagePrimitive;
-
-  return <Component {...props} title="Image" />;
+  const hasIncomers = connections.length > 0;
+  const Component = hasIncomers || props.data.generateMode ? ImageTransform : ImagePrimitive;
+  return <Component key={(hasIncomers || props.data.generateMode) ? 'transform' : 'primitive'} {...props} title="Image" />;
 };
