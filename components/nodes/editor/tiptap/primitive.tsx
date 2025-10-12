@@ -11,12 +11,7 @@ import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
-import Blockquote from '@tiptap/extension-blockquote';
-import BulletList from '@tiptap/extension-bullet-list';
-import OrderedList from '@tiptap/extension-ordered-list';
-import ListItem from '@tiptap/extension-list-item';
-import TextStyle from '@tiptap/extension-text-style';
-import FontFamily from '@tiptap/extension-font-family';
+// Lists and blockquote are provided by StarterKit
 import { useEffect, type ComponentProps, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import * as Y from 'yjs';
@@ -83,12 +78,6 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             Link.configure({
                 openOnClick: false,
             }),
-            Blockquote,
-            BulletList,
-            OrderedList,
-            ListItem,
-            TextStyle,
-            FontFamily,
             // Liveblocks extension registered after mount to avoid setState during render
         ],
         editorProps: {
@@ -183,8 +172,6 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 {/* Headings dropdown */}
                 <HeadingDropdown editor={editor} />
-                {/* Font family dropdown */}
-                <FontDropdown editor={editor} />
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 <button title="Bold" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('bold') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()}>
                   <BoldIcon className="h-4 w-4" />
@@ -310,31 +297,6 @@ const HeadingDropdown = ({ editor }: { editor: any }) => {
   );
 };
 
-const FontDropdown = ({ editor }: { editor: any }) => {
-  const [open, setOpen] = useState(false);
-  const fonts = [
-    { label: 'Default', value: '' },
-    { label: 'Inter', value: 'Inter, ui-sans-serif, system-ui' },
-    { label: 'Georgia', value: 'Georgia, serif' },
-    { label: 'Monospace', value: 'ui-monospace, SFMono-Regular, Menlo' },
-  ];
-  return (
-    <div className="relative inline-flex items-center">
-      <button className="rounded-md p-2 hover:bg-cyan-700" title="Font" onClick={() => setOpen((o) => !o)}>
-        <span className="text-xs">Font</span>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 min-w-[160px] rounded-md border border-cyan-700 bg-cyan-600 text-white shadow">
-          {fonts.map((f) => (
-            <button key={f.label} className="block w-full px-3 py-1 text-left hover:bg-cyan-700" style={{ fontFamily: f.value || undefined }} onClick={() => { editor.chain().focus().setFontFamily(f.value || null).run(); setOpen(false); }}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 
 type TiptapPrimitiveProps = TiptapNodeProps & {
