@@ -28,7 +28,6 @@ export const AIComparePrimitive = (props: Props) => {
   const removeQuery = (i: number) => updateNodeData(props.id, { queries: queries.filter((_, idx) => idx !== i) });
 
   const [isRunning, setIsRunning] = useState(false);
-  const [isGeminiRunning, setIsGeminiRunning] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
   const runSingle = useCallback(async () => {
@@ -90,17 +89,7 @@ export const AIComparePrimitive = (props: Props) => {
     setIsBatchRunning(false);
   }, [queries, updateNodeData, props.id]);
 
-  const runGeminiOnly = useCallback(async () => {
-    const q = (queries[0] || '').trim();
-    if (!q) return;
-    setIsGeminiRunning(true);
-    try {
-      const g = await fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json());
-      updateNodeData(props.id, { results: { single: { openai: null, gemini: g, anthropic: null, serp: null } } });
-    } finally {
-      setIsGeminiRunning(false);
-    }
-  }, [queries, updateNodeData, props.id]);
+  // No Gemini-only mode; keep bulk mode for multiple questions
 
   const toolbar = [
     {
@@ -129,21 +118,38 @@ export const AIComparePrimitive = (props: Props) => {
           {inputMode === 'single' ? (
             <div className="flex w-full items-center gap-2">
               <Input className="w-full" value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
-              <Button onClick={runSingle} disabled={isRunning || isGeminiRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
-              <Button variant="secondary" onClick={runGeminiOnly} disabled={isGeminiRunning || isRunning}>{isGeminiRunning ? 'Gemini…' : 'Gemini only'}</Button>
+              <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <Button onClick={runBatch} disabled={isBatchRunning}>{isBatchRunning ? 'Running…' : 'Run Batch'}</Button>
+              <Button variant="outline" size="sm" onClick={addQuery}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
             </div>
           )}
         </div>
 
         {/* Content */}
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
-          {/* Left: sources by provider */}
+          {/* Left: sources in single mode; questions list in batch mode */}
           <div className="col-span-4 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
-            <SourcesPanel results={props.data.results} selectedIndex={props.data.selectedQueryIndex ?? 0} />
+            {inputMode === 'batch' ? (
+              <div className="space-y-2">
+                {queries.map((q, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <button
+                      className={`shrink-0 rounded border px-2 py-1 text-xs ${props.data.selectedQueryIndex===idx ? 'bg-primary/10 border-primary' : 'border-border'}`}
+                      onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
+                    >{idx+1}</button>
+                    <Input value={q} onChange={(e)=>updateQuery(idx, e.target.value)} />
+                    {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && <span className="text-xs text-muted-foreground">…</span>}
+                    {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && <CheckIcon className="h-4 w-4 text-emerald-600" />}
+                    <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}><XIcon className="h-4 w-4"/></Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <SourcesPanel results={props.data.results} selectedIndex={props.data.selectedQueryIndex ?? 0} />
+            )}
           </div>
 
           {/* Right: table */}

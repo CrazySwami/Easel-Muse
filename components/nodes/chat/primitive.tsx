@@ -78,12 +78,16 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
   const [isSending, setIsSending] = useState(false);
 
+  // Prefer persisted session messages for display so switching sessions shows history
+  const session = sessions.find((s) => s.id === sessionId);
+  const displayMessages = (session?.messages?.length ? (session.messages as any) : (messages as any)) as any[];
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-card/60" onPointerDown={(e) => e.stopPropagation()}>
         <Conversation className="h-full">
           <ConversationContent>
-            {(messages ?? []).map((message: any, msgIdx: number) => (
+            {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
                 {message.role === 'assistant' && message.parts?.filter((p: any) => p.type === 'source-url').length > 0 && (
                   <Sources>
@@ -116,7 +120,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       return null;
                   }
                 })}
-                {message.role === 'assistant' && msgIdx === (messages as any).length - 1 && (
+                {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
                   <Actions className="mt-2">
                     <Action onClick={() => regenerate?.()} label="Retry">
                       <RefreshCcwIcon className="size-3" />
@@ -170,18 +174,6 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
               <GlobeIcon size={16} />
               <span>Search</span>
             </PromptInputButton>
-            <PromptInputModelSelect onValueChange={(value) => updateNodeData(nodeId, { model: value })} value={model}>
-              <PromptInputModelSelectTrigger>
-                <PromptInputModelSelectValue />
-              </PromptInputModelSelectTrigger>
-              <PromptInputModelSelectContent>
-                {Object.keys(modelsMap).map((id) => (
-                  <PromptInputModelSelectItem key={id} value={id}>
-                    {(modelsMap as any)[id]?.label ?? id}
-                  </PromptInputModelSelectItem>
-                ))}
-              </PromptInputModelSelectContent>
-            </PromptInputModelSelect>
           </PromptInputTools>
           <PromptInputSubmit disabled={!draft && status !== 'streaming'} status={status as any} />
         </PromptInputToolbar>
