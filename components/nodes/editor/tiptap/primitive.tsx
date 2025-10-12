@@ -161,7 +161,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
     return (
         <div className="lb-tiptap flex h-full w-full flex-col">
             {editor && editor.view && !editor.isDestroyed && (
-              <div className="sticky top-0 z-10 flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white">
+              <div className="sticky top-0 z-10 flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white rounded-t-3xl border-b border-cyan-700">
                 <button title="Undo" className="rounded-md p-2 hover:bg-cyan-700" onClick={() => editor.chain().focus().undo().run()}>
                   <Undo2Icon className="h-4 w-4" />
                 </button>
