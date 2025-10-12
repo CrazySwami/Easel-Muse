@@ -231,7 +231,7 @@ export const AIComparePrimitive = (props: Props) => {
 
           {/* Right: provider answers + table */}
           <div className="col-span-8 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
-            {(() => {
+            {inputMode === 'batch' && (() => {
               const payload = getActivePayload(props.data.results, props.data.selectedQueryIndex ?? 0);
               return <AnswersCollapsible payload={payload} />;
             })()}
@@ -317,10 +317,19 @@ function buildCoverage(results: any, selectedIndex: number): Array<{ domain: str
 
     const geminiDomains = new Set<string>();
     try {
+      // Prefer resolved final URLs (via our /api/resolve from earlier pass) if present
       const chunks: any[] = payload.gemini?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
       for (const c of chunks) {
-        const d = (c?.web?.title || c?.web?.domain || '').toString().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'');
-        if (d) geminiDomains.add(d);
+        const u = c?.web?.uri || c?.web?.url;
+        if (typeof u === 'string') {
+          try {
+            const finalUrl = new URL(u).hostname.endsWith('vertexaisearch.cloud.google.com') ? '' : u;
+            const d = new URL(finalUrl || u).hostname.replace(/^www\./,'');
+            if (d && d !== 'vertexaisearch.cloud.google.com') geminiDomains.add(d);
+          } catch {}
+        }
+        const d2 = (c?.web?.title || c?.web?.domain || '').toString().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'');
+        if (d2 && d2 !== 'vertexaisearch.cloud.google.com') geminiDomains.add(d2);
       }
       const rawDomains = scanUrlsToDomains(payload.gemini);
       for (const d of rawDomains) if (d !== 'vertexaisearch.cloud.google.com') geminiDomains.add(d);
