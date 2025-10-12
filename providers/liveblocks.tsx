@@ -128,42 +128,26 @@ export const CursorsLayer = () => {
     return (
     <div
       key={key}
+      className="pointer-events-none absolute top-0 left-0"
       style={{
-        position: 'fixed',
-        left: 0,
-        top: 0,
         transform: `translateX(${x}px) translateY(${y}px)`,
         zIndex: 50,
-        pointerEvents: 'none',
       }}
     >
-      <Cursor color={color} x={0} y={0} />
-      {label ? (
+      {/* Note: The user's own cursor is the native mouse pointer. We only render the name tag to follow it. */}
+      {label && (
         <div
-          style={{
-            position: 'absolute',
-            left: 16,
-            top: 14,
-            padding: '4px 10px',
-            borderRadius: 9999,
-            background: color,
-            color: 'white',
-            fontSize: 12,
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            width: 'max-content',
-            boxShadow: '0 1px 2px rgba(0,0,0,.35)'
-          }}
+          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl px-4 py-2"
+          style={{ backgroundColor: color, borderRadius: 20 }}
         >
           {avatar ? (
-            <img src={avatar} alt={label} style={{ width: 18, height: 18, borderRadius: 9999, display: 'inline-block' }} />
+            <img src={avatar} alt={label} width={24} height={24} className="rounded-full" />
           ) : null}
-          <span>{label}</span>
+          <p className="whitespace-nowrap text-sm leading-relaxed text-white">
+            {label}
+          </p>
         </div>
-      ) : null}
+      )}
     </div>
   ); };
 
