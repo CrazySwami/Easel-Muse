@@ -12,6 +12,7 @@ import { getIncomers } from '@xyflow/react';
 import { getTextFromTextNodes, getMarkdownFromFirecrawlNodes, getTextFromTiptapNodes } from '@/lib/xyflow';
 import { XIcon, PlusIcon, CheckIcon, Loader2Icon } from 'lucide-react';
 import type { ComponentProps } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useGateway } from '@/providers/gateway/client';
 import { ModelSelector } from '../model-selector';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
