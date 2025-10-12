@@ -145,5 +145,17 @@ export const nodeButtons = [
       fullscreenOnly: false,
     },
   },
+  {
+    id: 'ai-compare',
+    label: 'AI Compare',
+    icon: SearchIcon,
+    data: {
+      width: 1200,
+      height: 800,
+      resizable: false,
+      fullscreenSupported: true,
+      fullscreenOnly: false,
+    },
+  },
   
 ];
