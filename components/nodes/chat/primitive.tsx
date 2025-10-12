@@ -240,7 +240,9 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                 <PromptInputModelSelectValue />
               </PromptInputModelSelectTrigger>
               <PromptInputModelSelectContent>
-                {Object.entries(modelsMap || {}).map(([id, m]: any) => (
+                {Object.entries(modelsMap || {})
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([id, m]: any) => (
                   <PromptInputModelSelectItem key={id} value={id}>
                     {m?.label ?? id}
                   </PromptInputModelSelectItem>

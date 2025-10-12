@@ -10,7 +10,7 @@ import { QueryList } from '@/components/ui/batch/query-list';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
-import { CheckIcon, PlusIcon, XIcon } from 'lucide-react';
+import { CheckIcon, PlusIcon, XIcon, Loader2Icon } from 'lucide-react';
 import { useGateway } from '@/providers/gateway/client';
 import { ModelSelector } from '../model-selector';
 
@@ -273,6 +273,10 @@ export const AIComparePrimitive = (props: Props) => {
 
           {/* Right: provider answers + table */}
           <div className="col-span-8 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2 nowheel nodrag nopan" onPointerDown={(e)=> e.stopPropagation()}>
+            {/* Right pane loading indicator when active query is running */}
+            {inputMode === 'batch' && (batchStatuses[props.data.selectedQueryIndex ?? 0] === 'running') && (
+              <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2Icon className="h-4 w-4 animate-spin"/> Loading…</div>
+            )}
             {inputMode === 'batch' && (() => {
               const payload = getActivePayload(props.data.results, props.data.selectedQueryIndex ?? 0);
               return <AnswersCollapsible payload={payload} />;

@@ -354,9 +354,10 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
             </div>
             {/* Right: results */}
             <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
-              {loading ? (
-                <div className="flex h-full items-center justify-center text-muted-foreground"><Loader2Icon className="h-6 w-6 animate-spin"/></div>
-              ) : (Array.isArray(props.data?.results) && props.data.results.length ? (
+              {loading && (
+                <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2Icon className="h-4 w-4 animate-spin"/> Loading…</div>
+              )}
+              {Array.isArray(props.data?.results) && props.data.results.length ? (
                 <div className="grid grid-cols-2 gap-3">
                   {(props.data.results as any[]).map((r, i) => (
                     <SearchResult key={i} result={{ url: r?.link || r?.url, title: r?.title, snippet: r?.snippet }} variant="card" />
@@ -364,7 +365,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Run a batch to see results.</div>
-              ))}
+              )}
             </div>
           </div>
         )}

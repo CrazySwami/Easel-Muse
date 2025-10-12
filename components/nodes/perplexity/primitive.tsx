@@ -457,6 +457,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                   />
                 </div>
                 <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
+                  {(isBatchRunning || (batchStatuses[(props.data as any)?.selectedQueryIndex ?? 0] === 'running')) && (
+                    <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2Icon className="h-4 w-4 animate-spin"/> Loading…</div>
+                  )}
                   {(() => {
                     const idx = (props.data as any)?.selectedQueryIndex ?? 0;
                     if (pxMode === 'model') {
