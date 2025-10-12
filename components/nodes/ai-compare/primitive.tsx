@@ -4,19 +4,31 @@ import { NodeLayout } from '@/components/nodes/layout';
 import type { AICompareNodeProps } from './index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon, PlusIcon, XIcon } from 'lucide-react';
+import { useGateway } from '@/providers/gateway/client';
+import { ModelSelector } from '../model-selector';
+
+const DEFAULT_TEXT_MODEL_ID = 'gpt-5-mini';
+const getDefaultModel = (all: Record<string, any>) => {
+  if (all[DEFAULT_TEXT_MODEL_ID]) return DEFAULT_TEXT_MODEL_ID;
+  return Object.keys(all)[0];
+};
 
 type Props = AICompareNodeProps & { title: string };
 
 export const AIComparePrimitive = (props: Props) => {
   const { updateNodeData } = useReactFlow();
+  const { models } = useGateway();
 
   const inputMode = props.data.inputMode ?? 'single';
   const queries = props.data.queries ?? [''];
   const batchStatuses = (props.data.batchStatuses ?? []) as Array<'idle'|'running'|'done'|'error'>;
+  const generatePrompt = (props.data as any)?.generatePrompt ?? '';
+  const model = (props.data as any)?.model ?? getDefaultModel(models);
 
   const setInputMode = (value: 'single'|'batch') => updateNodeData(props.id, { inputMode: value });
   const updateQuery = (i: number, v: string) => {
@@ -29,6 +41,7 @@ export const AIComparePrimitive = (props: Props) => {
 
   const [isRunning, setIsRunning] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const runSingle = useCallback(async () => {
     const q = (queries[0] || '').trim();
@@ -105,6 +118,28 @@ export const AIComparePrimitive = (props: Props) => {
   const width = (props.data.width ?? 1200);
   const height = (props.data.height ?? 800);
 
+  const isGenerateDisabled = isGenerating || !generatePrompt.trim();
+
+  const handleGenerate = useCallback(async () => {
+    if (!generatePrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const resp = await fetch('/api/perplexity/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'generate_questions', prompt: generatePrompt, model }),
+      });
+      const data = await resp.json();
+      if (Array.isArray(data?.questions) && data.questions.length) {
+        updateNodeData(props.id, { queries: data.questions, inputMode: 'batch' });
+      }
+    } catch (e) {
+      // no-op
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [generatePrompt, model, updateNodeData, props.id]);
+
   return (
     <NodeLayout
       {...props}
@@ -130,22 +165,36 @@ export const AIComparePrimitive = (props: Props) => {
 
         {/* Content */}
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
-          {/* Left: sources in single mode; questions list in batch mode */}
+          {/* Left: sources in single mode; generator + questions list in batch mode */}
           <div className="col-span-4 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
             {inputMode === 'batch' ? (
-              <div className="space-y-2">
-                {queries.map((q, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <button
-                      className={`shrink-0 rounded border px-2 py-1 text-xs ${props.data.selectedQueryIndex===idx ? 'bg-primary/10 border-primary' : 'border-border'}`}
-                      onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
-                    >{idx+1}</button>
-                    <Input value={q} onChange={(e)=>updateQuery(idx, e.target.value)} />
-                    {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && <span className="text-xs text-muted-foreground">…</span>}
-                    {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && <CheckIcon className="h-4 w-4 text-emerald-600" />}
-                    <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}><XIcon className="h-4 w-4"/></Button>
+              <div className="flex h-full min-h-0 flex-col gap-2">
+                {/* Generate questions (copied pattern from Perplexity) */}
+                <div className="shrink-0 rounded-xl border bg-card/60 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">Generate questions</div>
+                    <ModelSelector value={model} options={models} className="w-[200px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
                   </div>
-                ))}
+                  <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })} />
+                  <div className="mt-2 flex items-center justify-end">
+                    <Button size="sm" onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
+                  </div>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-auto space-y-2">
+                  {queries.map((q, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <button
+                        className={`shrink-0 rounded border px-2 py-1 text-xs ${props.data.selectedQueryIndex===idx ? 'bg-primary/10 border-primary' : 'border-border'}`}
+                        onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
+                      >{idx+1}</button>
+                      <Input value={q} onChange={(e)=>updateQuery(idx, e.target.value)} />
+                      {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && <span className="text-xs text-muted-foreground">…</span>}
+                      {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && <CheckIcon className="h-4 w-4 text-emerald-600" />}
+                      <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}><XIcon className="h-4 w-4"/></Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <SourcesPanel results={props.data.results} selectedIndex={props.data.selectedQueryIndex ?? 0} />
@@ -307,8 +356,33 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
     </div>
   );
   if (!payload) return <div className="text-xs text-muted-foreground">Run to see sources.</div>;
+
+  const answers = extractAnswersByProvider(payload);
   return (
     <div className="text-xs h-full min-h-0 overflow-auto pr-1">
+      {/* Answers */}
+      {(answers.openai || answers.gemini || answers.anthropic) && (
+        <div className="mb-3 space-y-2">
+          {answers.openai && (
+            <div className="rounded border bg-card/60 p-2">
+              <div className="mb-1 inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</div>
+              <p className="whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
+            </div>
+          )}
+          {answers.gemini && (
+            <div className="rounded border bg-card/60 p-2">
+              <div className="mb-1 inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</div>
+              <p className="whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
+            </div>
+          )}
+          {answers.anthropic && (
+            <div className="rounded border bg-card/60 p-2">
+              <div className="mb-1 inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</div>
+              <p className="whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
+            </div>
+          )}
+        </div>
+      )}
       {renderGroup('ChatGPT', <OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}
       {renderGroup('Gemini', <GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}
       {renderGroup('Claude', <AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}
@@ -354,6 +428,30 @@ function extractUrlsByProvider(payload: any): { openai: string[]; gemini: string
     anthropic: Array.from(new Set(out.anthropic)),
     serp: Array.from(new Set(out.serp)),
   };
+}
+
+function extractAnswersByProvider(payload: any): { openai?: string; gemini?: string; anthropic?: string } {
+  const out: { openai?: string; gemini?: string; anthropic?: string } = {};
+  try {
+    const o = payload?.openai;
+    out.openai = o?.output_text
+      || (Array.isArray(o?.content) ? o.content.map((c: any) => c?.text).filter(Boolean).join('\n') : '')
+      || (o?.choices?.[0]?.message?.content ? (Array.isArray(o.choices[0].message.content) ? o.choices[0].message.content.map((p: any) => p?.text).filter(Boolean).join('\n') : String(o.choices[0].message.content)) : '');
+    if (out.openai) out.openai = String(out.openai).slice(0, 1200);
+  } catch {}
+  try {
+    const g = payload?.gemini;
+    const parts = g?.candidates?.[0]?.content?.parts ?? g?.candidates?.[0]?.content?.[0]?.parts ?? [];
+    out.gemini = parts.map((p: any) => p?.text).filter(Boolean).join('\n');
+    if (out.gemini) out.gemini = String(out.gemini).slice(0, 1200);
+  } catch {}
+  try {
+    const a = payload?.anthropic;
+    const blocks = Array.isArray(a?.content) ? a.content : [];
+    out.anthropic = blocks.map((b: any) => b?.text).filter(Boolean).join('\n');
+    if (out.anthropic) out.anthropic = String(out.anthropic).slice(0, 1200);
+  } catch {}
+  return out;
 }
 
 

@@ -72,6 +72,21 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     if (lastAssistant) {
       const text = (lastAssistant.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
       if (text) updateNodeData(nodeId, { outputTexts: [text] });
+      // Auto-title after first exchange
+      const sess = (sessions ?? []).find((s) => s.id === sessionId);
+      const isDefault = sess && (sess.name === 'New chat' || !sess.name);
+      const firstUser = messages.find((m) => m.role === 'user');
+      if (isDefault && firstUser) {
+        fetch('/api/chat/title', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: (firstUser.parts ?? []).map((p: any)=>p.text||'').join(' '), assistant: text }),
+        }).then(async (r)=>{
+          const { title } = await r.json().catch(()=>({ title: 'New chat' }));
+          const next = (sessions ?? []).map((s)=> s.id === sessionId ? { ...s, name: title } : s);
+          updateNodeData(nodeId, { sessions: next });
+        }).catch(()=>{});
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, sessionId]);
@@ -235,15 +250,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
   // useChat is now scoped inside ChatPanel and remounted via key on session change
 
-  const toolbar = [
-    {
-      children: (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Chat</span>
-        </div>
-      ),
-    },
-  ] as any;
+  const toolbar = undefined as any;
 
   return (
     <NodeLayout
@@ -280,20 +287,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
         {/* Main */}
         <div className="flex min-h-0 flex-1 flex-col">
           {/* Controls */}
-          <div className="shrink-0 rounded-2xl border bg-card/60 p-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="inline-flex items-center gap-2">
-                <ModelSelector value={model} options={chatModels} className="w-[240px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" checked={webSearch} onChange={(e) => updateNodeData(props.id, { webSearch: e.target.checked })} />
-                  Web Search
-                </label>
-              </div>
-              <div className="inline-flex items-center gap-1">
-                <Button size="icon" variant="ghost"><Trash2Icon className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          </div>
+          {/* Removed top controls per spec to avoid redundancy */}
           <ChatPanel
             key={activeId || 'no-session'}
             nodeId={props.id}
