@@ -4,7 +4,6 @@ import { type ComponentProps, useCallback, useEffect, useRef } from 'react';
 import type { CodeNodeProps } from '.';
 import { NodeLayout } from '../layout';
 import { LanguageSelector } from './language-selector';
-import { Switch } from '@/components/ui/switch';
 import { useLocks } from '@/providers/locks';
 
 type CodePrimitiveProps = CodeNodeProps & {
@@ -46,18 +45,6 @@ export const CodePrimitive = ({
         />
       ),
     },
-    {
-      tooltip: 'Generate mode',
-      children: (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Generate</span>
-          <Switch
-            checked={Boolean((data as any)?.generateMode)}
-            onCheckedChange={(v) => updateNodeData(id, { generateMode: v })}
-          />
-        </div>
-      ),
-    },
   ];
 
   const handleEditorMount = useCallback<OnMount>((editorInstance) => {
@@ -95,7 +82,7 @@ export const CodePrimitive = ({
   }, [isEditLocked]);
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false }} title={title} type={type} toolbar={toolbar}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false, dualModeSupported: true, titleOverride: 'Code' }} title={title} type={type} toolbar={toolbar}>
       <div className="h-full min-h-[640px] overflow-hidden group-data-[selected=true]:overflow-auto group-data-[lock-level=edit]:overflow-hidden">
         <div
           className="pointer-events-none group-data-[selected=true]:pointer-events-auto group-data-[selected=true]:nodrag group-data-[selected=true]:nopan group-data-[lock-level=edit]:pointer-events-none group-data-[lock-level=edit]:select-none"

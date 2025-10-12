@@ -73,7 +73,7 @@ export const VideoPrimitive = ({
   ];
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }} type={type} title={title} toolbar={toolbar}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false, dualModeSupported: true, titleOverride: 'Video' }} type={type} title={title} toolbar={toolbar}>
       <div className="flex h-full min-h-0 flex-col p-3">
         {isUploading && (
           <Skeleton className="flex h-full w-full animate-pulse items-center justify-center rounded-2xl">

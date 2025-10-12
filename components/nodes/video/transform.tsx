@@ -186,7 +186,7 @@ export const VideoTransform = ({
   ) => updateNodeData(id, { instructions: event.target.value });
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }} type={type} title={title} toolbar={toolbar}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false, dualModeSupported: true, titleOverride: 'Video generation' }} type={type} title={title} toolbar={toolbar}>
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Model selector moved to toolbar */}
 

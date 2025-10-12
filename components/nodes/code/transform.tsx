@@ -274,7 +274,7 @@ export const CodeTransform = ({
   const nonUserMessages = messages.filter((message) => message.role !== 'user');
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false }} title={title} type={type} toolbar={toolbar}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false, dualModeSupported: true, titleOverride: 'Code generation' }} title={title} type={type} toolbar={toolbar}>
       <div className="flex h-full flex-col min-h-0 gap-3 p-3" style={{ touchAction: 'manipulation', overscrollBehavior: 'none' }}>
         <div className="flex-1 min-h-0 overflow-hidden rounded-3xl border bg-card">
           <Editor

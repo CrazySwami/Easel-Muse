@@ -25,6 +25,9 @@ export type TextNodeProps = {
 
     // Tiptap text content
     text?: string;
+
+    // Local UI toggle: when true and not connected, show generate UI
+    generateMode?: boolean;
   };
   id: string;
 };
@@ -35,11 +38,11 @@ export const TextNode = (props: TextNodeProps) => {
     handleType: 'target',
   });
   const hasIncomers = connections.length > 0;
-  const Component = hasIncomers ? TextTransform : TextPrimitive;
+  const Component = hasIncomers || props.data.generateMode ? TextTransform : TextPrimitive;
   // Force a clean remount when switching modes
   return (
     <ErrorBoundary fallback={<TextPrimitive {...props} title="Text" /> }>
-      <Component key={hasIncomers ? 'transform' : 'primitive'} {...props} title="Text" />
+      <Component key={(hasIncomers || props.data.generateMode) ? 'transform' : 'primitive'} {...props} title="Text" />
     </ErrorBoundary>
   );
 };

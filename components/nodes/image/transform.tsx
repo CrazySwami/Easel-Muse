@@ -276,7 +276,7 @@ export const ImageTransform = ({
   }, [data.size]);
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false }} type={type} title={title} toolbar={toolbar}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false, dualModeSupported: true, titleOverride: 'Image generation' }} type={type} title={title} toolbar={toolbar}>
       <div className="flex h-full min-h-0 flex-col p-3">
         {loading && (
           <Skeleton className="flex flex-1 min-h-0 items-center justify-center rounded-2xl">
