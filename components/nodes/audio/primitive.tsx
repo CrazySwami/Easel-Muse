@@ -226,7 +226,7 @@ export const AudioPrimitive = ({
   return (
     <NodeLayout id={id} data={{ ...data, width: 840, height: 480, resizable: false, dualModeSupported: true, titleOverride: 'Audio' }} type={type} title={title}>
       {/* Options: two equal columns */}
-      <div className="mb-3 grid grid-cols-2 gap-3 h-44">
+      <div className="mb-3 grid grid-cols-2 gap-3 flex-1 min-h-0">
         {/* Record column */}
         <div className="rounded-2xl border bg-card/60 p-3 h-full flex items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-center">
@@ -303,7 +303,7 @@ export const AudioPrimitive = ({
               }}
               className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
               >
-                <DropzoneEmptyState />
+                <DropzoneEmptyState className="flex items-center justify-center" />
                 <DropzoneContent />
               </Dropzone>
             </div>

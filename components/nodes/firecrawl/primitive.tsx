@@ -13,7 +13,7 @@ import { useState, type ChangeEventHandler, useMemo, useEffect, useCallback } fr
 import { toast } from 'sonner';
 import type { FirecrawlNodeProps, FirecrawlMode } from './index';
 import { getIncomers, useReactFlow } from '@xyflow/react';
-import { CopyIcon, PlayIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
+import { CopyIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 type FirecrawlPrimitiveProps = FirecrawlNodeProps & {
@@ -82,41 +82,11 @@ export const FirecrawlPrimitive = ({ data, id, type, title }: FirecrawlPrimitive
     }
   }, [data.generated, data.emit]);
 
-  const toolbar = useMemo(() => {
-    const items: NonNullable<Parameters<typeof NodeLayout>[0]['toolbar']> = [];
-    if (status === 'running') {
-      items.push({
-        tooltip: 'Stop',
-        children: (
-          <Button size="icon" className="rounded-full" disabled={!project?.id} onClick={() => updateNodeData(id, { status: 'idle' })}>
-            <SquareIcon size={12} />
-          </Button>
-        ),
-      });
-    } else if (data.generated) {
-      items.push({
-        tooltip: 'Regenerate',
-        children: (
-          <Button size="icon" className="rounded-full" disabled={!project?.id} onClick={handleGenerate}>
-            <RotateCcwIcon size={12} />
-          </Button>
-        ),
-      });
-    } else {
-      items.push({
-        tooltip: 'Generate',
-        children: (
-          <Button size="icon" className="rounded-full" disabled={!project?.id} onClick={handleGenerate}>
-            <PlayIcon size={12} />
-          </Button>
-        ),
-      });
-    }
-    return items;
-  }, [status, data.generated, handleGenerate, id, project?.id, updateNodeData]);
+  // No bottom toolbar actions for Firecrawl; primary action lives in-node
+  const toolbar = undefined;
 
   return (
-    <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar}>
+    <NodeLayout id={id} data={data} title={title} type={type}>
       <div className="nowheel flex h-full min-w-[420px] flex-col items-stretch gap-3 overflow-hidden p-3">
         {/* Top: Options */}
         <div className="flex flex-col gap-3">
