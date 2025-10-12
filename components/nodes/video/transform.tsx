@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { mutate } from 'swr';
 import type { VideoNodeProps } from '.';
 import { ModelSelector } from '../model-selector';
+import { Switch } from '@/components/ui/switch';
 
 type VideoTransformProps = VideoNodeProps & {
   title: string;
@@ -100,6 +101,17 @@ export const VideoTransform = ({
   };
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    {
+      children: (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Generate</span>
+          <Switch
+            checked={Boolean(data.generateMode)}
+            onCheckedChange={(v) => updateNodeData(id, { generateMode: v })}
+          />
+        </div>
+      ),
+    },
     {
       children: (
         <ModelSelector

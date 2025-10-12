@@ -729,3 +729,77 @@ Keep palette defaults in `lib/node-buttons.ts` in sync with component fallbacks 
   - Component: `<NodeLayout data={{ ...data, width: data.width ?? 920, height: data.height ?? 640, resizable: false }}>`
 
 These sizes expand the working area while keeping frame/content sizes consistent to avoid connector misalignment. Adjust if needed, but always keep palette and component fallbacks identical.
+
+---
+
+## Dual‑Mode Nodes (Plain vs Generate)
+
+Many nodes support two interaction modes:
+
+- Plain mode: a lightweight input or preview UI (e.g., Text textarea, Image/Video upload, Code editor).
+- Generate mode: a model‑driven UI with model selectors, actions, and progress.
+
+Pattern overview
+- Each dual‑mode node stores a boolean `data.generateMode` flag.
+- The node’s `index.tsx` decides which component to render based on:
+  - Connected incomers (transform mode implied), or
+  - Local `generateMode` flag (user‑toggled).
+- The toolbar exposes a “Generate” switch in BOTH modes so users can switch back and forth without hunting for it.
+
+Implementation checklist
+1) State flag
+```ts
+// data.generateMode?: boolean
+```
+
+2) Index switch
+```tsx
+const connections = useNodeConnections({ id: props.id, handleType: 'target' });
+const hasIncomers = connections.length > 0;
+const Component = hasIncomers || props.data.generateMode ? Transform : Primitive;
+return <Component key={(hasIncomers || props.data.generateMode) ? 'transform' : 'primitive'} {...props} />;
+```
+
+3) Toolbar toggle (in both Primitive and Transform)
+```tsx
+{
+  children: (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span>Generate</span>
+      <Switch
+        checked={Boolean(data.generateMode)}
+        onCheckedChange={(v) => updateNodeData(id, { generateMode: v })}
+      />
+    </div>
+  ),
+}
+```
+
+4) Layout rules by mode
+- Plain nodes can be Hug Content or Fill Frame; keep the direct child contract.
+- Generate nodes are typically Fill Frame:
+  - Direct child: `flex h-full flex-col min-h-0`
+  - Main panel: `flex-1 min-h-0 overflow-auto` (or a centered container with `object-contain`)
+  - Inputs: `shrink-0 max-h-48 overflow-auto nowheel nodrag nopan` + `onPointerDown(e.stopPropagation())`
+
+5) Bottom toolbar placement
+- Place model selectors and actions (Play/Stop/Regenerate) in the node’s floating toolbar.
+- Order: left → model/size selectors; right → action button.
+- The toolbar is visible on selection and is width‑constrained to the node.
+
+6) Size variance by mode
+- It’s OK for modes to have different internal compositions (e.g., editor vs preview), but keep the frame size consistent across modes by passing `width`/`height` in both components.
+
+Troubleshooting
+- Toggle missing in generate mode: ensure the switch is included in the transform toolbar.
+- Canvas panning while scrolling prompts: add `nowheel nodrag nopan` and stop propagation on pointer down.
+
+---
+
+## Canvas controls location
+
+The floating zoom/theme/lock control stack has been moved into the top toolbar as a compact menu next to Share:
+
+- Component: `components/controls.tsx` exports `ControlsMenu` for the top bar.
+- Mounted in `components/top-bar.tsx` beside `ShareDialog` in a rounded group.
+- The old floating `Controls` panel is removed from `components/toolbar.tsx`.
