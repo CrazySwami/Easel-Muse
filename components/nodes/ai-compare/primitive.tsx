@@ -573,11 +573,32 @@ function AnswersCollapsible({ payload }: { payload: any }) {
   const sources = extractUrlsByProvider(payload);
   const answers = extractAnswersByProvider(payload);
   const preview = (t?: string) => (t ? (t.length > 120 ? t.slice(0, 120) + '…' : t) : '');
-  const renderGroup = (icon: React.ReactNode, urls: string[]) => (
+  // Resolve Gemini redirector URLs to final destinations (batch mode)
+  const [resolved, setResolved] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    const all = sources.gemini ?? [];
+    const redirectors = all.filter((u) => { try { return new URL(u).hostname.endsWith('vertexaisearch.cloud.google.com'); } catch { return false; } });
+    if (!redirectors.length) { setResolved(new Map()); return; }
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(redirectors.map(async (u) => {
+        try {
+          const r = await fetch(`/api/resolve?url=${encodeURIComponent(u)}`).then((r) => r.json()).catch(() => null);
+          return [u, r?.finalUrl || u] as const;
+        } catch { return [u, u] as const; }
+      }));
+      if (!cancelled) setResolved(new Map(entries));
+    })();
+    return () => { cancelled = true; };
+  }, [sources.gemini.join('|')]);
+  const renderGroup = (icon: React.ReactNode, urls: string[], provider: 'openai'|'gemini'|'anthropic'|'serp') => (
     <div className="mt-2 space-y-1">
-      {urls.slice(0, 30).map((u) => (
-        <a key={u} href={u} target="_blank" rel="noreferrer" className="block truncate text-primary hover:underline">{u}</a>
-      ))}
+      {urls.slice(0, 30).map((u) => {
+        const finalUrl = provider === 'gemini' ? (resolved.get(u) ?? u) : u;
+        return (
+          <a key={u} href={finalUrl} target="_blank" rel="noreferrer" className="block truncate text-primary hover:underline">{finalUrl}</a>
+        );
+      })}
     </div>
   );
   return (
@@ -590,7 +611,7 @@ function AnswersCollapsible({ payload }: { payload: any }) {
               <span className="ml-2 text-muted-foreground">{preview(answers.openai)}</span>
             </summary>
             <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
-            {renderGroup(<OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}
+            {renderGroup(<OpenAiIcon className="h-3.5 w-3.5" />, sources.openai, 'openai')}
           </details>
         </div>
       )}
@@ -602,7 +623,7 @@ function AnswersCollapsible({ payload }: { payload: any }) {
               <span className="ml-2 text-muted-foreground">{preview(answers.gemini)}</span>
             </summary>
             <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
-            {renderGroup(<GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}
+            {renderGroup(<GeminiIcon className="h-3.5 w-3.5" />, sources.gemini, 'gemini')}
           </details>
         </div>
       )}
@@ -614,7 +635,7 @@ function AnswersCollapsible({ payload }: { payload: any }) {
               <span className="ml-2 text-muted-foreground">{preview(answers.anthropic)}</span>
             </summary>
             <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
-            {renderGroup(<AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}
+            {renderGroup(<AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic, 'anthropic')}
           </details>
         </div>
       )}
@@ -626,7 +647,7 @@ function AnswersCollapsible({ payload }: { payload: any }) {
             <span className="ml-2 text-muted-foreground">Google results preview</span>
           </summary>
           <p className="mt-2 text-foreground/90">These links are extracted from Google results via SerpApi.</p>
-          {renderGroup(<GoogleIcon className="h-3.5 w-3.5" />, sources.serp)}
+          {renderGroup(<GoogleIcon className="h-3.5 w-3.5" />, sources.serp, 'serp')}
         </details>
       </div>
     </div>

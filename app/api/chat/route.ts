@@ -15,9 +15,7 @@ export async function POST(req: Request) {
     modelId = (form.get('modelId') as string) || undefined;
     webSearch = ((form.get('webSearch') as string) || 'false') === 'true';
     // Fill file parts with uploaded blobs in order
-    const uploadedFiles: File[] = Array.from(form.entries())
-      .map(([_, v]) => v)
-      .filter((v): v is File => typeof v !== 'string') as File[];
+    const uploadedFiles: File[] = Array.from(form.values()).filter((v): v is File => typeof v !== 'string');
     let idx = 0;
     for (const m of messages as any[]) {
       for (const p of (m.parts ?? []) as any[]) {
@@ -41,9 +39,21 @@ export async function POST(req: Request) {
   // If webSearch is enabled, override to Sonar; otherwise use requested or a cheap default.
   const selectedModel = webSearch ? 'perplexity/sonar' : (requested || 'openai/gpt-4o-mini');
 
+  // Normalize: convert image-like file parts to proper 'image' parts for providers (Google, etc.)
+  const normalizedMessages: UIMessage[] = (messages ?? []).map((m: any) => ({
+    ...m,
+    parts: (m.parts ?? []).map((p: any) => {
+      if (p?.type === 'file' && typeof p?.mediaType === 'string' && p.mediaType.startsWith('image/')) {
+        const image = p.data ?? p.url; // ArrayBuffer/Uint8Array or data URL
+        if (image) return { type: 'image', image } as any;
+      }
+      return p;
+    }),
+  })) as any;
+
   const result = streamText({
     model: selectedModel,
-    messages: convertToModelMessages(messages ?? []),
+    messages: convertToModelMessages(normalizedMessages),
     system: 'You are a helpful assistant that can answer questions and help with tasks',
     tools: undefined,
   });

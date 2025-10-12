@@ -29,7 +29,9 @@ export default function AICompareTestPage() {
     const hasText = Boolean(chatText);
     const hasFiles = chatFiles.length > 0;
     if (!hasText && !hasFiles) return;
-    await sendMessage({ text: chatText, files: chatFiles.slice(0,3) }, { body: { modelId } });
+    const dt = new DataTransfer();
+    chatFiles.slice(0,3).forEach((f)=> dt.items.add(f));
+    await sendMessage({ text: chatText, files: dt.files }, { body: { modelId } });
     setChatText('');
     setChatFiles([]);
   };

@@ -152,7 +152,9 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
     if (!(hasText || hasAttachments)) return;
     const filesToSend: Array<File> = (message.files && message.files.length ? Array.from(message.files as FileList) : attachedFiles).slice(0, 3);
-    await sendMessage({ text: message.text, files: filesToSend }, { body: { modelId: selectedModel, webSearch: search } });
+    const dt = new DataTransfer();
+    filesToSend.forEach((f) => dt.items.add(f));
+    await sendMessage({ text: message.text, files: dt.files }, { body: { modelId: selectedModel, webSearch: search } });
     setInput('');
     setAttachedFiles([]);
   };
