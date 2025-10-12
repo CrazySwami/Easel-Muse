@@ -36,6 +36,7 @@ const ResultCard = ({ r }: { r: any }) => {
 
 export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) => {
   const { updateNodeData } = useReactFlow();
+  const { models } = useGateway();
   const data = props.data ?? {};
   const [mode, setMode] = useState<'single' | 'batch' | 'aio'>(data.serpMode ?? 'single');
   const [query, setQuery] = useState<string>(data.query ?? '');
@@ -50,6 +51,23 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
   const [showDebug, setShowDebug] = useState(false);
   const [locQuery, setLocQuery] = useState('');
   const [locOptions, setLocOptions] = useState<Array<{ canonical_name: string }>>([]);
+
+  // Text-capable models for question generation (one-line bar)
+  const filterTextModels = (ms: Record<string, any>) =>
+    Object.fromEntries(
+      Object.entries(ms).filter(([id, m]: any) => {
+        const isOpenAI = m?.chef?.id === 'openai' || (Array.isArray(m?.providers) && m.providers.some((p: any) => p.id === 'openai'));
+        if (!isOpenAI) return false;
+        const label = String(m?.label ?? '').toLowerCase();
+        return ['gpt-4.1','gpt-4.1 mini','gpt-4.1 nano','gpt-4o mini','gpt-5','gpt-5 mini','gpt-5 nano'].some((s) => label.includes(s))
+          || ['gpt-4.1','gpt-4.1-mini','gpt-4.1-nano','gpt-4o-mini','gpt-5','gpt-5-mini','gpt-5-nano'].includes(id);
+      })
+    );
+  const textModels = useMemo(() => filterTextModels(models), [models]);
+  const [genModel, setGenModel] = useState<string>(Object.keys(textModels)[0]);
+  const [genPrompt, setGenPrompt] = useState('');
+  const [genLoading, setGenLoading] = useState(false);
+  useEffect(() => { if (!genModel && Object.keys(textModels).length) setGenModel(Object.keys(textModels)[0]); }, [textModels, genModel]);
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -278,7 +296,27 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
 
         {/* Batch Generate Questions (Perplexity-style) */}
         {mode === 'batch' && (
-          <BatchGenerateSection nodeId={props.id} />
+          <div className="shrink-0">
+            <GeneratorBar
+              model={genModel}
+              models={textModels}
+              onModelChange={setGenModel}
+              prompt={genPrompt}
+              onPromptChange={setGenPrompt}
+              onGenerate={async () => {
+                if (!genPrompt.trim()) return;
+                setGenLoading(true);
+                try {
+                  const resp = await fetch('/api/perplexity/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'generate_questions', prompt: genPrompt, model: genModel }) });
+                  const json = await resp.json();
+                  const next = Array.isArray(json?.questions) ? json.questions : [];
+                  setQueries((prev) => [...prev, ...next]);
+                } catch {}
+                setGenLoading(false);
+              }}
+              generating={genLoading}
+            />
+          </div>
         )}
 
         {/* Results */}
