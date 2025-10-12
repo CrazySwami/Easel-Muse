@@ -133,28 +133,37 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
                 {/* Sources above message like the example */}
-                {message.role === 'assistant' && (
-                  <Sources>
-                    <SourcesTrigger count={(message.parts ?? []).filter((p: any)=> p.type==='source-url').length} />
-                    {(message.parts ?? []).map((part: any, i: number) => (
-                      part.type === 'source-url' ? (
-                        <SourcesContent key={`${message.id}-${i}`}>
-                          <Source href={part.url} title={part.url} />
-                        </SourcesContent>
-                      ) : null
-                    ))}
-                  </Sources>
-                )}
+                {(() => {
+                  if (message.role !== 'assistant') return null;
+                  const count = (message.parts ?? []).filter((p: any) => p.type === 'source-url').length;
+                  if (count <= 0) return null;
+                  return (
+                    <Sources>
+                      <SourcesTrigger count={count} />
+                      {(message.parts ?? []).map((part: any, i: number) => (
+                        part.type === 'source-url' ? (
+                          <SourcesContent key={`${message.id}-${i}`}>
+                            <Source href={part.url} title={part.url} />
+                          </SourcesContent>
+                        ) : null
+                      ))}
+                    </Sources>
+                  );
+                })()}
                 {message.parts?.map((part: any, i: number) => {
                   switch (part.type) {
-                    case 'text':
-                      return (
-                        <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'}>
-                          <MessageContent className={message.role === 'user' ? 'text-white' : undefined}>
-                            {message.role === 'user' ? (part.text) : (<Response>{part.text}</Response>)}
-                          </MessageContent>
-                        </Message>
-                      );
+                     case 'text':
+                       return (
+                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'}>
+                           {message.role === 'user' ? (
+                             <div className="text-white">{part.text}</div>
+                           ) : (
+                             <MessageContent>
+                               <Response>{part.text}</Response>
+                             </MessageContent>
+                           )}
+                         </Message>
+                       );
                     case 'reasoning':
                       return (
                         <Reasoning key={`${message.id}-${i}`} className="w-full" isStreaming={status === 'streaming' && i === message.parts.length - 1 && message.id === (messages as any).at(-1)?.id}>

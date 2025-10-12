@@ -17,7 +17,6 @@ import { useGateway } from '@/providers/gateway/client';
 import { ModelSelector } from '../model-selector';
 import { GeneratorBar } from '@/components/ui/batch/generator-bar';
 import { QueryList } from '@/components/ui/batch/query-list';
-import { QueryColumn } from '@/components/ui/batch/query-column';
 import { PerplexityIcon } from '@/lib/icons';
 
 // Helper copied from Text node to choose a sensible default
@@ -435,8 +434,11 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
               />
 
               <div className="grid h-full min-h-0 grid-cols-12 gap-3">
-                <div className="col-span-4 h-full min-h-0 rounded-xl border bg-card/60 p-3">
-                  <QueryColumn
+                <div
+                  className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3 nowheel nodrag nopan"
+                  onPointerDown={(e)=> e.stopPropagation()}
+                >
+                  <QueryList
                     queries={queries}
                     onChange={(next)=> updateNodeData(props.id, { queries: next })}
                     selectedIndex={(props.data as any)?.selectedQueryIndex ?? 0}
