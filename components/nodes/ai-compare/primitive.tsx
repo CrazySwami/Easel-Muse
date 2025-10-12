@@ -5,7 +5,7 @@ import type { AICompareNodeProps } from './index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useReactFlow } from '@xyflow/react';
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon, PlusIcon, XIcon } from 'lucide-react';
 
@@ -27,25 +27,33 @@ export const AIComparePrimitive = (props: Props) => {
   const addQuery = () => updateNodeData(props.id, { queries: [...queries, ''] });
   const removeQuery = (i: number) => updateNodeData(props.id, { queries: queries.filter((_, idx) => idx !== i) });
 
+  const [isRunning, setIsRunning] = useState(false);
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
+
   const runSingle = useCallback(async () => {
     const q = (queries[0] || '').trim();
     if (!q) return;
-    const [o, g, a, s] = await Promise.allSettled([
-      fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-      fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-      fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-      fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
-    ]);
-    updateNodeData(props.id, {
-      results: {
-        single: {
-          openai: o.status==='fulfilled'?o.value:null,
-          gemini: g.status==='fulfilled'?g.value:null,
-          anthropic: a.status==='fulfilled'?a.value:null,
-          serp: s.status==='fulfilled'?s.value:null,
+    setIsRunning(true);
+    try {
+      const [o, g, a, s] = await Promise.allSettled([
+        fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
+        fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
+        fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
+        fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
+      ]);
+      updateNodeData(props.id, {
+        results: {
+          single: {
+            openai: o.status==='fulfilled'?o.value:null,
+            gemini: g.status==='fulfilled'?g.value:null,
+            anthropic: a.status==='fulfilled'?a.value:null,
+            serp: s.status==='fulfilled'?s.value:null,
+          },
         },
-      },
-    });
+      });
+    } finally {
+      setIsRunning(false);
+    }
   }, [queries, updateNodeData, props.id]);
 
   const runBatch = useCallback(async () => {
@@ -54,6 +62,7 @@ export const AIComparePrimitive = (props: Props) => {
     const statuses = valid.map(() => 'running') as Array<'idle'|'running'|'done'|'error'>;
     updateNodeData(props.id, { batchStatuses: statuses, selectedQueryIndex: 0, results: null });
     const accum: any[] = [];
+    setIsBatchRunning(true);
     for (let i = 0; i < valid.length; i++) {
       const q = valid[i];
       try {
@@ -77,6 +86,7 @@ export const AIComparePrimitive = (props: Props) => {
         updateNodeData(props.id, { batchStatuses: next, selectedQueryIndex: i });
       }
     }
+    setIsBatchRunning(false);
   }, [queries, updateNodeData, props.id]);
 
   const toolbar = [
@@ -106,34 +116,20 @@ export const AIComparePrimitive = (props: Props) => {
           {inputMode === 'single' ? (
             <div className="flex w-full items-center gap-2">
               <Input className="w-full" value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
-              <Button onClick={runSingle}>Run</Button>
+              <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Button onClick={runBatch}>Run Batch</Button>
+              <Button onClick={runBatch} disabled={isBatchRunning}>{isBatchRunning ? 'Running…' : 'Run Batch'}</Button>
             </div>
           )}
         </div>
 
         {/* Content */}
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
-          {/* Left: results list */}
+          {/* Left: sources by provider */}
           <div className="col-span-4 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
-            {inputMode === 'batch' ? (
-              <div className="space-y-2">
-                {queries.map((q, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Input value={q} onChange={(e)=>updateQuery(idx, e.target.value)} />
-                    {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && <span className="text-xs text-muted-foreground">…</span>}
-                    {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && <CheckIcon className="h-4 w-4 text-emerald-600" />}
-                    <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}><XIcon className="h-4 w-4"/></Button>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addQuery}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">Run a query to populate results.</div>
-            )}
+            <SourcesPanel results={props.data.results} selectedIndex={props.data.selectedQueryIndex ?? 0} />
           </div>
 
           {/* Right: table */}
@@ -150,7 +146,7 @@ export const AIComparePrimitive = (props: Props) => {
                 </tr>
               </thead>
               <tbody>
-                {renderRows(props.data.results)}
+                {renderRows(props.data.results, props.data.selectedQueryIndex ?? 0)}
               </tbody>
             </table>
           </div>
@@ -160,8 +156,8 @@ export const AIComparePrimitive = (props: Props) => {
   );
 };
 
-function renderRows(results: any) {
-  const rows = buildCoverage(results);
+function renderRows(results: any, selectedIndex: number) {
+  const rows = buildCoverage(results, selectedIndex);
   if (!rows.length) {
     return (
       <tr>
@@ -186,13 +182,13 @@ function renderRows(results: any) {
   ));
 }
 
-function buildCoverage(results: any): Array<{ domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }> {
+function buildCoverage(results: any, selectedIndex: number): Array<{ domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }> {
   try {
     // Choose the active result set
     let payload: any = null;
     if (results?.single) payload = results.single;
     else if (Array.isArray(results?.groups)) {
-      const idx = results.selectedIndex ?? 0;
+      const idx = selectedIndex ?? 0;
       payload = results.groups[idx];
     } else if (results) payload = results;
     if (!payload) return [];
@@ -238,6 +234,76 @@ function buildCoverage(results: any): Array<{ domain: string; openai: boolean; g
   } catch {
     return [];
   }
+}
+
+function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex: number }) {
+  const payload = useMemo(() => getActivePayload(results, selectedIndex), [results, selectedIndex]);
+  const sources = useMemo(() => extractUrlsByProvider(payload), [payload]);
+  const renderGroup = (label: string, urls: string[]) => (
+    <div className="mb-3">
+      <p className="mb-1 text-xs font-semibold text-foreground/80">{label} <span className="text-muted-foreground">({urls.length})</span></p>
+      <div className="space-y-1">
+        {urls.slice(0, 30).map((u) => {
+          let host = ''; try { host = new URL(u).hostname.replace(/^www\./,''); } catch {}
+          const fav = host ? `https://www.google.com/s2/favicons?domain=${host}&sz=16` : '';
+          return (
+            <a key={u} href={u} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-primary hover:underline">
+              {fav ? <img src={fav} alt="" width={14} height={14} className="rounded"/> : <span className="h-3.5 w-3.5 rounded bg-muted inline-block"/>}
+              <span className="truncate text-foreground/90">{host || u}</span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+  if (!payload) return <div className="text-xs text-muted-foreground">Run to see sources.</div>;
+  return (
+    <div className="text-xs">
+      {renderGroup('ChatGPT', sources.openai)}
+      {renderGroup('Gemini', sources.gemini)}
+      {renderGroup('Claude', sources.anthropic)}
+      {renderGroup('SerpApi', sources.serp)}
+    </div>
+  );
+}
+
+function getActivePayload(results: any, selectedIndex: number) {
+  if (!results) return null;
+  if (results.single) return results.single;
+  if (Array.isArray(results.groups)) return results.groups[selectedIndex ?? 0];
+  return results;
+}
+
+function extractUrlsByProvider(payload: any): { openai: string[]; gemini: string[]; anthropic: string[]; serp: string[] } {
+  const out = { openai: [] as string[], gemini: [] as string[], anthropic: [] as string[], serp: [] as string[] };
+  if (!payload) return out;
+  const push = (arr: string[], u?: string) => { try { if (u) arr.push(new URL(u).href); } catch {} };
+  try {
+    const t = JSON.stringify(payload.openai ?? {});
+    for (const m of t.matchAll(/https?:\/\/[^\s\)"']+/g)) push(out.openai, m[0]);
+  } catch {}
+  try {
+    const chunks: any[] = payload.gemini?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+    for (const c of chunks) push(out.gemini, c?.web?.uri);
+    const t = JSON.stringify(payload.gemini ?? {});
+    for (const m of t.matchAll(/https?:\/\/[^\s\)"']+/g)) push(out.gemini, m[0]);
+  } catch {}
+  try {
+    const t = JSON.stringify(payload.anthropic ?? {});
+    for (const m of t.matchAll(/https?:\/\/[^\s\)"']+/g)) push(out.anthropic, m[0]);
+  } catch {}
+  try {
+    const organic: any[] = Array.isArray(payload.serp?.organic_results) ? payload.serp.organic_results : [];
+    organic.forEach((r) => push(out.serp, r?.link));
+    const refs: any[] = payload.serp?.ai_overview?.references ?? [];
+    refs.forEach((r) => push(out.serp, r?.link));
+  } catch {}
+  return {
+    openai: Array.from(new Set(out.openai)),
+    gemini: Array.from(new Set(out.gemini)),
+    anthropic: Array.from(new Set(out.anthropic)),
+    serp: Array.from(new Set(out.serp)),
+  };
 }
 
 

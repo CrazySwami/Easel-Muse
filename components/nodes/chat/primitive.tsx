@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { NodeLayout } from '@/components/nodes/layout';
 import type { ChatNodeProps, ChatSession, UIMessage } from './index';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ModelSelector } from '../model-selector';
 import { useGateway } from '@/providers/gateway/client';
@@ -12,6 +11,28 @@ import { nanoid } from 'nanoid';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
+import {
+  AIConversation,
+  AIConversationContent,
+  AIConversationScrollButton,
+} from '@/components/ui/kibo-ui/ai/conversation';
+import {
+  AIMessage,
+  AIMessageContent,
+} from '@/components/ui/kibo-ui/ai/message';
+import {
+  AIInput,
+  AIInputTextarea,
+  AIInputToolbar,
+  AIInputTools,
+  AIInputButton,
+  AIInputSubmit,
+  AIInputModelSelect,
+  AIInputModelSelectContent,
+  AIInputModelSelectItem,
+  AIInputModelSelectTrigger,
+  AIInputModelSelectValue,
+} from '@/components/ui/kibo-ui/ai/input';
 
 type ChatPanelProps = {
   nodeId: string;
@@ -53,55 +74,51 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Conversation */}
-      <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-3" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="space-y-3 text-sm">
-          {(messages ?? []).map((m: any, i: number) => (
-            <div key={i} className="rounded-lg border bg-background p-2">
-              <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">{m.role}</div>
-              <div className="whitespace-pre-wrap">{m.parts?.map((p: any) => (p.type === 'text' ? p.text : '')).join(' ')}</div>
-            </div>
-          ))}
-        </div>
+      <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-card/60" onPointerDown={(e) => e.stopPropagation()}>
+        <AIConversation className="h-full">
+          <AIConversationContent>
+            {(messages ?? []).map((m: any, i: number) => (
+              <AIMessage key={i} from={m.role === 'user' ? 'user' : 'assistant'}>
+                <AIMessageContent>
+                  <div className="whitespace-pre-wrap">{m.parts?.map((p: any) => (p.type === 'text' ? p.text : '')).join(' ')}</div>
+                </AIMessageContent>
+              </AIMessage>
+            ))}
+          </AIConversationContent>
+          <AIConversationScrollButton />
+        </AIConversation>
       </div>
 
-      {/* Prompt */}
-      <div className="mt-2 shrink-0 rounded-2xl border bg-card/60 p-2">
-        <div className="flex items-center gap-2">
-          <Textarea
-            rows={2}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            className="flex-1"
-            placeholder="Ask anything…"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                const doSend = async () => {
-                  if (isSending || !draft.trim()) return;
-                  setIsSending(true);
-                  await sendMessage({ text: draft }, { body: { model, webSearch } });
-                  setDraft('');
-                  setIsSending(false);
-                };
-                void doSend();
-              }
-            }}
-          />
-          <Button
-            disabled={!draft.trim() || status === 'streaming' || isSending}
-            onClick={async () => {
-              if (isSending || !draft.trim()) return;
-              setIsSending(true);
-              await sendMessage({ text: draft }, { body: { model, webSearch } });
-              setDraft('');
-              setIsSending(false);
-            }}
-          >
-            {status === 'streaming' || isSending ? 'Sending…' : 'Send'}
-          </Button>
-        </div>
-      </div>
+      <AIInput
+        className="mt-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (isSending || !draft.trim()) return;
+          setIsSending(true);
+          await sendMessage({ text: draft }, { body: { model, webSearch } });
+          setDraft('');
+          setIsSending(false);
+        }}
+      >
+        <AIInputTextarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Ask anything…"
+        />
+        <AIInputToolbar>
+          <AIInputTools>
+            {/* Web Search toggle (visual only; state wired on send) */}
+            <AIInputButton variant={webSearch ? 'default' : 'ghost'} onClick={() => updateNodeData(nodeId, { webSearch: !webSearch })}>
+              Search
+            </AIInputButton>
+            {/* Model select */}
+            {/* Kept primary selector in header; optional quick-select could go here */}
+          </AIInputTools>
+          <AIInputSubmit status={status as any} disabled={!draft.trim() || isSending}>
+            Send
+          </AIInputSubmit>
+        </AIInputToolbar>
+      </AIInput>
     </div>
   );
 };
@@ -180,13 +197,23 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
         <div className="nowheel nodrag nopan w-64 shrink-0 overflow-auto rounded-2xl border bg-card/60 p-2" onPointerDown={(e) => e.stopPropagation()}>
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs text-muted-foreground">Chats</div>
-            <Button size="icon" variant="ghost" onClick={() => { /* TODO: wire create */ }}>
+            <Button size="icon" variant="ghost" onClick={() => {
+              const id = nanoid();
+              const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+              updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
+            }}>
               <PlusIcon className="h-4 w-4" />
             </Button>
           </div>
           <div className="space-y-1">
             {(sessions.length ? sessions : []).map((s) => (
-              <button key={s.id} className={`w-full truncate rounded-lg border px-2 py-1 text-left text-xs hover:bg-muted/50 ${s.id === activeId ? 'bg-muted/50' : ''}`}>{s.name || 'Untitled'}</button>
+              <button
+                key={s.id}
+                className={`w-full truncate rounded-lg border px-2 py-1 text-left text-xs hover:bg-muted/50 ${s.id === activeId ? 'bg-muted/50' : ''}`}
+                onClick={() => setActiveSession(s.id)}
+              >
+                {s.name || 'Untitled'}
+              </button>
             ))}
           </div>
         </div>
