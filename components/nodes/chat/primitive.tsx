@@ -138,6 +138,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
     if (!(hasText || hasAttachments)) return;
     const filesToSend = (message.files && message.files.length ? message.files : attachedFiles);
+    // Send using the transport's attachment path; do NOT clear local history here
     void sendMessage({ text: message.text || 'Sent with attachments', files: filesToSend }, { body: { modelId: selectedModel, webSearch: search } });
     setInput('');
     setAttachedFiles([]);

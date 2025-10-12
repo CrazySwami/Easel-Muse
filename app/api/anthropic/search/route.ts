@@ -20,7 +20,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
-        tools: [{ type: 'web_search' }],
+        // Revert to known-working tool id (falls back gracefully if unsupported)
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         tool_choice: { type: 'auto' },
         messages: [
           { role: 'user', content: q }
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
       }),
     });
     const json = await res.json();
-    return NextResponse.json(json, { status: res.status });
+    return NextResponse.json(json, { status: res.ok ? 200 : 500 });
   } catch (e: any) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
