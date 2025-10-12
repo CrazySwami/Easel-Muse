@@ -31,7 +31,11 @@ export async function POST(req: Request) {
       const meta: Record<string, unknown> = (user as any).user_metadata ?? {};
       const preferredName = (meta.full_name as string | undefined) || (meta.name as string | undefined) || (user.email ? user.email.split('@')[0] : undefined) || 'Anonymous';
       const avatarUrl = (meta.avatar as string | undefined) || (meta.avatar_url as string | undefined) || (meta.picture as string | undefined) || undefined;
-      userInfo = { name: preferredName, email: user.email ?? undefined, avatar: avatarUrl };
+      // Deterministic user color for presence/highlights
+      const palette = ['#06f','#0ea5e9','#22c55e','#eab308','#f97316','#ef4444','#a855f7','#14b8a6'];
+      let hash = 0; for (let i = 0; i < userId.length; i++) { hash = (hash * 31 + userId.charCodeAt(i)) >>> 0; }
+      const color = palette[hash % palette.length];
+      userInfo = { name: preferredName, email: user.email ?? undefined, avatar: avatarUrl, color };
 
       try {
         const project = await database.query.projects.findFirst({ where: eq(projects.id, roomId) });

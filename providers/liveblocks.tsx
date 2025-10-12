@@ -120,7 +120,7 @@ export const CursorsLayer = () => {
     };
   }, [setMyPresence]);
 
-  const renderCursor = (flowX: number, flowY: number, color: string, label?: string, key?: string | number) => {
+  const renderCursor = (flowX: number, flowY: number, color: string, label?: string, key?: string | number, avatar?: string) => {
     const [tx, ty, zoom] = transform ?? [0, 0, 1];
     const x = (flowX * zoom + tx) + (paneRect?.left ?? 0);
     const y = (flowY * zoom + ty) + (paneRect?.top ?? 0);
@@ -151,7 +151,10 @@ export const CursorsLayer = () => {
             boxShadow: '0 1px 2px rgba(0,0,0,.35)'
           }}
         >
-          {label}
+          {avatar ? (
+            <img src={avatar} alt={label} style={{ width: 14, height: 14, borderRadius: 9999, marginRight: 6, verticalAlign: 'middle', display: 'inline-block' }} />
+          ) : null}
+          <span>{label}</span>
         </div>
       ) : null}
     </div>
@@ -166,14 +169,16 @@ export const CursorsLayer = () => {
           if (!cursor) return null;
           const color = (user.info as any)?.color ?? '#06f';
           const name = (user.info as any)?.name ?? 'User';
-          return renderCursor(cursor.x, cursor.y, color, name, user.connectionId);
+          const avatar = (user.info as any)?.avatar as string | undefined;
+          return renderCursor(cursor.x, cursor.y, color, name, user.connectionId, avatar);
         })}
       {me?.presence?.cursor
         ? renderCursor(
             (me.presence.cursor as any).x,
             (me.presence.cursor as any).y,
             ((me.info as any)?.color as string) ?? '#06f',
-            ((me.info as any)?.name as string) ?? 'You'
+            ((me.info as any)?.name as string) ?? 'You',
+            ((me.info as any)?.avatar as string | undefined)
           )
         : null}
     </div>

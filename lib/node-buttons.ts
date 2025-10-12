@@ -60,8 +60,8 @@ export const nodeButtons = [
     label: 'Editor',
     icon: FileTextIcon,
     data: {
-      width: 920,
-      height: 1160,
+      width: 1080,
+      height: 1280,
       resizable: false,
     },
   },

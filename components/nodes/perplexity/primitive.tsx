@@ -397,7 +397,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
 
         {/* Results View */}
         <div className="nowheel flex-1 overflow-auto rounded-2xl border bg-card/60 p-3 min-h-0">
-          {isLoading && <p className="text-xs text-muted-foreground">Loading...</p>}
+          {/* Per design parity with other nodes, suppress transient loading text */}
 
           {inputMode === 'single' && (
             pxMode === 'model' ? (
@@ -431,7 +431,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                 prompt={generatePrompt}
                 onPromptChange={(v) => updateNodeData(props.id, { generatePrompt: v })}
                 onGenerate={async () => { await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }}
-                generating={isLoading}
+                generating={false}
               />
 
               <div className="grid h-full min-h-0 grid-cols-12 gap-3">
