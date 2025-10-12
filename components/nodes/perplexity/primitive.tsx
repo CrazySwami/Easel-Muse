@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NodeLayout } from '@/components/nodes/layout';
 import type { PerplexityNodeProps } from './index';
 import { Button } from '@/components/ui/button';
@@ -100,6 +100,18 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
   const modelBatchAnswers = (props.data as any)?.modelBatchAnswers ?? [] as Array<{ answer: string; citations: string[] }>;
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // Normalize persisted size to current defaults so existing nodes pick up the reduced height
+  useEffect(() => {
+    const currentW = (props.data as any)?.width;
+    const currentH = (props.data as any)?.height;
+    const updates: any = {};
+    if (typeof currentW === 'number' && currentW !== 1200) updates.width = 1200;
+    if (typeof currentH === 'number' && currentH !== 560) updates.height = 560;
+    if (Object.keys(updates).length) {
+      updateNodeData(props.id, updates);
+    }
+  }, [props.id, props.data, updateNodeData]);
 
   const deriveOutputsFromResults = (results: any[] | { query: string; results: any[] }[]) => {
     const flat: any[] = Array.isArray(results) && results.length > 0 && 'query' in (results[0] as any)
