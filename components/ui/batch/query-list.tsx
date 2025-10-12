@@ -18,9 +18,9 @@ type QueryListProps = {
 export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAdd, onRun, stickyFooter = true }: QueryListProps) {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   return (
-    <div className="space-y-2 min-h-0">
+    <div className="relative flex h-full min-h-0 flex-col">
       <div className="text-xs text-muted-foreground">Batch queries</div>
-      <div className="space-y-2 pb-16">
+      <div className="space-y-2 pb-16 min-h-0 overflow-auto">
         {queries.map((q, idx) => (
           <div key={idx} className="group flex items-center gap-2">
             <button
@@ -47,8 +47,8 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
           </div>
         ))}
       </div>
-      <div className={`${stickyFooter ? 'sticky bottom-0 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border-t p-2' : 'pt-2'}`}>
-        <div className="flex w-full items-center justify-end gap-2">
+      <div className={`${stickyFooter ? 'absolute bottom-2 right-2' : ''}`}>
+        <div className="flex w-full items-center justify-end gap-2 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 rounded-md px-2 py-2 border">
           <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
           <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
         </div>

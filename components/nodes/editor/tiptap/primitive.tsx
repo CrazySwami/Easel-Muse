@@ -282,6 +282,20 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             attributes: {
                 class: 'focus:outline-none p-4 h-full w-full',
             },
+            handleClickOn: (_view, _pos, _node, _nodePos, event) => {
+                const target = event.target as HTMLElement | null;
+                if (!target) return false;
+                const el = target.closest('span[data-comment-id]') as HTMLElement | null;
+                if (el) {
+                    const id = el.getAttribute('data-comment-id');
+                    if (id) {
+                        setActiveCommentId(id);
+                        setSidebarOpen(true);
+                        return true;
+                    }
+                }
+                return false;
+            },
         },
         editable: !readOnly,
         content: data.content ?? {
@@ -529,19 +543,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 <button title="Blockquote" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('blockquote') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
                   <QuoteIcon className="h-4 w-4" />
                 </button>
-                <button title="Highlight" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('highlight') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleHighlight().run()}>
-                  <span className="text-[10px]">HL</span>
-                </button>
-                <button title="Color" className={`rounded-md p-2 hover:bg-cyan-700`} onClick={() => {
-                  const color = window.prompt('Color (e.g. #ff0 or red)');
-                  if (!color) return;
-                  editor.chain().focus().setColor(color).run();
-                }}>
-                  <span className="text-[10px]">A</span>
-                </button>
-                <button title="Clear color" className={`rounded-md p-2 hover:bg-cyan-700`} onClick={() => editor.chain().focus().unsetColor().run()}>
-                  <span className="text-[10px]">Ac</span>
-                </button>
+                <ColorDropdown editor={editor} />
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 <button title="Align left" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'left' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
                   <AlignLeftIcon className="h-4 w-4" />
@@ -745,6 +747,53 @@ const FontSizeDropdown = ({ editor }: { editor: any }) => {
             {size}
           </DropdownMenuItem>
         ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const ColorDropdown = ({ editor }: { editor: any }) => {
+  const palette = [
+    '#000000','#111827','#6B7280','#9CA3AF','#D1D5DB','#FFFFFF',
+    '#EF4444','#F59E0B','#FBBF24','#10B981','#3B82F6','#6366F1','#8B5CF6'
+  ];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button title="Color" className="rounded-md p-2 hover:bg-cyan-700">
+          <span className="text-[10px]">A</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="z-[100] p-2 bg-cyan-600 text-white border border-cyan-700" sideOffset={6} align="start">
+        <div className="grid grid-cols-7 gap-2">
+          {palette.map((hex) => (
+            <button
+              key={hex}
+              className="h-5 w-5 rounded-sm border border-white/20"
+              style={{ backgroundColor: hex }}
+              onClick={(e) => {
+                e.preventDefault();
+                editor.chain().focus().setColor(hex).run();
+              }}
+            />
+          ))}
+          <label className="col-span-7 flex items-center gap-2 text-xs">
+            Custom
+            <input
+              type="color"
+              className="h-5 w-10 cursor-pointer rounded border border-white/20 bg-transparent"
+              onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            />
+          </label>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <button className="rounded bg-cyan-700 px-2 py-1 text-xs" onClick={() => editor.chain().focus().toggleHighlight().run()}>
+            Toggle highlight
+          </button>
+          <button className="rounded bg-cyan-700 px-2 py-1 text-xs" onClick={() => editor.chain().focus().unsetColor().run()}>
+            Clear
+          </button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
