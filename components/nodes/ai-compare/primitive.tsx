@@ -113,7 +113,7 @@ export const AIComparePrimitive = (props: Props) => {
     } finally {
       setIsRunning(false);
     }
-  }, [queries, updateNodeData, props.id]);
+  }, [queries, updateNodeData, props.id, groupsRef, openaiModel, geminiModel, anthropicModel]);
 
   const runBatch = useCallback(async () => {
     const valid = queries.map((x) => x.trim()).filter(Boolean);
@@ -159,7 +159,7 @@ export const AIComparePrimitive = (props: Props) => {
       }
     }
     setIsBatchRunning(false);
-  }, [queries, updateNodeData, props.id]);
+  }, [queries, updateNodeData, props.id, singleRef, openaiModel, geminiModel, anthropicModel]);
 
   // No Gemini-only mode; keep bulk mode for multiple questions
 
@@ -312,7 +312,7 @@ export const AIComparePrimitive = (props: Props) => {
                         const groups = Array.isArray(props.data.results?.groups) ? [...props.data.results.groups] : [];
                         groups[i] = { query: q, openai: o, gemini: g, anthropic: a, serp: s };
                         current[i] = 'done';
-                        updateNodeData(props.id, (prev: any) => ({ results: { single: prev?.results?.single ?? null, groups }, batchStatuses: current }));
+                        updateNodeData(props.id, { results: { single: singleRef, groups }, batchStatuses: current });
                       } catch {
                         const next = Array.isArray(props.data.batchStatuses) ? [...props.data.batchStatuses] : [];
                         next[i] = 'error';

@@ -24,29 +24,12 @@ export default function AICompareTestPage() {
     transport: new DefaultChatTransport({ api: '/api/chat' }),
   });
 
-  const convertFilesToDataURLs = async (files: Array<File>) => {
-    const list = files.slice(0, 3);
-    return await Promise.all(
-      list.map(
-        (file) =>
-          new Promise<any>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve({ type: 'file', mediaType: file.type, url: reader.result as string });
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          })
-      )
-    );
-  };
 
   const runChatTest = async () => {
     const hasText = Boolean(chatText);
     const hasFiles = chatFiles.length > 0;
     if (!hasText && !hasFiles) return;
-    const parts: any[] = [];
-    if (hasText) parts.push({ type: 'text', text: chatText });
-    if (hasFiles) parts.push(...(await convertFilesToDataURLs(chatFiles)));
-    await sendMessage({ parts }, { body: { modelId } });
+    await sendMessage({ text: chatText, files: chatFiles.slice(0,3) }, { body: { modelId } });
     setChatText('');
     setChatFiles([]);
   };

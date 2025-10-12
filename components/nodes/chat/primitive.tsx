@@ -145,33 +145,14 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     lastSavedCountRef.current = current;
   }, [messages, session?.messages?.length]);
 
-  const convertFilesToDataURLs = async (files: Array<File>) => {
-    const list = files.slice(0, 3);
-    return await Promise.all(
-      list.map(
-        (file) =>
-          new Promise<any>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              resolve({ type: 'file', mediaType: file.type, url: reader.result as string });
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          })
-      )
-    );
-  };
+  // no-op helper removed; rely on DefaultChatTransport to build multipart for File[]
 
   const handleSubmit = async (message: any) => {
     const hasText = Boolean(message.text);
     const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
     if (!(hasText || hasAttachments)) return;
     const filesToSend: Array<File> = (message.files && message.files.length ? Array.from(message.files as FileList) : attachedFiles).slice(0, 3);
-    const fileParts = filesToSend.length ? await convertFilesToDataURLs(filesToSend) : [];
-    const parts: any[] = [];
-    if (hasText) parts.push({ type: 'text', text: message.text });
-    parts.push(...fileParts);
-    await sendMessage({ parts }, { body: { modelId: selectedModel, webSearch: search } });
+    await sendMessage({ text: message.text, files: filesToSend }, { body: { modelId: selectedModel, webSearch: search } });
     setInput('');
     setAttachedFiles([]);
   };
