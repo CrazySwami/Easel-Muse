@@ -18,6 +18,8 @@ export type VideoNodeProps = {
     instructions?: string;
     width?: number;
     height?: number;
+    // Local UI toggle: when true and not connected, show generate UI
+    generateMode?: boolean;
   };
   id: string;
 };
@@ -27,7 +29,7 @@ export const VideoNode = (props: VideoNodeProps) => {
     id: props.id,
     handleType: 'target',
   });
-  const Component = connections.length ? VideoTransform : VideoPrimitive;
-
-  return <Component {...props} title="Video" />;
+  const hasIncomers = connections.length > 0;
+  const Component = hasIncomers || props.data.generateMode ? VideoTransform : VideoPrimitive;
+  return <Component key={(hasIncomers || props.data.generateMode) ? 'transform' : 'primitive'} {...props} title="Video" />;
 };

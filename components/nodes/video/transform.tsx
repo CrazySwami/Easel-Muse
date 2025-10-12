@@ -163,9 +163,9 @@ export const VideoTransform = ({
   ) => updateNodeData(id, { instructions: event.target.value });
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar} className="w-96 min-h-[280px]">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 px-3 py-2">
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }} type={type} title={title} toolbar={toolbar}>
+      <div className="flex h-full min-h-0 flex-col gap-3 p-3">
+        <div className="shrink-0 rounded-2xl border border-border bg-card/60 px-3 py-2">
           <ModelSelector
             value={modelId}
             options={videoModels}
@@ -176,13 +176,13 @@ export const VideoTransform = ({
         </div>
 
         {loading && (
-          <Skeleton className="flex aspect-video w-full animate-pulse items-center justify-center rounded-b-xl">
+          <Skeleton className="flex flex-1 min-h-0 items-center justify-center rounded-2xl">
             <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
           </Skeleton>
         )}
 
         {!loading && !data.generated?.url && (
-          <div className="flex aspect-video w-full items-center justify-center rounded-b-xl bg-secondary">
+          <div className="flex flex-1 min-h-0 items-center justify-center rounded-2xl border bg-card">
             <p className="text-muted-foreground text-sm">
               Press <PlayIcon size={12} className="-translate-y-px inline" /> to generate video
             </p>
@@ -190,22 +190,17 @@ export const VideoTransform = ({
         )}
 
         {data.generated?.url && !loading && (
-          <video
-            src={data.generated.url}
-            width={data.width ?? 800}
-            height={data.height ?? 450}
-            autoPlay
-            muted
-            controls
-            className="aspect-video w-full rounded-b-xl"
-          />
+          <div className="flex flex-1 min-h-0 items-center justify-center overflow-hidden rounded-2xl border bg-card">
+            <video src={data.generated.url} autoPlay muted controls className="h-full w-full object-contain" />
+          </div>
         )}
 
         <Textarea
           value={data.instructions ?? ''}
           onChange={handleInstructionsChange}
           placeholder="Enter instructions"
-          className="resize-y rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground shadow-none transition focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="nowheel nodrag nopan shrink-0 max-h-48 overflow-auto rounded-2xl border border-border bg-card/60 px-3 py-2 text-sm text-foreground shadow-none transition focus-visible:ring-2 focus-visible:ring-primary/60"
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </div>
     </NodeLayout>

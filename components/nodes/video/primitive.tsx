@@ -9,8 +9,9 @@ import { handleError } from '@/lib/error/handle';
 import { uploadFile } from '@/lib/upload';
 import { useReactFlow } from '@xyflow/react';
 import { Loader2Icon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import type { VideoNodeProps } from '.';
+import { Switch } from '@/components/ui/switch';
 
 type VideoPrimitiveProps = VideoNodeProps & {
   title: string;
@@ -55,8 +56,24 @@ export const VideoPrimitive = ({
     }
   };
 
+  const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    { children: <div className="px-2 text-xs text-muted-foreground">Plain video</div> },
+    {
+      tooltip: 'Generate mode',
+      children: (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Generate</span>
+          <Switch
+            checked={Boolean((data as any)?.generateMode)}
+            onCheckedChange={(v) => updateNodeData(id, { generateMode: v })}
+          />
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }} type={type} title={title}>
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }} type={type} title={title} toolbar={toolbar}>
       <div className="flex h-full min-h-0 flex-col p-3">
         {isUploading && (
           <Skeleton className="flex h-full w-full animate-pulse items-center justify-center rounded-2xl">
