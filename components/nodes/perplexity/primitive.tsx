@@ -218,11 +218,13 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     setIsBatchRunning(true);
     // initialize statuses and results containers; preserve results from the other mode
     const initStatuses = validQueries.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
+    // Keep a single mutable array so prior indices retain their state across iterations
+    let currentStatuses = [...initStatuses];
     // clear only the active mode's container for a fresh run
     if (pxMode === 'model') {
-      updateNodeData(props.id, { batchStatuses: initStatuses, modelBatchAnswers: [] });
+      updateNodeData(props.id, { batchStatuses: currentStatuses, modelBatchAnswers: [] });
     } else {
-      updateNodeData(props.id, { batchStatuses: initStatuses, searchBatchResults: [] });
+      updateNodeData(props.id, { batchStatuses: currentStatuses, searchBatchResults: [] });
     }
 
     const groups: any[] = [];
@@ -230,9 +232,8 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     for (let i = 0; i < validQueries.length; i++) {
       const q = validQueries[i];
       // mark running
-      const nextStatuses = [...(initStatuses.length === validQueries.length ? initStatuses : (props.data.batchStatuses ?? initStatuses))];
-      nextStatuses[i] = 'running';
-      updateNodeData(props.id, { batchStatuses: nextStatuses, selectedQueryIndex: i });
+      currentStatuses[i] = 'running';
+      updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i });
       try {
         const payload = pxMode === 'model'
           ? { mode: 'chat', messages: [{ role: 'user', content: q }], model: pxModel }
@@ -253,22 +254,19 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
           answers[i] = { answer: text, citations };
           // surface outputs for downstream nodes
           updateNodeData(props.id, { modelBatchAnswers: [...answers], outputTexts: [text], outputLinks: citations });
-          const doneStatuses = [...nextStatuses];
-          doneStatuses[i] = 'done';
-          updateNodeData(props.id, { batchStatuses: doneStatuses });
+          currentStatuses[i] = 'done';
+          updateNodeData(props.id, { batchStatuses: [...currentStatuses] });
         } else {
           const results = (data.results ?? []);
           groups[i] = { query: q, results };
           const out = deriveOutputsFromResults(groups as any);
           updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: out.texts, outputLinks: out.links });
-          const doneStatuses = [...nextStatuses];
-          doneStatuses[i] = 'done';
-          updateNodeData(props.id, { batchStatuses: doneStatuses });
+          currentStatuses[i] = 'done';
+          updateNodeData(props.id, { batchStatuses: [...currentStatuses] });
         }
       } catch (e) {
-        const errStatuses = [...(props.data.batchStatuses ?? initStatuses)];
-        errStatuses[i] = 'error';
-        updateNodeData(props.id, { batchStatuses: errStatuses });
+        currentStatuses[i] = 'error';
+        updateNodeData(props.id, { batchStatuses: [...currentStatuses] });
       }
     }
     setIsBatchRunning(false);
