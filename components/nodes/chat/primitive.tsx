@@ -13,13 +13,105 @@ import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
 
+type ChatPanelProps = {
+  nodeId: string;
+  sessionId: string;
+  model: string;
+  webSearch: boolean;
+  sessions: ChatSession[];
+  renameSessionIfNeeded: (sessId: string, firstUserText: string) => void;
+  updateNodeData: ReturnType<typeof useReactFlow>['updateNodeData'];
+};
+
+const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData }: ChatPanelProps) => {
+  const { messages, status, sendMessage } = useChat();
+  const [draft, setDraft] = useState('');
+
+  // Sync to node data for this session
+  useEffect(() => {
+    // Auto-name by first user message
+    const firstUser = messages.find((m) => m.role === 'user');
+    if (firstUser) {
+      const text = (firstUser.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
+      renameSessionIfNeeded(sessionId, text);
+    }
+    const nextSessions = (sessions ?? []).map((s) =>
+      s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
+    );
+    updateNodeData(nodeId, { sessions: nextSessions });
+
+    // Push latest assistant text
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+    if (lastAssistant) {
+      const text = (lastAssistant.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
+      if (text) updateNodeData(nodeId, { outputTexts: [text] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, sessionId]);
+
+  const [isSending, setIsSending] = useState(false);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Conversation */}
+      <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-3" onPointerDown={(e) => e.stopPropagation()}>
+        <div className="space-y-3 text-sm">
+          {(messages ?? []).map((m: any, i: number) => (
+            <div key={i} className="rounded-lg border bg-background p-2">
+              <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">{m.role}</div>
+              <div className="whitespace-pre-wrap">{m.parts?.map((p: any) => (p.type === 'text' ? p.text : '')).join(' ')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Prompt */}
+      <div className="mt-2 shrink-0 rounded-2xl border bg-card/60 p-2">
+        <div className="flex items-center gap-2">
+          <Textarea
+            rows={2}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className="flex-1"
+            placeholder="Ask anything…"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                const doSend = async () => {
+                  if (isSending || !draft.trim()) return;
+                  setIsSending(true);
+                  await sendMessage({ text: draft }, { body: { model, webSearch } });
+                  setDraft('');
+                  setIsSending(false);
+                };
+                void doSend();
+              }
+            }}
+          />
+          <Button
+            disabled={!draft.trim() || status === 'streaming' || isSending}
+            onClick={async () => {
+              if (isSending || !draft.trim()) return;
+              setIsSending(true);
+              await sendMessage({ text: draft }, { body: { model, webSearch } });
+              setDraft('');
+              setIsSending(false);
+            }}
+          >
+            {status === 'streaming' || isSending ? 'Sending…' : 'Send'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
   const { updateNodeData } = useReactFlow();
   const { models } = useGateway();
   const sessions: ChatSession[] = (props.data.sessions ?? []);
   const activeId = props.data.activeSessionId ?? sessions[0]?.id;
   const active = sessions.find((s) => s.id === activeId);
-  const [draft, setDraft] = useState('');
 
   const chatModels = useMemo(() => {
     return Object.fromEntries(
@@ -65,30 +157,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
     updateNodeData(props.id, { sessions: next });
   };
 
-  const { messages, status, sendMessage } = useChat();
-
-  // Sync useChat messages into the active session in node data
-  useEffect(() => {
-    const sessId = activeId ?? ensureSession();
-    // Auto-name session from first user message
-    const firstUser = messages.find((m) => m.role === 'user');
-    if (firstUser) {
-      const text = (firstUser.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
-      renameSessionIfNeeded(sessId, text);
-    }
-    const nextSessions = (props.data.sessions ?? []).map((s) =>
-      s.id === sessId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
-    );
-    updateNodeData(props.id, { sessions: nextSessions });
-
-    // Push latest assistant text to outputTexts for downstream nodes
-    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-    if (lastAssistant) {
-      const text = (lastAssistant.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
-      if (text) updateNodeData(props.id, { outputTexts: [text] });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
+  // useChat is now scoped inside ChatPanel and remounted via key on session change
 
   const toolbar = [
     {
@@ -139,40 +208,16 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
               </div>
             </div>
           </div>
-
-          {/* Conversation */}
-          <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-3" onPointerDown={(e) => e.stopPropagation()}>
-            <div className="space-y-3 text-sm">
-              {(messages ?? []).map((m: any, i: number) => (
-                <div key={i} className="rounded-lg border bg-background p-2">
-                  <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">{m.role}</div>
-                  <div className="whitespace-pre-wrap">{m.parts?.map((p: any) => (p.type === 'text' ? p.text : '')).join(' ')}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Prompt */}
-          <div className="mt-2 shrink-0 rounded-2xl border bg-card/60 p-2">
-            <div className="flex items-center gap-2">
-              <Textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} className="flex-1" placeholder="Ask anything…" />
-              <Button
-                disabled={!draft.trim() || status === 'streaming'}
-                onClick={async () => {
-                  const sessId = ensureSession();
-                  // ensure active session set
-                  setActiveSession(sessId);
-                  await sendMessage(
-                    { text: draft },
-                    { body: { model, webSearch } }
-                  );
-                  setDraft('');
-                }}
-              >
-                {status === 'streaming' ? 'Sending…' : 'Send'}
-              </Button>
-            </div>
-          </div>
+          <ChatPanel
+            key={activeId || 'no-session'}
+            nodeId={props.id}
+            sessionId={activeId ?? ensureSession()}
+            model={model}
+            webSearch={webSearch}
+            sessions={sessions}
+            renameSessionIfNeeded={renameSessionIfNeeded}
+            updateNodeData={updateNodeData}
+          />
         </div>
       </div>
     </NodeLayout>

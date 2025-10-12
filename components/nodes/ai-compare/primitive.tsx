@@ -38,10 +38,12 @@ export const AIComparePrimitive = (props: Props) => {
     ]);
     updateNodeData(props.id, {
       results: {
-        openai: o.status==='fulfilled'?o.value:null,
-        gemini: g.status==='fulfilled'?g.value:null,
-        anthropic: a.status==='fulfilled'?a.value:null,
-        serp: s.status==='fulfilled'?s.value:null,
+        single: {
+          openai: o.status==='fulfilled'?o.value:null,
+          gemini: g.status==='fulfilled'?g.value:null,
+          anthropic: a.status==='fulfilled'?a.value:null,
+          serp: s.status==='fulfilled'?s.value:null,
+        },
       },
     });
   }, [queries, updateNodeData, props.id]);
@@ -100,10 +102,10 @@ export const AIComparePrimitive = (props: Props) => {
     >
       <div className="flex h-full flex-col gap-3 p-3">
         {/* Controls */}
-        <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-card/60 p-2">
+        <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-card/60 p-3">
           {inputMode === 'single' ? (
-            <div className="flex items-center gap-2">
-              <Input value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
+            <div className="flex w-full items-center gap-2">
+              <Input className="w-full" value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
               <Button onClick={runSingle}>Run</Button>
             </div>
           ) : (
@@ -148,15 +150,7 @@ export const AIComparePrimitive = (props: Props) => {
                 </tr>
               </thead>
               <tbody>
-                {/* For brevity, ask users to use the /ai-compare-test logic; placeholder row here */}
-                <tr>
-                  <td className="border-b p-2">—</td>
-                  <td className="border-b p-2"></td>
-                  <td className="border-b p-2"></td>
-                  <td className="border-b p-2"></td>
-                  <td className="border-b p-2"></td>
-                  <td className="border-b p-2">0</td>
-                </tr>
+                {renderRows(props.data.results)}
               </tbody>
             </table>
           </div>
@@ -165,5 +159,85 @@ export const AIComparePrimitive = (props: Props) => {
     </NodeLayout>
   );
 };
+
+function renderRows(results: any) {
+  const rows = buildCoverage(results);
+  if (!rows.length) {
+    return (
+      <tr>
+        <td className="border-b p-2">—</td>
+        <td className="border-b p-2"></td>
+        <td className="border-b p-2"></td>
+        <td className="border-b p-2"></td>
+        <td className="border-b p-2"></td>
+        <td className="border-b p-2">0</td>
+      </tr>
+    );
+  }
+  return rows.map((r) => (
+    <tr key={r.domain}>
+      <td className="border-b p-2">{r.domain}</td>
+      <td className="border-b p-2">{r.openai ? '✓' : ''}</td>
+      <td className="border-b p-2">{r.gemini ? '✓' : ''}</td>
+      <td className="border-b p-2">{r.anthropic ? '✓' : ''}</td>
+      <td className="border-b p-2">{r.serp ? '✓' : ''}</td>
+      <td className="border-b p-2">{r.total}</td>
+    </tr>
+  ));
+}
+
+function buildCoverage(results: any): Array<{ domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }> {
+  try {
+    // Choose the active result set
+    let payload: any = null;
+    if (results?.single) payload = results.single;
+    else if (Array.isArray(results?.groups)) {
+      const idx = results.selectedIndex ?? 0;
+      payload = results.groups[idx];
+    } else if (results) payload = results;
+    if (!payload) return [];
+
+    const addUrls = (holder: Set<string>, text: string | undefined) => {
+      if (!text) return;
+      const regex = /https?:\/\/[^\s\)"']+/g;
+      for (const m of text.matchAll(regex)) holder.add(m[0]);
+    };
+
+    const urls = new Set<string>();
+    try { addUrls(urls, JSON.stringify(payload.openai ?? {})); } catch {}
+    try { addUrls(urls, JSON.stringify(payload.gemini ?? {})); } catch {}
+    try { addUrls(urls, JSON.stringify(payload.anthropic ?? {})); } catch {}
+    try {
+      const text = JSON.stringify(payload.serp ?? {});
+      addUrls(urls, text);
+    } catch {}
+
+    const tOpenAI = JSON.stringify(payload.openai ?? {});
+    const tGemini = JSON.stringify(payload.gemini ?? {});
+    const tAnthropic = JSON.stringify(payload.anthropic ?? {});
+    const tSerp = JSON.stringify(payload.serp ?? {});
+
+    const toDomain = (u: string) => { try { return new URL(u).hostname.replace(/^www\./,''); } catch { return u; } };
+    const map = new Map<string, { domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }>();
+    for (const u of urls) {
+      const d = toDomain(u);
+      const openai = tOpenAI.includes(u);
+      const gemini = tGemini.includes(u);
+      const anthropic = tAnthropic.includes(u);
+      const serp = tSerp.includes(u);
+      const ex = map.get(d);
+      if (ex) {
+        ex.openai = ex.openai || openai; ex.gemini = ex.gemini || gemini; ex.anthropic = ex.anthropic || anthropic; ex.serp = ex.serp || serp;
+      } else {
+        map.set(d, { domain: d, openai, gemini, anthropic, serp, total: 0 });
+      }
+    }
+    const rows = Array.from(map.values()).map((r) => ({ ...r, total: [r.openai, r.gemini, r.anthropic, r.serp].filter(Boolean).length }));
+    rows.sort((a, b) => b.total - a.total || a.domain.localeCompare(b.domain));
+    return rows;
+  } catch {
+    return [];
+  }
+}
 
 
