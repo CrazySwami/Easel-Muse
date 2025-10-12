@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ModelSelector } from '../model-selector';
 import { useGateway } from '@/providers/gateway/client';
 import { nanoid } from 'nanoid';
-import { PlusIcon, Trash2Icon } from 'lucide-react';
+import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
 import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation';
@@ -51,7 +51,7 @@ type ChatPanelProps = {
 };
 
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
-  const { messages, status, sendMessage } = useChat();
+  const { messages, status, sendMessage, regenerate } = useChat();
   const [draft, setDraft] = useState('');
 
   // Sync to node data for this session
@@ -83,7 +83,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-card/60" onPointerDown={(e) => e.stopPropagation()}>
         <Conversation className="h-full">
           <ConversationContent>
-            {(messages ?? []).map((message: any) => (
+            {(messages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
                 {message.role === 'assistant' && message.parts?.filter((p: any) => p.type === 'source-url').length > 0 && (
                   <Sources>
@@ -116,6 +116,23 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       return null;
                   }
                 })}
+                {message.role === 'assistant' && msgIdx === (messages as any).length - 1 && (
+                  <Actions className="mt-2">
+                    <Action onClick={() => regenerate?.()} label="Retry">
+                      <RefreshCcwIcon className="size-3" />
+                    </Action>
+                    <Action
+                      onClick={() => {
+                        const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');
+                        const toCopy = textParts.map((p: any) => p.text).join('\n');
+                        navigator.clipboard?.writeText(toCopy);
+                      }}
+                      label="Copy"
+                    >
+                      <CopyIcon className="size-3" />
+                    </Action>
+                  </Actions>
+                )}
               </div>
             ))}
             {status === 'submitted' && <Loader />}
@@ -150,7 +167,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
               </PromptInputActionMenuContent>
             </PromptInputActionMenu>
             <PromptInputButton variant={webSearch ? 'default' : 'ghost'} onClick={() => updateNodeData(nodeId, { webSearch: !webSearch })}>
-              Search
+              <GlobeIcon size={16} />
+              <span>Search</span>
             </PromptInputButton>
             <PromptInputModelSelect onValueChange={(value) => updateNodeData(nodeId, { model: value })} value={model}>
               <PromptInputModelSelectTrigger>

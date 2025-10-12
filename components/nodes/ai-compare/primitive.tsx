@@ -207,42 +207,47 @@ function buildCoverage(results: any, selectedIndex: number): Array<{ domain: str
     } else if (results) payload = results;
     if (!payload) return [];
 
-    const addUrls = (holder: Set<string>, text: string | undefined) => {
-      if (!text) return;
-      const regex = /https?:\/\/[^\s\)"']+/g;
-      for (const m of text.matchAll(regex)) holder.add(m[0]);
+    const toDomain = (u: string) => { try { return new URL(u).hostname.replace(/^www\./,''); } catch { return u; } };
+
+    const scanUrlsToDomains = (obj: any): Set<string> => {
+      const found = new Set<string>();
+      try {
+        const t = JSON.stringify(obj ?? {});
+        for (const m of t.matchAll(/https?:\/\/[^\s\)"']+/g)) found.add(toDomain(m[0]));
+      } catch {}
+      return found;
     };
 
-    const urls = new Set<string>();
-    try { addUrls(urls, JSON.stringify(payload.openai ?? {})); } catch {}
-    try { addUrls(urls, JSON.stringify(payload.gemini ?? {})); } catch {}
-    try { addUrls(urls, JSON.stringify(payload.anthropic ?? {})); } catch {}
+    const openaiDomains = scanUrlsToDomains(payload.openai);
+    const anthropicDomains = scanUrlsToDomains(payload.anthropic);
+    const serpDomains = new Set<string>();
     try {
-      const text = JSON.stringify(payload.serp ?? {});
-      addUrls(urls, text);
+      const organic: any[] = Array.isArray(payload.serp?.organic_results) ? payload.serp.organic_results : [];
+      organic.forEach((r) => { if (r?.link) serpDomains.add(toDomain(r.link)); });
+      const refs: any[] = payload.serp?.ai_overview?.references ?? [];
+      refs.forEach((r) => { if (r?.link) serpDomains.add(toDomain(r.link)); });
     } catch {}
 
-    const tOpenAI = JSON.stringify(payload.openai ?? {});
-    const tGemini = JSON.stringify(payload.gemini ?? {});
-    const tAnthropic = JSON.stringify(payload.anthropic ?? {});
-    const tSerp = JSON.stringify(payload.serp ?? {});
-
-    const toDomain = (u: string) => { try { return new URL(u).hostname.replace(/^www\./,''); } catch { return u; } };
-    const map = new Map<string, { domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }>();
-    for (const u of urls) {
-      const d = toDomain(u);
-      const openai = tOpenAI.includes(u);
-      const gemini = tGemini.includes(u);
-      const anthropic = tAnthropic.includes(u);
-      const serp = tSerp.includes(u);
-      const ex = map.get(d);
-      if (ex) {
-        ex.openai = ex.openai || openai; ex.gemini = ex.gemini || gemini; ex.anthropic = ex.anthropic || anthropic; ex.serp = ex.serp || serp;
-      } else {
-        map.set(d, { domain: d, openai, gemini, anthropic, serp, total: 0 });
+    const geminiDomains = new Set<string>();
+    try {
+      const chunks: any[] = payload.gemini?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+      for (const c of chunks) {
+        const d = (c?.web?.title || c?.web?.domain || '').toString().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'');
+        if (d) geminiDomains.add(d);
       }
-    }
-    const rows = Array.from(map.values()).map((r) => ({ ...r, total: [r.openai, r.gemini, r.anthropic, r.serp].filter(Boolean).length }));
+      const rawDomains = scanUrlsToDomains(payload.gemini);
+      for (const d of rawDomains) if (d !== 'vertexaisearch.cloud.google.com') geminiDomains.add(d);
+    } catch {}
+
+    const allDomains = new Set<string>([...openaiDomains, ...geminiDomains, ...anthropicDomains, ...serpDomains]);
+    const rows = Array.from(allDomains).map((d) => ({
+      domain: d,
+      openai: openaiDomains.has(d),
+      gemini: geminiDomains.has(d),
+      anthropic: anthropicDomains.has(d),
+      serp: serpDomains.has(d),
+      total: 0,
+    })).map((r) => ({ ...r, total: [r.openai, r.gemini, r.anthropic, r.serp].filter(Boolean).length }));
     rows.sort((a, b) => b.total - a.total || a.domain.localeCompare(b.domain));
     return rows;
   } catch {
