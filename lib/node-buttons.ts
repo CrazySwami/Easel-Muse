@@ -18,8 +18,8 @@ export const nodeButtons = [
     label: 'Chat',
     icon: MessageSquareIcon,
     data: {
-      width: 1120,
-      height: 760,
+      width: 1280,
+      height: 880,
       resizable: false,
       fullscreenSupported: true,
       allowIncoming: true,
@@ -135,11 +135,11 @@ export const nodeButtons = [
   },
   {
     id: 'serpapi',
-    label: 'SerpApi',
+    label: 'Google Search Results',
     icon: GlobeIcon,
     data: {
       width: 1200,
-      height: 800,
+      height: 880,
       resizable: false,
       fullscreenSupported: true,
       fullscreenOnly: false,
@@ -151,7 +151,7 @@ export const nodeButtons = [
     icon: SearchIcon,
     data: {
       width: 1200,
-      height: 800,
+      height: 880,
       resizable: false,
       fullscreenSupported: true,
       fullscreenOnly: false,

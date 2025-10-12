@@ -241,7 +241,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
   return (
     <NodeLayout
       id={props.id}
-      data={{ ...props.data, width: 1200, height: 800, resizable: false, allowIncoming: false, allowOutgoing: true, titleOverride: 'SerpApi' }}
+      data={{ ...props.data, width: 1200, height: 880, resizable: false, allowIncoming: false, allowOutgoing: true, titleOverride: 'Google Search Results' }}
       type={props.type}
       title={props.title}
       toolbar={toolbar}

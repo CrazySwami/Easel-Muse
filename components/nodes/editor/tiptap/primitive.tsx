@@ -11,6 +11,7 @@ import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
+import Heading from '@tiptap/extension-heading';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import { Extension } from '@tiptap/core';
@@ -263,6 +264,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 placeholder: 'Start typing your collaborative document...',
             }),
             Typography,
+            Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
             TextStyle,
             FontFamily,
             FontSize,
@@ -641,12 +643,12 @@ const HeadingDropdown = ({ editor }: { editor: any }) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="z-[100] min-w-[160px] bg-cyan-600 text-white border border-cyan-700"
         sideOffset={6} align="start">
-        <DropdownMenuItem onClick={() => editor.chain().focus().setParagraph().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().setParagraph().run(); }} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().setHeading({ level: 1 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().setHeading({ level: 1 }).run(); }} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().setHeading({ level: 2 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().setHeading({ level: 2 }).run(); }} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().setHeading({ level: 3 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().setHeading({ level: 3 }).run(); }} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().setHeading({ level: 4 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().setHeading({ level: 4 }).run(); }} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().setHeading({ level: 5 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().setHeading({ level: 5 }).run(); }} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setParagraph().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setParagraph().run(); }} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 1 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 1 }).run(); }} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 2 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 2 }).run(); }} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 3 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 3 }).run(); }} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 4 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 4 }).run(); }} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 5 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 5 }).run(); }} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

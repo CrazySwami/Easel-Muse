@@ -119,16 +119,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
           <ConversationContent>
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
-                {message.role === 'assistant' && message.parts?.filter((p: any) => p.type === 'source-url').length > 0 && (
-                  <Sources>
-                    <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
-                    {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
-                      <SourcesContent key={`${message.id}-${i}`}>
-                        <Source href={part.url} title={part.url} />
-                      </SourcesContent>
-                    ))}
-                  </Sources>
-                )}
+                {/* Citations block below the message */}
                 {message.parts?.map((part: any, i: number) => {
                   switch (part.type) {
                     case 'text':
@@ -150,6 +141,16 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       return null;
                   }
                 })}
+                {message.role === 'assistant' && message.parts?.filter((p: any) => p.type === 'source-url').length > 0 && (
+                  <Sources>
+                    <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
+                    {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
+                      <SourcesContent key={`${message.id}-src-${i}`}>
+                        <Source href={part.url} title={part.url} />
+                      </SourcesContent>
+                    ))}
+                  </Sources>
+                )}
                 {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
                   <Actions className="mt-2">
                     <Action onClick={() => regenerate?.()} label="Retry">
@@ -295,7 +296,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
     <NodeLayout
       {...props}
       toolbar={toolbar}
-      data={{ ...props.data, width: props.data.width ?? 1120, height: props.data.height ?? 760, resizable: false, fullscreenSupported: true, allowIncoming: true, allowOutgoing: true, titleOverride: 'Chat' }}
+      data={{ ...props.data, width: props.data.width ?? 1280, height: props.data.height ?? 880, resizable: false, fullscreenSupported: true, allowIncoming: true, allowOutgoing: true, titleOverride: 'Chat' }}
     >
       <div className="flex h-full min-h-0 gap-3 p-3">
         {/* Sidebar */}

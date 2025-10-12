@@ -20,7 +20,7 @@ export type SerpApiNodeProps = {
 };
 
 export const SerpApiNode = (props: SerpApiNodeProps) => {
-  return <SerpApiPrimitive {...props} title={props.title ?? 'SerpApi'} />;
+  return <SerpApiPrimitive {...props} title={props.title ?? 'Google Search Results'} />;
 };
 
 

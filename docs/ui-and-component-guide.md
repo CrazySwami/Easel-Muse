@@ -745,10 +745,13 @@ Sizing defaults:
 
 ---
 
-## Image, Video, and Code node sizes
+## Chat, Image, Video, and Code node sizes
 
 Keep palette defaults in `lib/node-buttons.ts` in sync with component fallbacks in the node primitives:
 
+- Chat: `width: 1280`, `height: 880`, `resizable: false`
+  - Palette: `chat.data = { width: 1280, height: 880, resizable: false }`
+  - Component: `<NodeLayout data={{ ...data, width: data.width ?? 1280, height: data.height ?? 880, resizable: false }}>`
 - Image: `width: 840`, `height: 560`, `resizable: false`
   - Palette: `image.data = { width: 840, height: 560, resizable: false }`
   - Component: `<NodeLayout data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false }}>`
