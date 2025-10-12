@@ -58,14 +58,11 @@ const filterPerplexityModels = (models: Record<string, any>) =>
 
 // Map gateway ids like "perplexity/sonar-pro" -> API ids like "sonar-pro"
 const normalizePxModel = (id: string | undefined) => {
-  if (!id) return 'sonar-small-online';
+  if (!id) return 'sonar';
   const clean = id.replace(/^perplexity\//i, '');
   if (/pro/i.test(clean)) return 'sonar-pro';
-  if (/medium/i.test(clean) && /online/i.test(clean)) return 'sonar-medium-online';
-  if (/small/i.test(clean) && /online/i.test(clean)) return 'sonar-small-online';
-  if (/online/i.test(clean)) return clean.toLowerCase();
-  // default to a safe online model
-  return 'sonar-small-online';
+  // default family model
+  return 'sonar';
 };
 
 type PerplexityPrimitiveProps = PerplexityNodeProps & { title: string };

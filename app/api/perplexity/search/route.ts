@@ -26,7 +26,7 @@ function resolveProviderAndModel(model?: string): { provider: 'openai' | 'anthro
     return { provider: 'openai', model: m.includes('mini') ? 'gpt-4o-mini' : 'gpt-4o' };
   }
   if (m.includes('sonar') || m.includes('perplexity')) {
-    return { provider: 'perplexity', model: 'sonar-small-online' };
+    return { provider: 'perplexity', model: 'sonar' };
   }
   // default to OpenAI mini
   return { provider: 'openai', model: 'gpt-4o-mini' };
@@ -152,10 +152,14 @@ export async function POST(req: Request) {
   if (mode === 'chat') {
     const { messages, system } = reqBody as any;
     let { model } = reqBody as any;
-    if (typeof model !== 'string' || !/sonar|perplexity|online/i.test(model)) {
-      model = 'sonar-small-online';
+    // Normalize model id and default
+    if (typeof model !== 'string') {
+      model = 'sonar';
     }
     model = String(model).replace(/^perplexity\//i, '');
+    if (!/^sonar(|-pro)$/i.test(model)) {
+      model = /pro/i.test(model) ? 'sonar-pro' : 'sonar';
+    }
 
     try {
       const chatMessages = Array.isArray(messages) ? messages : [];
