@@ -241,12 +241,8 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
   const active = sessions.find((s) => s.id === activeId);
 
   const chatModels = useMemo(() => {
-    return Object.fromEntries(
-      Object.entries(models).filter(([_, m]: any) => {
-        const provs = (m?.providers ?? []).map((p: any) => p.id);
-        return provs.includes('openai') || provs.includes('anthropic') || provs.includes('google') || provs.includes('meta');
-      })
-    );
+    // Use full gateway models list, identical to the Text node
+    return models;
   }, [models]);
 
   const defaultModel = useMemo(() => {

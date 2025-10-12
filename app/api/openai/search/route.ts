@@ -14,17 +14,18 @@ export async function POST(req: Request) {
       headers: {
         'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
+        'OpenAI-Beta': 'responses-2024-10-22',
       },
       body: JSON.stringify({
-        model: model || 'gpt-4o-mini',
-        input: [{ role: 'user', content: q }],
+        model: model || 'gpt-4o-mini-2024-07-18',
+        input: q,
         tools: [{ type: 'web_search_preview' }],
         tool_choice: 'auto',
         parallel_tool_calls: true,
       }),
     });
     const json = await res.json();
-    return NextResponse.json(json, { status: res.ok ? 200 : 500 });
+    return NextResponse.json(json, { status: res.status });
   } catch (e: any) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

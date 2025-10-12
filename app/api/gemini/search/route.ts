@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const m = model || 'gemini-2.5-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${env.GOOGLE_GENERATIVE_AI_API_KEY}`;
     const body: any = {
-      contents: [{ parts: [{ text: q }]}],
+      contents: [{ role: 'user', parts: [{ text: q }]}],
       tools: [{ google_search: {} }],
     };
     if (Array.isArray(urlContext) && urlContext.length) {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
     const json = await res.json();
-    return NextResponse.json(json, { status: res.ok ? 200 : 500 });
+    return NextResponse.json(json, { status: res.status });
   } catch (e: any) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

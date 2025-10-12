@@ -20,15 +20,15 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        tool_choice: { type: 'auto' },
+        tools: [{ type: 'web_search_20241022', name: 'web_search' }],
+        tool_choice: 'auto',
         messages: [
           { role: 'user', content: q }
         ],
       }),
     });
     const json = await res.json();
-    return NextResponse.json(json, { status: res.ok ? 200 : 500 });
+    return NextResponse.json(json, { status: res.status });
   } catch (e: any) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
