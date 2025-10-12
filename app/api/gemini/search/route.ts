@@ -5,13 +5,14 @@ import { env } from '@/lib/env';
 // POST body: { q: string; urlContext?: string[]; dynamic?: boolean }
 export async function POST(req: Request) {
   try {
-    const { q, urlContext = [], dynamic = true } = await req.json();
+    const { q, urlContext = [], dynamic = true, model } = await req.json();
     if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 });
     if (!env.GOOGLE_GENERATIVE_AI_API_KEY) {
       return NextResponse.json({ error: 'GOOGLE_GENERATIVE_AI_API_KEY not set' }, { status: 500 });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GOOGLE_GENERATIVE_AI_API_KEY}`;
+    const m = model || 'gemini-2.5-flash';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${env.GOOGLE_GENERATIVE_AI_API_KEY}`;
     const body: any = {
       contents: [{ parts: [{ text: q }]}],
       tools: [{ google_search: {} }],

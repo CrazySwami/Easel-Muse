@@ -5,7 +5,7 @@ import { env } from '@/lib/env';
 // POST body: { q: string }
 export async function POST(req: Request) {
   try {
-    const { q } = await req.json();
+    const { q, model } = await req.json();
     if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 });
     if (!env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY not set' }, { status: 500 });
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: model || 'gpt-4o-mini',
         input: [{ role: 'user', content: q }],
         tools: [{ type: 'web_search_preview' }],
         tool_choice: 'auto',

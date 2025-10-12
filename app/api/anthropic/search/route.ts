@@ -6,7 +6,7 @@ import { env } from '@/lib/env';
 // Here we proxy a minimal call; you may need to adjust per your account's web search enablement.
 export async function POST(req: Request) {
   try {
-    const { q } = await req.json();
+    const { q, model } = await req.json();
     if (!q) return NextResponse.json({ error: 'Missing q' }, { status: 400 });
     if (!env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 });
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         tool_choice: { type: 'auto' },

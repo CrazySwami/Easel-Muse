@@ -140,7 +140,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                   switch (part.type) {
                      case 'text':
                        return (
-                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'}>
+                        <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? (typeof (globalThis as any)?.currentUserAvatar === 'string' ? (globalThis as any).currentUserAvatar : undefined) : '/Easel-Logo.svg'}>
                            {message.role === 'user' ? (
                              <div className="text-white">{part.text}</div>
                            ) : (

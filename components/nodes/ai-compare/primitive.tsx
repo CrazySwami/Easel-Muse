@@ -59,6 +59,10 @@ export const AIComparePrimitive = (props: Props) => {
   const batchStatuses = (props.data.batchStatuses ?? []) as Array<'idle'|'running'|'done'|'error'>;
   const generatePrompt = (props.data as any)?.generatePrompt ?? '';
   const model = (props.data as any)?.model ?? getDefaultModel(models);
+  // Per-provider model selections (with sensible defaults)
+  const openaiModel = (props.data as any)?.openaiModel ?? 'gpt-4o-mini';
+  const geminiModel = (props.data as any)?.geminiModel ?? 'gemini-2.5-flash';
+  const anthropicModel = (props.data as any)?.anthropicModel ?? 'claude-3-5-sonnet-20241022';
 
   const setInputMode = (value: 'single'|'batch') => updateNodeData(props.id, { inputMode: value });
   const updateQuery = (i: number, v: string) => {
@@ -79,9 +83,9 @@ export const AIComparePrimitive = (props: Props) => {
     setIsRunning(true);
     try {
       const [o, g, a, s] = await Promise.allSettled([
-        fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-        fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-        fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
+        fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: openaiModel }) }).then(r=>r.json()),
+        fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: geminiModel }) }).then(r=>r.json()),
+        fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
         fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
       ]);
       updateNodeData(props.id, {
@@ -110,9 +114,9 @@ export const AIComparePrimitive = (props: Props) => {
       const q = valid[i];
       try {
         const [o, g, a, s] = await Promise.allSettled([
-          fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-          fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
-          fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
+          fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: openaiModel }) }).then(r=>r.json()),
+          fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: geminiModel }) }).then(r=>r.json()),
+          fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
           fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
         ]);
         accum[i] = {
@@ -141,6 +145,42 @@ export const AIComparePrimitive = (props: Props) => {
           <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
           <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
         </div>
+      ),
+    },
+    {
+      children: (
+        <details className="ml-2 rounded-md border bg-card/60 p-2">
+          <summary className="cursor-pointer text-xs font-medium">Options</summary>
+          <div className="mt-2 grid grid-cols-1 gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <OpenAiIcon className="h-3.5 w-3.5" />
+              <input
+                className="w-full rounded border bg-background px-2 py-1"
+                value={openaiModel}
+                onChange={(e) => updateNodeData(props.id, { openaiModel: e.target.value })}
+                placeholder="OpenAI model (e.g. gpt-4o-mini)"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <GeminiIcon className="h-3.5 w-3.5" />
+              <input
+                className="w-full rounded border bg-background px-2 py-1"
+                value={geminiModel}
+                onChange={(e) => updateNodeData(props.id, { geminiModel: e.target.value })}
+                placeholder="Gemini model (e.g. gemini-2.5-flash)"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <AnthropicIcon className="h-3.5 w-3.5" />
+              <input
+                className="w-full rounded border bg-background px-2 py-1"
+                value={anthropicModel}
+                onChange={(e) => updateNodeData(props.id, { anthropicModel: e.target.value })}
+                placeholder="Claude model (e.g. claude-3-5-sonnet-20241022)"
+              />
+            </div>
+          </div>
+        </details>
       ),
     },
   ] as any;
