@@ -286,7 +286,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
 
         {/* Batch Generate Questions (Perplexity-style) */}
         {mode === 'batch' && (
-          <div className="shrink-0">
+          <div className="shrink-0 mt-3 mb-2">
             <GeneratorBar
               model={genModel}
               models={textModels}

@@ -147,17 +147,19 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                   }
                 })}
                 {message.role === 'assistant' && Array.isArray(message.parts) && message.parts.some((p: any) => p.type === 'source-url') && (
-                  <Sources>
-                    <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
-                    <SourcesContent>
-                      {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
-                        <Source key={`${message.id}-src-${i}`} href={part.url} title={part.url} />
-                      ))}
-                    </SourcesContent>
-                  </Sources>
+                  <div className="mt-2">
+                    <Sources>
+                      <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
+                      <SourcesContent>
+                        {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
+                          <Source key={`${message.id}-src-${i}`} href={part.url} title={part.url} />
+                        ))}
+                      </SourcesContent>
+                    </Sources>
+                  </div>
                 )}
                 {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
-                  <Actions className="mt-2">
+                  <Actions className="mt-1">
                     <Action
                       onClick={() => {
                         const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');

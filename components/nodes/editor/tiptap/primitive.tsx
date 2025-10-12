@@ -8,9 +8,9 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
-import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
+import Highlight from '@tiptap/extension-highlight';
 import Heading from '@tiptap/extension-heading';
 import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -144,6 +144,7 @@ const FontSize = Extension.create({
 // Custom Comment Mark Extension
 const Comment = Mark.create({
   name: 'comment',
+  inclusive: false,
   addAttributes() {
     return {
       commentId: {
@@ -270,9 +271,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             FontSize,
             Color,
             Underline,
-            Highlight.configure({
-                multicolor: true,
-            }),
+            Highlight.configure({ multicolor: true }),
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             Link.configure({
                 openOnClick: false,
@@ -400,6 +399,8 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             userName,
             userColor,
         }).run();
+        // Immediately collapse selection to avoid extending mark to new text
+        editor.commands.setTextSelection(to);
 
         // Store comment thread in Yjs
         const thread: CommentThread = {
@@ -527,6 +528,19 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 </button>
                 <button title="Blockquote" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('blockquote') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
                   <QuoteIcon className="h-4 w-4" />
+                </button>
+                <button title="Highlight" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('highlight') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleHighlight().run()}>
+                  <span className="text-[10px]">HL</span>
+                </button>
+                <button title="Color" className={`rounded-md p-2 hover:bg-cyan-700`} onClick={() => {
+                  const color = window.prompt('Color (e.g. #ff0 or red)');
+                  if (!color) return;
+                  editor.chain().focus().setColor(color).run();
+                }}>
+                  <span className="text-[10px]">A</span>
+                </button>
+                <button title="Clear color" className={`rounded-md p-2 hover:bg-cyan-700`} onClick={() => editor.chain().focus().unsetColor().run()}>
+                  <span className="text-[10px]">Ac</span>
                 </button>
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 <button title="Align left" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'left' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
@@ -743,8 +757,8 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
   const reactFlow = useReactFlow();
   
   // Allow per-node overrides via data.width/height
-  const width = (props.data as any)?.width ?? 920;
-  const height = (props.data as any)?.height ?? 1160;
+  const width = (props.data as any)?.width ?? 1080;
+  const height = (props.data as any)?.height ?? 1280;
   const { getLock } = useLocks();
   const lock = getLock(props.id);
   const isEditLocked = lock?.level === 'edit';
@@ -776,7 +790,7 @@ export const TiptapPrimitive = (props: TiptapPrimitiveProps) => {
       type={props.type}
       title={props.title}
       toolbar={createToolbar()}
-      className="min-h-[720px]"
+      className="min-h-[820px]"
     >
       {/* "Fill Frame" Pattern: Direct child has h-full */}
       <div className="flex h-full flex-col gap-3 p-3">
