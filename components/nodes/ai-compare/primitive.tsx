@@ -348,7 +348,7 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
           return (
             <a key={u} href={finalUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-primary hover:underline">
               {fav ? <img src={fav} alt="" width={14} height={14} className="rounded"/> : <span className="h-3.5 w-3.5 rounded bg-muted inline-block"/>}
-              <span className="truncate text-foreground/90">{host || finalUrl}</span>
+              <span className="truncate text-foreground/90">{finalUrl}</span>
             </a>
           );
         })}
@@ -360,33 +360,43 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
   const answers = extractAnswersByProvider(payload);
   return (
     <div className="text-xs h-full min-h-0 overflow-auto pr-1">
-      {/* Answers */}
-      {(answers.openai || answers.gemini || answers.anthropic) && (
-        <div className="mb-3 space-y-2">
-          {answers.openai && (
-            <div className="rounded border bg-card/60 p-2">
-              <div className="mb-1 inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</div>
-              <p className="whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
-            </div>
-          )}
-          {answers.gemini && (
-            <div className="rounded border bg-card/60 p-2">
-              <div className="mb-1 inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</div>
-              <p className="whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
-            </div>
-          )}
-          {answers.anthropic && (
-            <div className="rounded border bg-card/60 p-2">
-              <div className="mb-1 inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</div>
-              <p className="whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
-            </div>
-          )}
+      {/* Collapsible answers with per-provider sources */}
+      {answers.openai && (
+        <div className="mb-3 rounded border bg-card/60 p-2">
+          <details>
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
+            <div className="mt-2">{renderGroup('Sources', <OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}</div>
+          </details>
         </div>
       )}
-      {renderGroup('ChatGPT', <OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}
-      {renderGroup('Gemini', <GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}
-      {renderGroup('Claude', <AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}
-      {renderGroup('SerpApi', <GoogleIcon className="h-3.5 w-3.5" />, sources.serp)}
+      {answers.gemini && (
+        <div className="mb-3 rounded border bg-card/60 p-2">
+          <details>
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
+            <div className="mt-2">{renderGroup('Sources', <GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}</div>
+          </details>
+        </div>
+      )}
+      {answers.anthropic && (
+        <div className="mb-3 rounded border bg-card/60 p-2">
+          <details>
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
+            <div className="mt-2">{renderGroup('Sources', <AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}</div>
+          </details>
+        </div>
+      )}
+      {!answers.openai && !answers.gemini && !answers.anthropic && (
+        <div className="text-muted-foreground">Run to see provider answers.</div>
+      )}
     </div>
   );
 }
