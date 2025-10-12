@@ -33,8 +33,8 @@ export const SearchResult = ({ result, variant = 'pill' }: SearchResultProps) =>
       >
         {href ? (
           <img
-            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
-            alt={`${domain} favicon`}
+            src={`https://www.google.com/s2/favicons?domain=${(result.title && /\./.test(result.title) ? result.title : domain)}&sz=16`}
+            alt={`${result.title ?? domain} favicon`}
             width={14}
             height={14}
             className="rounded"
@@ -42,7 +42,7 @@ export const SearchResult = ({ result, variant = 'pill' }: SearchResultProps) =>
         ) : (
           <div className="h-3.5 w-3.5 rounded bg-muted" />
         )}
-        <span className="truncate text-xs text-muted-foreground group-hover:underline">{domain}</span>
+        <span className="truncate text-xs text-muted-foreground group-hover:underline">{result.title ?? domain}</span>
       </a>
     );
   }

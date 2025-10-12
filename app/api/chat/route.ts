@@ -1,8 +1,4 @@
-'use server';
-
 import { streamText, type UIMessage, convertToModelMessages } from 'ai';
-
-export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { messages, model, webSearch }: { messages: UIMessage[]; model?: string; webSearch?: boolean } = await req.json();

@@ -197,8 +197,9 @@ export default function AICompareTestPage() {
           <div className="flex flex-wrap gap-2">
             {urls.map((u) => {
               const finalUrl = resolved?.get(u) ?? u;
+              const display = root(finalUrl) || root(u) || finalUrl;
               return (
-                <SearchResult key={u} result={{ url: finalUrl, title: finalUrl, snippet: '' }} />
+                <SearchResult key={u} result={{ url: finalUrl, title: display, snippet: '' }} />
               );
             })}
           </div>
