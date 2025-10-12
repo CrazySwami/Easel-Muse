@@ -260,9 +260,10 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
     >
       <div className="flex h-full min-h-0 gap-3 p-3">
         {/* Sidebar */}
-        <div className="nowheel nodrag nopan w-64 shrink-0 overflow-auto rounded-2xl border bg-card/60 p-2" onPointerDown={(e) => e.stopPropagation()}>
+        <div className={`${(props.data as any)?.sidebarCollapsed ? 'hidden' : 'block'} nowheel nodrag nopan w-64 shrink-0 overflow-auto rounded-2xl border bg-card/60 p-2`} onPointerDown={(e) => e.stopPropagation()}>
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs text-muted-foreground">Chats</div>
+            <div className="inline-flex items-center gap-1">
             <Button size="icon" variant="ghost" onClick={() => {
               const id = nanoid();
               const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
@@ -270,6 +271,11 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
             }}>
               <PlusIcon className="h-4 w-4" />
             </Button>
+            <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: true })}>
+              {/* simple hamburger placeholder */}
+              <span className="i-heroicons-bars-3 h-4 w-4">≡</span>
+            </Button>
+            </div>
           </div>
           <div className="space-y-1">
             {(sessions.length ? sessions : []).map((s) => (
@@ -286,6 +292,14 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
         {/* Main */}
         <div className="flex min-h-0 flex-1 flex-col">
+          {(props.data as any)?.sidebarCollapsed ? (
+            <div className="mb-2 flex items-center gap-2">
+              <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: false })}>
+                <span className="i-heroicons-bars-3 h-4 w-4">≡</span>
+              </Button>
+              <div className="text-xs text-muted-foreground">Chats hidden</div>
+            </div>
+          ) : null}
           {/* Controls */}
           {/* Removed top controls per spec to avoid redundancy */}
           <ChatPanel

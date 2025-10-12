@@ -17,6 +17,34 @@ const getDefaultModel = (all: Record<string, any>) => {
   if (all[DEFAULT_TEXT_MODEL_ID]) return DEFAULT_TEXT_MODEL_ID;
   return Object.keys(all)[0];
 };
+// Restrict generator models similar to Text node (prefer OpenAI text-capable ones)
+const OPENAI_WHITELIST_IDS = new Set([
+  'gpt-4.1',
+  'gpt-4.1-mini',
+  'gpt-4.1-nano',
+  'gpt-4o-mini',
+  'gpt-5',
+  'gpt-5-mini',
+  'gpt-5-nano',
+]);
+const OPENAI_WHITELIST_LABELS = [
+  'gpt-4.1',
+  'gpt-4.1 mini',
+  'gpt-4.1 nano',
+  'gpt-4o mini',
+  'gpt-5',
+  'gpt-5 mini',
+  'gpt-5 nano',
+];
+const filterTextModels = (models: Record<string, any>) =>
+  Object.fromEntries(
+    Object.entries(models).filter(([id, m]: any) => {
+      const isOpenAI = m?.chef?.id === 'openai' || (Array.isArray(m?.providers) && m.providers.some((p: any) => p.id === 'openai'));
+      if (!isOpenAI) return false;
+      const label = String(m?.label ?? '').toLowerCase();
+      return OPENAI_WHITELIST_IDS.has(id) || OPENAI_WHITELIST_LABELS.some((s) => label.includes(s));
+    })
+  );
 
 type Props = AICompareNodeProps & { title: string };
 
@@ -156,10 +184,7 @@ export const AIComparePrimitive = (props: Props) => {
               <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Button onClick={runBatch} disabled={isBatchRunning}>{isBatchRunning ? 'Running…' : 'Run Batch'}</Button>
-              <Button variant="outline" size="sm" onClick={addQuery}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
-            </div>
+            <div />
           )}
         </div>
 
@@ -176,11 +201,11 @@ export const AIComparePrimitive = (props: Props) => {
                 <div className="shrink-0 rounded-xl border bg-card/60 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">Generate questions</div>
-                    <ModelSelector value={model} options={models} className="w-[200px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
+                    <ModelSelector value={model} options={filterTextModels(models)} className="w-[220px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
                   </div>
                   <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })} />
-                  <div className="mt-2 flex items-center justify-end">
-                    <Button size="sm" onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
+                  <div className="mt-2">
+                    <Button className="w-full" size="sm" onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
                   </div>
                 </div>
 
@@ -200,6 +225,10 @@ export const AIComparePrimitive = (props: Props) => {
                       <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}><XIcon className="h-4 w-4"/></Button>
                     </div>
                   ))}
+                  <div className="flex items-center justify-between pt-2">
+                    <Button variant="outline" size="sm" onClick={addQuery}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
+                    <Button onClick={runBatch} disabled={isBatchRunning} size="sm">{isBatchRunning ? 'Running…' : 'Run Batch'}</Button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -207,8 +236,12 @@ export const AIComparePrimitive = (props: Props) => {
             )}
           </div>
 
-          {/* Right: table */}
+          {/* Right: provider answers + table */}
           <div className="col-span-8 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
+            {(() => {
+              const payload = getActivePayload(props.data.results, props.data.selectedQueryIndex ?? 0);
+              return <AnswersCollapsible payload={payload} />;
+            })()}
             <table className="w-full text-left text-sm">
               <thead>
                 <tr>
@@ -410,6 +443,70 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
       {!answers.openai && !answers.gemini && !answers.anthropic && (
         <div className="text-muted-foreground">Run to see provider answers.</div>
       )}
+    </div>
+  );
+}
+
+function AnswersCollapsible({ payload }: { payload: any }) {
+  const sources = extractUrlsByProvider(payload);
+  const answers = extractAnswersByProvider(payload);
+  const preview = (t?: string) => (t ? (t.length > 120 ? t.slice(0, 120) + '…' : t) : '');
+  const renderGroup = (icon: React.ReactNode, urls: string[]) => (
+    <div className="mt-2 space-y-1">
+      {urls.slice(0, 30).map((u) => (
+        <a key={u} href={u} target="_blank" rel="noreferrer" className="block truncate text-primary hover:underline">{u}</a>
+      ))}
+    </div>
+  );
+  return (
+    <div className="mb-3 space-y-2">
+      {answers.openai && (
+        <div className="rounded border bg-card/60 p-2">
+          <details>
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</span>
+              <span className="ml-2 text-muted-foreground">{preview(answers.openai)}</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
+            {renderGroup(<OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}
+          </details>
+        </div>
+      )}
+      {answers.gemini && (
+        <div className="rounded border bg-card/60 p-2">
+          <details>
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</span>
+              <span className="ml-2 text-muted-foreground">{preview(answers.gemini)}</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
+            {renderGroup(<GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}
+          </details>
+        </div>
+      )}
+      {answers.anthropic && (
+        <div className="rounded border bg-card/60 p-2">
+          <details>
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</span>
+              <span className="ml-2 text-muted-foreground">{preview(answers.anthropic)}</span>
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
+            {renderGroup(<AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}
+          </details>
+        </div>
+      )}
+      {/* SerpApi static info */}
+      <div className="rounded border bg-card/60 p-2">
+        <details>
+          <summary className="cursor-pointer list-none">
+            <span className="inline-flex items-center gap-2 font-semibold"><GoogleIcon className="h-3.5 w-3.5"/> SerpApi</span>
+            <span className="ml-2 text-muted-foreground">Google results preview</span>
+          </summary>
+          <p className="mt-2 text-foreground/90">These links are extracted from Google results via SerpApi.</p>
+          {renderGroup(<GoogleIcon className="h-3.5 w-3.5" />, sources.serp)}
+        </details>
+      </div>
     </div>
   );
 }

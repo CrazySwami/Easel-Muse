@@ -34,6 +34,7 @@ export type ChatNodeProps = {
     activeSessionId?: string;
     model?: string;
     webSearch?: boolean;
+    sidebarCollapsed?: boolean;
     outputTexts?: string[];
   };
 };
