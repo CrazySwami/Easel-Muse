@@ -527,27 +527,34 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                 <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   {(() => {
                     const idx = (props.data as any)?.selectedQueryIndex ?? 0;
-                    if (pxMode === 'model' && Array.isArray(modelBatchAnswers) && modelBatchAnswers[idx]) {
-                      const ans = modelBatchAnswers[idx];
-                      return (
-                        <div className="space-y-3">
-                          {/* Question header */}
-                          <div className="rounded-lg border bg-card/60 p-3 text-sm font-medium text-foreground/80">
-                            {queries[idx] || `Query #${idx + 1}`}
-                          </div>
-                          <div className="rounded-lg border bg-card/60 p-4">
-                            <ReactMarkdown>{ans.answer}</ReactMarkdown>
-                          </div>
-                          {Array.isArray(ans.citations) && ans.citations.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {ans.citations.slice(0, 6).map((u: string, j: number) => (
-                                <SearchResult key={j} result={{ title: u, snippet: u, url: u }} />
-                              ))}
+                    if (pxMode === 'model') {
+                      if (Array.isArray(modelBatchAnswers) && modelBatchAnswers[idx]) {
+                        const ans = modelBatchAnswers[idx];
+                        return (
+                          <div className="space-y-3">
+                            <div className="rounded-lg border bg-card/60 p-3 text-sm font-medium text-foreground/80">
+                              {queries[idx] || `Query #${idx + 1}`}
                             </div>
-                          )}
+                            <div className="rounded-lg border bg-card/60 p-4">
+                              <ReactMarkdown>{ans.answer}</ReactMarkdown>
+                            </div>
+                            {Array.isArray(ans.citations) && ans.citations.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {ans.citations.slice(0, 6).map((u: string, j: number) => (
+                                  <SearchResult key={j} result={{ title: u, snippet: u, url: u }} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                          No model answer yet. Run Batch.
                         </div>
                       );
                     }
+                    // pxMode === 'search'
                     if (Array.isArray(searchBatchResults) && searchBatchResults.length > 0 && typeof searchBatchResults[0] === 'object' && 'query' in (searchBatchResults[0] as any)) {
                       const group = (searchBatchResults as any[])[idx];
                       return (
@@ -558,12 +565,19 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                         </div>
                       );
                     }
-                    const flat = searchBatchResults as any[];
+                    if (Array.isArray(searchBatchResults) && searchBatchResults.length > 0) {
+                      const flat = searchBatchResults as any[];
+                      return (
+                        <div className="grid grid-cols-2 gap-3">
+                          {flat.map((res: any, j: number) => (
+                            <SearchResult key={j} result={res} variant="card" />
+                          ))}
+                        </div>
+                      );
+                    }
                     return (
-                      <div className="grid grid-cols-2 gap-3">
-                        {flat.map((res: any, j: number) => (
-                          <SearchResult key={j} result={res} variant="card" />
-                        ))}
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        No search results yet. Run Batch.
                       </div>
                     );
                   })()}
