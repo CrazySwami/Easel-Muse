@@ -107,15 +107,17 @@ export const AIComparePrimitive = (props: Props) => {
     const valid = queries.map((x) => x.trim()).filter(Boolean);
     if (!valid.length) return;
     const statuses = valid.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
-    updateNodeData(props.id, { batchStatuses: statuses, selectedQueryIndex: 0, results: null });
+    // Keep a single accumulating array so prior indices retain their state
+    let currentStatuses = [...statuses];
+    updateNodeData(props.id, { batchStatuses: currentStatuses, selectedQueryIndex: 0, results: null });
     const accum: any[] = [];
     setIsBatchRunning(true);
     for (let i = 0; i < valid.length; i++) {
       const q = valid[i];
       try {
         // mark active item as running and select it
-        const nextRunning = [...statuses]; nextRunning[i] = 'running';
-        updateNodeData(props.id, { batchStatuses: nextRunning, selectedQueryIndex: i });
+        currentStatuses[i] = 'running';
+        updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i });
         const [o, g, a, s] = await Promise.allSettled([
           fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: openaiModel }) }).then(r=>r.json()),
           fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: geminiModel }) }).then(r=>r.json()),
@@ -129,11 +131,11 @@ export const AIComparePrimitive = (props: Props) => {
           anthropic: a.status==='fulfilled'?a.value:null,
           serp: s.status==='fulfilled'?s.value:null,
         };
-        const next = [...nextRunning]; next[i] = 'done';
-        updateNodeData(props.id, { batchStatuses: next, selectedQueryIndex: i, results: { groups: accum } });
+        currentStatuses[i] = 'done';
+        updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i, results: { groups: accum } });
       } catch {
-        const next = [...statuses]; next[i] = 'error';
-        updateNodeData(props.id, { batchStatuses: next, selectedQueryIndex: i });
+        currentStatuses[i] = 'error';
+        updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i });
       }
     }
     setIsBatchRunning(false);

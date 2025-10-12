@@ -16,12 +16,6 @@ import { Conversation, ConversationContent, ConversationScrollButton } from '@/c
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import {
   PromptInput,
-  PromptInputActionAddAttachments,
-  PromptInputActionMenu,
-  PromptInputActionMenuContent,
-  PromptInputActionMenuTrigger,
-  PromptInputAttachment,
-  PromptInputAttachments,
   PromptInputBody,
   PromptInputButton,
   PromptInputModelSelect,
@@ -132,7 +126,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-muted/20" onPointerDown={(e) => e.stopPropagation()}>
         <Conversation className="h-full">
-          <ConversationContent>
+          <ConversationContent className="px-2">
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
                 {/* Sources above message like the example */}
@@ -220,19 +214,10 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
       <PromptInput className="mt-2 rounded-2xl border bg-muted/20" onSubmit={handleSubmit}>
         <PromptInputBody>
-          <PromptInputAttachments>
-            {(attachment) => <PromptInputAttachment data={attachment} />}
-          </PromptInputAttachments>
           <PromptInputTextarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything…" />
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
-            <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger />
-              <PromptInputActionMenuContent>
-                <PromptInputActionAddAttachments />
-              </PromptInputActionMenuContent>
-            </PromptInputActionMenu>
             <PromptInputButton variant={search ? 'default' : 'ghost'} onClick={() => setSearch(!search)}>
               <GlobeIcon size={16} />
               <span>Search</span>
