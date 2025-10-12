@@ -52,6 +52,11 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
   const [locQuery, setLocQuery] = useState('');
   const [locOptions, setLocOptions] = useState<Array<{ canonical_name: string }>>([]);
 
+  // Progressive batch state for parity with other nodes
+  const [batchStatuses, setBatchStatuses] = useState<Array<'idle'|'running'|'done'|'error'>>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [batchGroups, setBatchGroups] = useState<any[]>([]);
+
   // Text-capable models for question generation (one-line bar)
   const filterTextModels = (ms: Record<string, any>) =>
     Object.fromEntries(
@@ -211,7 +216,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
     );
   };
 
-  const run = async () => {
+  const runSingle = async () => {
     try {
       setLoading(true);
       if (mode === 'single') {
@@ -225,17 +230,41 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
           const json = await res.json();
           updateNodeData(props.id, { results: [json], outputTexts: [], outputLinks: [], serpMode: mode, updatedAt: new Date().toISOString() });
         }
-      } else {
-        // batch, support both engines
-        const res = await fetch('/api/serpapi/batch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: engine === 'search' ? 'search' : 'aio', queries, location, hl, gl }) });
-        const arr = await res.json();
-        const flat = (arr ?? []).flatMap((row: any) => (row?.ok ? row?.data?.organic_results ?? [] : []));
-        const { texts, links } = deriveOutputs({ organic_results: flat });
-        updateNodeData(props.id, { results: flat, outputTexts: texts, outputLinks: links, serpMode: mode, updatedAt: new Date().toISOString() });
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const runBatch = async () => {
+    const valid = queries.map((x) => x.trim()).filter(Boolean);
+    if (!valid.length) return;
+    setLoading(true);
+    setBatchStatuses(valid.map(() => 'idle'));
+    setBatchGroups([]);
+    const groups: any[] = [];
+    for (let i = 0; i < valid.length; i++) {
+      const q = valid[i];
+      setSelectedIndex(i);
+      setBatchStatuses((prev) => { const next = [...prev]; next[i] = 'running'; return next; });
+      try {
+        if (engine === 'search') {
+          const res = await fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
+          const json = await res.json();
+          const results = json?.organic_results ?? [];
+          groups[i] = { query: q, results };
+        } else {
+          const res = await fetch('/api/serpapi/ai-overview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
+          const json = await res.json();
+          groups[i] = { query: q, results: [json] };
+        }
+        setBatchGroups([...groups]);
+        setBatchStatuses((prev) => { const next = [...prev]; next[i] = 'done'; return next; });
+      } catch {
+        setBatchStatuses((prev) => { const next = [...prev]; next[i] = 'error'; return next; });
+      }
+    }
+    setLoading(false);
   };
 
   return (
@@ -280,7 +309,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={noCache} onChange={(e)=> setNoCache(e.target.checked)} /> Force fresh
             </label>
-            <Button onClick={() => void run()} disabled={loading}><SearchIcon className="mr-2 h-4 w-4"/>Run</Button>
+            <Button onClick={() => void runSingle()} disabled={loading}><SearchIcon className="mr-2 h-4 w-4"/>Run</Button>
           </div>
         </div>
 
@@ -344,11 +373,11 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
               <QueryList
                 queries={queries}
                 onChange={setQueries}
-                selectedIndex={0}
-                onSelect={()=>{}}
+                selectedIndex={selectedIndex}
+                onSelect={setSelectedIndex}
                 onAdd={() => setQueries([...queries, ''])}
-                onRun={run}
-                statuses={[]}
+                onRun={runBatch}
+                statuses={batchStatuses}
                 running={loading}
               />
             </div>
@@ -357,12 +386,25 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
               {loading && (
                 <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2Icon className="h-4 w-4 animate-spin"/> Loading…</div>
               )}
-              {Array.isArray(props.data?.results) && props.data.results.length ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {(props.data.results as any[]).map((r, i) => (
-                    <SearchResult key={i} result={{ url: r?.link || r?.url, title: r?.title, snippet: r?.snippet }} variant="card" />
-                  ))}
-                </div>
+              {Array.isArray(batchGroups) && batchGroups.length ? (
+                (() => {
+                  const g = batchGroups[selectedIndex];
+                  if (!g) return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Select a query to see results.</div>;
+                  if (engine === 'search') {
+                    return (
+                      <div className="grid grid-cols-2 gap-3">
+                        {(g.results as any[]).map((r: any, i: number) => (
+                          <SearchResult key={i} result={{ url: r?.link || r?.url, title: r?.title, snippet: r?.snippet }} variant="card" />
+                        ))}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-3">
+                      {renderAio(g.results[0])}
+                    </div>
+                  );
+                })()
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Run a batch to see results.</div>
               )}
