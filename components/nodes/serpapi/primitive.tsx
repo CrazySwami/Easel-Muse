@@ -12,6 +12,8 @@ import { GlobeIcon, Loader2Icon, SearchIcon, XIcon, PlusIcon } from 'lucide-reac
 import { SearchResult } from '../perplexity/search-result';
 import { useGateway } from '@/providers/gateway/client';
 import { ModelSelector } from '../model-selector';
+import { GeneratorBar } from '@/components/ui/batch/generator-bar';
+import { QueryList } from '@/components/ui/batch/query-list';
 
 const ResultCard = ({ r }: { r: any }) => {
   const url: string | undefined = r?.link || r?.url;
@@ -311,21 +313,24 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
           <div className="grid h-full min-h-0 grid-cols-12 gap-3">
             {/* Left: queries editor */}
             <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs text-muted-foreground">Batch queries</div>
-                <Button variant="outline" size="sm" onClick={() => setQueries([...queries, ''])}><PlusIcon className="mr-1 h-3 w-3"/>Add</Button>
-              </div>
-              <div className="min-h-0 flex-1 space-y-2">
-                {queries.map((q, idx) => (
-                  <div className="flex items-center gap-2" key={idx}>
-                    <Input value={q} onChange={(e) => {
-                      const next = [...queries];
-                      next[idx] = e.target.value; setQueries(next);
-                    }} />
-                    <Button variant="ghost" size="icon" onClick={() => setQueries(queries.filter((_,i)=>i!==idx))}><XIcon className="h-4 w-4"/></Button>
-                  </div>
-                ))}
-              </div>
+              <GeneratorBar
+                model={''}
+                models={{}}
+                onModelChange={() => {}}
+                prompt={''}
+                onPromptChange={() => {}}
+                onGenerate={() => {}}
+                disabled
+              />
+              <div className="h-2"/>
+              <QueryList
+                queries={queries}
+                onChange={setQueries}
+                selectedIndex={0}
+                onSelect={()=>{}}
+                onAdd={() => setQueries([...queries, ''])}
+                onRun={run}
+              />
             </div>
             {/* Right: results */}
             <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
@@ -381,10 +386,10 @@ const BatchGenerateSection = ({ nodeId }: { nodeId: string }) => {
       const newQs: string[] = data?.questions ?? [];
       const merged = [...(typeof (window as any) !== 'undefined' ? [] : []), ...newQs];
       // Update local state and node data so UI reflects immediately
-      setQueries((prev) => {
-        const next = [...prev, ...newQs];
-        updateNodeData(nodeId, { serpMode: 'batch', queries: next, updatedAt: new Date().toISOString() });
-        return next;
+      updateNodeData(nodeId, (prev: any) => {
+        const current = Array.isArray(prev?.queries) ? prev.queries : [];
+        const next = [...current, ...newQs];
+        return { serpMode: 'batch', queries: next, updatedAt: new Date().toISOString() } as any;
       });
     } finally { setLoading(false); }
   };

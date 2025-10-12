@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { ComponentProps, HTMLAttributes } from 'react';
+import { SendIcon, PaperclipIcon } from 'lucide-react';
 
 export type PromptInputMessage = { text?: string; files?: File[] };
 
@@ -40,15 +41,24 @@ export const PromptInputButton = (props: ComponentProps<typeof Button>) => (
   <Button type="button" variant="ghost" size="default" {...props} />
 );
 
-export const PromptInputSubmit = ({ status, ...props }: ComponentProps<typeof Button> & { status?: 'submitted' | 'streaming' | 'ready' | 'error' }) => (
-  <Button type="submit" {...props} />
+export const PromptInputSubmit = ({ status, className, disabled, children, ...props }: ComponentProps<typeof Button> & { status?: 'submitted' | 'streaming' | 'ready' | 'error' }) => (
+  <Button
+    type="submit"
+    className={cn('rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-muted disabled:text-muted-foreground', className)}
+    disabled={disabled || status === 'streaming' || status === 'submitted'}
+    {...props}
+  >
+    {children ?? <SendIcon className="h-4 w-4" />}
+  </Button>
 );
 
 export const PromptInputActionMenu = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('inline-flex items-center', className)} {...props} />
 );
 export const PromptInputActionMenuTrigger = (props: ComponentProps<typeof Button>) => (
-  <Button type="button" variant="ghost" size="icon" {...props} />
+  <Button type="button" variant="ghost" size="icon" className={cn('text-muted-foreground', props.className)} {...props}>
+    <PaperclipIcon className="h-4 w-4" />
+  </Button>
 );
 export const PromptInputActionMenuContent = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('hidden', className)} {...props} />

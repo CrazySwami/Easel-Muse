@@ -189,6 +189,18 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
               <GlobeIcon size={16} />
               <span>Search</span>
             </PromptInputButton>
+            <PromptInputModelSelect onValueChange={(value) => updateNodeData(nodeId, { model: value })} value={model}>
+              <PromptInputModelSelectTrigger>
+                <PromptInputModelSelectValue />
+              </PromptInputModelSelectTrigger>
+              <PromptInputModelSelectContent>
+                {Object.keys(modelsMap).map((id) => (
+                  <PromptInputModelSelectItem key={id} value={id}>
+                    {(modelsMap as any)[id]?.label ?? id}
+                  </PromptInputModelSelectItem>
+                ))}
+              </PromptInputModelSelectContent>
+            </PromptInputModelSelect>
           </PromptInputTools>
           <PromptInputSubmit disabled={!draft && status !== 'streaming'} status={status as any} />
         </PromptInputToolbar>

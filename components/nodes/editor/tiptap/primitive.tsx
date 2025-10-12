@@ -12,7 +12,6 @@ import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
 import TextStyle from '@tiptap/extension-text-style';
-import FontFamily from '@tiptap/extension-font-family';
 import Color from '@tiptap/extension-color';
 import { Extension } from '@tiptap/core';
 import { Mark } from '@tiptap/core';
@@ -47,6 +46,7 @@ import {
 import { useLocks } from '@/providers/locks';
 import { useSelf } from '@liveblocks/react';
 import { nanoid } from 'nanoid';
+import { CommentSidebar } from './comment-sidebar';
 
 // A simple debounce function
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
@@ -56,6 +56,38 @@ function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
     timeout = setTimeout(() => func.apply(this, args), delay);
   };
 }
+
+// Custom FontFamily Extension
+const FontFamily = Extension.create({
+  name: 'fontFamily',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          fontFamily: {
+            default: null,
+            parseHTML: element => element.style.fontFamily?.replace(/['"]/g, '') || null,
+            renderHTML: attributes => {
+              if (!attributes.fontFamily) return {};
+              return { style: `font-family: ${attributes.fontFamily}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontFamily: (fontFamily: string) => ({ chain }: any) => {
+        return chain().setMark('textStyle', { fontFamily }).run();
+      },
+      unsetFontFamily: () => ({ chain }: any) => {
+        return chain().setMark('textStyle', { fontFamily: null }).removeEmptyTextStyle().run();
+      },
+    } as any;
+  },
+});
 
 // Custom FontSize Extension
 const FontSize = Extension.create({
@@ -85,7 +117,7 @@ const FontSize = Extension.create({
       unsetFontSize: () => ({ chain }: any) => {
         return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
       },
-    };
+    } as any;
   },
 });
 
@@ -155,7 +187,7 @@ const Comment = Mark.create({
       unsetComment: () => ({ commands }: any) => {
         return commands.unsetMark(this.name);
       },
-    };
+    } as any;
   },
 });
 
@@ -194,7 +226,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
 
     const me = useSelf();
     const [comments, setComments] = useState<Record<string, CommentThread>>({});
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
 
     // Set up Yjs Map for comments
@@ -218,9 +250,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             }),
             Typography,
             TextStyle,
-            FontFamily.configure({
-                types: ['textStyle'],
-            }),
+            FontFamily,
             FontSize,
             Color,
             Underline,
@@ -348,7 +378,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
         const userColor = userInfo?.color || '#fef08a';
 
         // Add comment mark to selected text
-        editor.chain().focus().setComment({
+        (editor.chain().focus() as any).setComment({
             commentId,
             userId: me.id as string,
             userName,
@@ -415,7 +445,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 if (node.marks) {
                     node.marks.forEach(mark => {
                         if (mark.type.name === 'comment' && mark.attrs.commentId === commentId) {
-                            editor.chain().focus().setTextSelection({ from: pos, to: pos + node.nodeSize }).unsetComment().run();
+                            (editor.chain().focus().setTextSelection({ from: pos, to: pos + node.nodeSize }) as any).unsetComment().run();
                         }
                     });
                 }
@@ -553,9 +583,34 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                     </button>
                 </BubbleMenu>
             )}
-            <div className="relative h-full w-full">
-                <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
-                {/* Comments UI removed for now */}
+            <div className="relative flex h-full w-full">
+                <div className={`flex-1 overflow-auto ${sidebarOpen ? 'mr-80' : ''}`}>
+                    <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
+                </div>
+                {sidebarOpen && (
+                    <CommentSidebar 
+                        comments={comments}
+                        activeCommentId={activeCommentId}
+                        onAddReply={addReply}
+                        onToggleResolve={toggleResolve}
+                        onDelete={deleteComment}
+                        onCommentClick={(commentId) => {
+                            setActiveCommentId(commentId);
+                            // Find and highlight the comment in the editor
+                            if (editor) {
+                                editor.state.doc.descendants((node, pos) => {
+                                    if (node.marks) {
+                                        node.marks.forEach(mark => {
+                                            if (mark.type.name === 'comment' && mark.attrs.commentId === commentId) {
+                                                editor.commands.setTextSelection({ from: pos, to: pos + node.nodeSize });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }}
+                    />
+                )}
             </div>
         </div>
     );
@@ -581,6 +636,125 @@ const HeadingDropdown = ({ editor }: { editor: any }) => {
           <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 3 }).run(); setOpen(false); }}>Heading 3</button>
           <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 4 }).run(); setOpen(false); }}>Heading 4</button>
           <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 5 }).run(); setOpen(false); }}>Heading 5</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const FontFamilyDropdown = ({ editor }: { editor: any }) => {
+  const [open, setOpen] = useState(false);
+  const fonts = [
+    { name: 'Default', value: null },
+    { name: 'Arial', value: 'Arial, sans-serif' },
+    { name: 'Times New Roman', value: '"Times New Roman", serif' },
+    { name: 'Georgia', value: 'Georgia, serif' },
+    { name: 'Courier New', value: '"Courier New", monospace' },
+    { name: 'Verdana', value: 'Verdana, sans-serif' },
+    { name: 'Helvetica', value: 'Helvetica, sans-serif' },
+    { name: 'System UI', value: 'system-ui, sans-serif' },
+  ];
+
+  const getCurrentFont = () => {
+    try {
+      const attrs = editor.getAttributes('textStyle');
+      const fontFamily = attrs.fontFamily;
+      return fonts.find(f => f.value === fontFamily)?.name || 'Default';
+    } catch {
+      return 'Default';
+    }
+  };
+
+  console.log('FontFamilyDropdown rendered', { editor: !!editor, open });
+
+  return (
+    <div className="relative inline-flex items-center">
+      <button
+        title="Font Family"
+        className="rounded-md p-2 hover:bg-cyan-700 bg-yellow-500"
+        onClick={() => {
+          console.log('Font family button clicked');
+          setOpen((o) => !o);
+        }}
+      >
+        <span className="text-xs text-black">{getCurrentFont()}</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 min-w-[180px] max-h-64 overflow-y-auto rounded-md border border-cyan-700 bg-cyan-600 text-white shadow">
+          {fonts.map(font => (
+            <button
+              key={font.name}
+              className="block w-full px-3 py-1 text-left hover:bg-cyan-700"
+              style={{ fontFamily: font.value || undefined }}
+              onClick={() => {
+                if (font.value) {
+                  (editor.chain().focus() as any).setFontFamily(font.value).run();
+                } else {
+                  (editor.chain().focus() as any).unsetFontFamily().run();
+                }
+                setOpen(false);
+              }}
+            >
+              {font.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const FontSizeDropdown = ({ editor }: { editor: any }) => {
+  const [open, setOpen] = useState(false);
+  const sizes = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px', '64px'];
+
+  const getCurrentSize = () => {
+    try {
+      const attrs = editor.getAttributes('textStyle');
+      return attrs.fontSize || 'Default';
+    } catch {
+      return 'Default';
+    }
+  };
+
+  console.log('FontSizeDropdown rendered', { editor: !!editor, open });
+
+  return (
+    <div className="relative inline-flex items-center">
+      <button
+        title="Font Size"
+        className="rounded-md p-2 hover:bg-cyan-700 bg-green-500"
+        onClick={() => {
+          console.log('Font size button clicked');
+          setOpen((o) => !o);
+        }}
+      >
+        <span className="text-xs text-black">{getCurrentSize()}</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] max-h-64 overflow-y-auto rounded-md border border-cyan-700 bg-cyan-600 text-white shadow">
+          <button
+            className="block w-full px-3 py-1 text-left hover:bg-cyan-700"
+            onClick={() => {
+              (editor.chain().focus() as any).unsetFontSize().run();
+              setOpen(false);
+            }}
+          >
+            Default
+          </button>
+          {sizes.map(size => (
+            <button
+              key={size}
+              className="block w-full px-3 py-1 text-left hover:bg-cyan-700"
+              style={{ fontSize: size }}
+              onClick={() => {
+                (editor.chain().focus() as any).setFontSize(size).run();
+                setOpen(false);
+              }}
+            >
+              {size}
+            </button>
+          ))}
         </div>
       )}
     </div>

@@ -95,6 +95,112 @@ Environment & config
 ## When to add Yjs
 - If you add rich‑text nodes or need offline edits/complex merges within a field, add Yjs for that specific content, not for the whole graph. Keep nodes/edges in Liveblocks Storage; mount Yjs only inside nodes that need Google‑Docs‑style editing.
 
+## Tiptap Collaborative Editor with Comments
+
+### Overview
+The Tiptap editor node integrates Liveblocks Yjs for real-time collaborative editing and commenting. Each editor instance maintains two Yjs structures:
+- **YXmlFragment** for the editor content (via `@liveblocks/react-tiptap`)
+- **YMap** for comment threads and replies
+
+### Comment Data Structure
+
+Comments are stored in a Yjs Map with the following structure:
+
+```typescript
+type CommentThread = {
+  id: string;                    // Unique nanoid
+  text: string;                  // Comment body
+  userId: string;                // From Liveblocks session
+  userName: string;              // From userInfo (name field)
+  userAvatar?: string;           // From userInfo (avatar field)
+  userColor?: string;            // From userInfo (color field)
+  timestamp: string;             // ISO 8601 timestamp
+  resolved: boolean;             // Resolution status
+  replies: Array<{
+    id: string;
+    text: string;
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+    timestamp: string;
+  }>;
+};
+```
+
+Comments are keyed by their `commentId` in the YMap: `doc.getMap('tiptap-comments-${nodeId}')`.
+
+### How Commenting Works
+
+1. **Creating a Comment**
+   - User selects text in the editor
+   - Clicks "Add Comment" button
+   - A custom `comment` mark is applied to the selected text with attributes: `commentId`, `userId`, `userName`, `userColor`
+   - A `CommentThread` object is stored in the Yjs Map
+   - The highlighted text is rendered with the user's color as background
+
+2. **Real-time Sync**
+   - The Yjs Map is observed for changes via `yCommentsMap.observe(observer)`
+   - Any changes to comments (add, edit, resolve, reply) sync to all connected clients automatically
+   - Comment highlights in the editor update via Tiptap's mark system
+
+3. **Comment Display**
+   - **Inline**: Commented text is highlighted with the commenter's color
+   - **Sidebar**: A fixed right panel lists all comment threads with replies
+   - Clicking highlighted text focuses the comment in the sidebar
+   - Clicking a comment in the sidebar selects the corresponding text
+
+4. **User Identification**
+   - Uses `useSelf()` hook from Liveblocks to get current user info
+   - User info (name, avatar, color) is set in `/api/liveblocks/auth/route.ts` from Supabase metadata
+   - Comments display the actual user name, not a generic "User #123"
+
+### Extensions Used
+
+#### Custom Extensions
+- **FontSize**: Adds pixel-based font sizing (8px-64px) via `textStyle` mark
+- **Comment**: Custom mark extension for comment highlights with user attribution
+
+#### Third-Party Extensions
+- `@tiptap/extension-text-style` - Required for font family and size
+- `@tiptap/extension-font-family` - Font family dropdown
+- `@tiptap/extension-color` - Text color support
+- `@tiptap/starter-kit` - Base editor features (bold, italic, lists, headings)
+- `@liveblocks/react-tiptap` - Yjs-based collaboration for editor content
+
+### Font Controls
+
+The toolbar includes:
+- **Font Family Dropdown**: Arial, Times New Roman, Georgia, Courier New, Verdana, Helvetica, System UI
+- **Font Size Dropdown**: Pixel-based sizes from 8px to 64px
+- Font changes are applied via `setFontFamily()` and `setFontSize()` commands
+
+### Performance Considerations
+
+- **Comment Storage**: Comments are lightweight JSON objects in Yjs Map; ~100-200 bytes per comment thread
+- **Sync Frequency**: Yjs handles conflict resolution automatically; updates propagate in <100ms
+- **Large Documents**: If a document has >100 comments, consider implementing pagination or filtering in the sidebar
+- **Memory**: Each comment thread + replies adds minimal overhead; YMap scales well to thousands of items
+
+### Extending the Commenting System
+
+To add new features:
+
+1. **Edit Comments**: Add an `editComment` function that updates the thread text in the YMap
+2. **Comment Notifications**: Subscribe to YMap changes and trigger notifications when a new reply is added
+3. **Comment Search**: Filter `Object.values(comments)` by text content or author
+4. **Comment Export**: Serialize the YMap to JSON for PDF/email reports
+5. **Rich Text Comments**: Replace the simple text input with a mini Tiptap editor for formatted comments
+
+### Troubleshooting Comments
+
+- **Comments not syncing**: Verify Liveblocks provider is connected and YMap is properly initialized
+- **User names showing as "Anonymous"**: Check that `/api/liveblocks/auth` is returning `userInfo` with `name` field
+- **Highlight colors not showing**: Ensure the `userColor` attribute is being passed and the CSS is not overriding the inline style
+- **Sidebar not opening**: Check that `sidebarOpen` state is toggling and the sidebar component is rendered conditionally
+- **Comments persist after deletion**: Ensure `yCommentsMap.delete(commentId)` is called and the editor marks are properly removed
+
 ## References
 - Liveblocks docs: <https://liveblocks.io/docs>
 - React Flow: <https://reactflow.dev/>
+- Tiptap docs: <https://tiptap.dev/>
+- Yjs docs: <https://docs.yjs.dev/>

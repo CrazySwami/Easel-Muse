@@ -685,6 +685,23 @@ This is useful for nodes that only produce data (e.g., a search/fetch node) and 
 
 ---
 
+### Batch generation and query lists (shared)
+
+- Reusable components live under `components/ui/batch/`:
+  - `GeneratorBar` – one-line generator with a model selector (left), prompt input (middle), and "Generate to Batch" button (right). Centralizes model selection rules across nodes.
+  - `QueryList` – hover-to-edit batch list. Rows show an index chip; edit (pencil) and delete (×) appear on hover. Clicking a row selects it; footer provides Add and Run Batch.
+
+- Usage pattern:
+  - Place `GeneratorBar` in the header row of Batch mode.
+  - Render `QueryList` inside a `min-h-0 overflow-auto nowheel nodrag nopan` container. Use `onSelect` to drive the right-side output.
+
+- Styling rules:
+  - Scroll containers: `min-h-0 overflow-auto` + `onPointerDown(e.stopPropagation())`.
+  - Hover affordances: hide actions by default; reveal with `group-hover:visible`.
+
+- Model filtering:
+  - For question generation, restrict to text-capable OpenAI models (see `filterTextModels` in AI Compare). Keep this list centralized.
+
 ## SerpApi node (Google Search + AI Overview)
 
 - Fill Frame pattern; defaults: `width: 1200`, `height: 800`, `resizable: false`.

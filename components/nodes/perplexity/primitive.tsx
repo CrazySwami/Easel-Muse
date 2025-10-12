@@ -15,6 +15,8 @@ import type { ComponentProps } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useGateway } from '@/providers/gateway/client';
 import { ModelSelector } from '../model-selector';
+import { GeneratorBar } from '@/components/ui/batch/generator-bar';
+import { QueryList } from '@/components/ui/batch/query-list';
 import { PerplexityIcon } from '@/lib/icons';
 
 // Helper copied from Text node to choose a sensible default
@@ -423,78 +425,26 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
 
           {inputMode === 'batch' && (
             <div className="flex h-full min-h-0 flex-col gap-3">
-              <div className="rounded-xl border bg-card/60 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">Generate questions</div>
-                  <ModelSelector value={model} options={filteredModels} className="w-[200px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
-                </div>
-                <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })} />
-                <div className="mt-2 flex items-center justify-end">
-                  <Button size="sm" onClick={async () => { await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate to Batch'}</Button>
-                </div>
-              </div>
+              <GeneratorBar
+                model={model}
+                models={filteredModels}
+                onModelChange={(v) => updateNodeData(props.id, { model: v })}
+                prompt={generatePrompt}
+                onPromptChange={(v) => updateNodeData(props.id, { generatePrompt: v })}
+                onGenerate={async () => { await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }}
+                generating={isLoading}
+              />
 
               <div className="grid h-full min-h-0 grid-cols-12 gap-3">
                 <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
-                  <div className="flex items-center justify-between">
-                    <div />
-                    <Button variant="ghost" size="sm" onClick={() => updateNodeData(props.id, { batchEdit: !batchEdit })}>
-                      {batchEdit ? 'Done' : 'Edit'}
-                    </Button>
-                  </div>
-                  <div className="min-h-0 flex-1 overflow-auto space-y-2">
-                    {queries.map((q: string, idx: number) => (
-                      batchEdit ? (
-                        <div key={idx} className="flex items-center gap-2">
-                          <Input
-                            value={q}
-                            onChange={(e) => updateQuery(idx, e.target.value)}
-                            onFocus={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
-                          />
-                          {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && (
-                            <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
-                          )}
-                          {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && (
-                            <CheckIcon className="h-4 w-4 text-green-600" />
-                          )}
-                          {Array.isArray(batchStatuses) && batchStatuses[idx] === 'error' && (
-                            <XIcon className="h-4 w-4 text-red-600" />
-                          )}
-                          <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}>
-                            <XIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <button
-                          key={idx}
-                          className="flex w-full items-center justify-between rounded-xl border bg-card/60 px-3 py-2 text-left text-sm hover:bg-muted/50"
-                          onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
-                        >
-                          <span className="block truncate">{q || `Query #${idx + 1}`}</span>
-                          <span className="ml-2 inline-flex items-center">
-                            {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && (
-                              <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
-                            )}
-                            {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && (
-                              <CheckIcon className="h-4 w-4 text-green-600" />
-                            )}
-                            {Array.isArray(batchStatuses) && batchStatuses[idx] === 'error' && (
-                              <XIcon className="h-4 w-4 text-red-600" />
-                            )}
-                          </span>
-                        </button>
-                      )
-                    ))}
-                  </div>
-                  <div className="flex shrink-0 items-center justify-between pt-2">
-                    <Button variant="outline" size="sm" onClick={addQuery}>
-                      <PlusIcon className="mr-2 h-4 w-4" /> Add Query
-                    </Button>
-                    <Button onClick={runBatchProgressive} disabled={isBatchSearchDisabled || isBatchRunning} size="sm" className="inline-flex items-center gap-2 text-white" style={{ backgroundColor: '#059669' }}>
-                      {isBatchRunning ? 'Running…' : 'Run Batch'}
-                      {!isBatchRunning && <PerplexityIcon className="h-4 w-4 text-white" />}
-                    </Button>
-                  </div>
+                  <QueryList
+                    queries={queries}
+                    onChange={(next)=> updateNodeData(props.id, { queries: next })}
+                    selectedIndex={(props.data as any)?.selectedQueryIndex ?? 0}
+                    onSelect={(i)=> updateNodeData(props.id, { selectedQueryIndex: i })}
+                    onAdd={addQuery}
+                    onRun={runBatchProgressive}
+                  />
                 </div>
                 <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   {(() => {

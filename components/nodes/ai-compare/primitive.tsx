@@ -5,6 +5,8 @@ import type { AICompareNodeProps } from './index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { GeneratorBar } from '@/components/ui/batch/generator-bar';
+import { QueryList } from '@/components/ui/batch/query-list';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
@@ -211,26 +213,26 @@ export const AIComparePrimitive = (props: Props) => {
           >
             {inputMode === 'batch' ? (
               <div className="flex h-full min-h-0 flex-col gap-2">
-                <div
-                  className="min-h-0 flex-1 overflow-auto space-y-2 nowheel nodrag nopan"
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  {queries.map((q, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <button
-                        className={`shrink-0 rounded border px-2 py-1 text-xs ${props.data.selectedQueryIndex===idx ? 'bg-primary/10 border-primary' : 'border-border'}`}
-                        onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
-                      >{idx+1}</button>
-                      <Input value={q} onChange={(e)=>updateQuery(idx, e.target.value)} />
-                      {Array.isArray(batchStatuses) && batchStatuses[idx] === 'running' && <span className="text-xs text-muted-foreground">…</span>}
-                      {Array.isArray(batchStatuses) && batchStatuses[idx] === 'done' && <CheckIcon className="h-4 w-4 text-emerald-600" />}
-                      <Button variant="ghost" size="icon" onClick={() => removeQuery(idx)}><XIcon className="h-4 w-4"/></Button>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between pt-2">
-                    <Button variant="outline" size="sm" onClick={addQuery}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
-                    <Button onClick={runBatch} disabled={isBatchRunning} size="sm">{isBatchRunning ? 'Running…' : 'Run Batch'}</Button>
-                  </div>
+                <div className="shrink-0">
+                  <GeneratorBar
+                    model={model}
+                    models={filterTextModels(models)}
+                    onModelChange={(v) => updateNodeData(props.id, { model: v })}
+                    prompt={generatePrompt}
+                    onPromptChange={(v) => updateNodeData(props.id, { generatePrompt: v })}
+                    onGenerate={handleGenerate}
+                    generating={isGenerating}
+                  />
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto nowheel nodrag nopan" onPointerDown={(e)=>e.stopPropagation()}>
+                  <QueryList
+                    queries={queries}
+                    onChange={(next) => updateNodeData(props.id, { queries: next })}
+                    selectedIndex={props.data.selectedQueryIndex ?? 0}
+                    onSelect={(i) => updateNodeData(props.id, { selectedQueryIndex: i })}
+                    onAdd={addQuery}
+                    onRun={runBatch}
+                  />
                 </div>
               </div>
             ) : (
