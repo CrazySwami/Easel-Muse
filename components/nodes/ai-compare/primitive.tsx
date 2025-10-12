@@ -12,6 +12,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon, PlusIcon, XIcon, Loader2Icon, SettingsIcon } from 'lucide-react';
 import { useGateway } from '@/providers/gateway/client';
+import { AIResponse } from '@/components/ui/kibo-ui/ai/response';
 import { ModelSelector } from '../model-selector';
 
 const DEFAULT_TEXT_MODEL_ID = 'gpt-5-mini';
@@ -515,14 +516,16 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
       onPointerDown={(e) => e.stopPropagation()}
     >
       {/* Collapsible answers with per-provider sources */}
-      {answers.openai && (
+            {answers.openai && (
         <div className="mb-3 rounded border bg-card/60 p-2">
           <details>
             <summary className="cursor-pointer list-none">
               <span className="inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</span>
               <span className="ml-2 text-muted-foreground">{preview(answers.openai)}</span>
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
+                  <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+                    <AIResponse>{answers.openai}</AIResponse>
+                  </div>
             <div className="mt-2">{renderGroup('Sources', <OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}</div>
           </details>
         </div>
@@ -534,7 +537,9 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
               <span className="inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</span>
               <span className="ml-2 text-muted-foreground">{preview(answers.gemini)}</span>
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
+                  <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+                    <AIResponse>{answers.gemini}</AIResponse>
+                  </div>
             <div className="mt-2">{renderGroup('Sources', <GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}</div>
           </details>
         </div>
@@ -546,7 +551,9 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
               <span className="inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</span>
               <span className="ml-2 text-muted-foreground">{preview(answers.anthropic)}</span>
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
+                  <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+                    <AIResponse>{answers.anthropic}</AIResponse>
+                  </div>
             <div className="mt-2">{renderGroup('Sources', <AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}</div>
           </details>
         </div>
@@ -610,7 +617,9 @@ function AnswersCollapsible({ payload }: { payload: any }) {
               <span className="inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</span>
               <span className="ml-2 text-muted-foreground">{preview(answers.openai)}</span>
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
+            <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+              <AIResponse>{answers.openai}</AIResponse>
+            </div>
             {renderGroup(<OpenAiIcon className="h-3.5 w-3.5" />, sources.openai, 'openai')}
           </details>
         </div>
@@ -622,7 +631,9 @@ function AnswersCollapsible({ payload }: { payload: any }) {
               <span className="inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</span>
               <span className="ml-2 text-muted-foreground">{preview(answers.gemini)}</span>
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
+            <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+              <AIResponse>{answers.gemini}</AIResponse>
+            </div>
             {renderGroup(<GeminiIcon className="h-3.5 w-3.5" />, sources.gemini, 'gemini')}
           </details>
         </div>
@@ -634,7 +645,9 @@ function AnswersCollapsible({ payload }: { payload: any }) {
               <span className="inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</span>
               <span className="ml-2 text-muted-foreground">{preview(answers.anthropic)}</span>
             </summary>
-            <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
+            <div className="mt-2 prose prose-sm dark:prose-invert max-w-none">
+              <AIResponse>{answers.anthropic}</AIResponse>
+            </div>
             {renderGroup(<AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic, 'anthropic')}
           </details>
         </div>

@@ -720,6 +720,52 @@ This is useful for nodes that only produce data (e.g., a search/fetch node) and 
 
 ---
 
+## Credit & Usage Tracking
+
+To ensure consistent usage tracking across all AI-powered nodes, a standardized client-server pattern is used. The client is responsible for triggering a re-fetch of the user's credit balance after an operation, while the server handles the actual deduction.
+
+### Client-Side Pattern
+
+1.  **Trigger on Completion**: Use the `onFinish` callback provided by the `useChat` hook (or a `.then()`/`finally()` block for direct `fetch` calls).
+2.  **Re-fetch Credits**: Inside the callback, call `mutate('credits')` from `swr` to revalidate the user's credit balance. A short delay (e.g., 5 seconds) can be used to ensure the backend has processed the deduction.
+3.  **Track Analytics**: Use the `useAnalytics` hook to send a tracking event with relevant details about the AI operation (e.g., node type, model ID, prompt length).
+
+**Example (`text/transform.tsx`):**
+
+```tsx
+import { useChat } from '@ai-sdk/react';
+import { mutate } from 'swr';
+import { toast } from 'sonner';
+import { useAnalytics } from '@/hooks/use-analytics';
+
+const analytics = useAnalytics();
+
+const { sendMessage } = useChat({
+  onFinish: () => {
+    toast.success('Text generated successfully');
+    // Re-fetch credits after 5 seconds to update the UI
+    setTimeout(() => mutate('credits'), 5000);
+  },
+});
+
+const handleGenerate = () => {
+  analytics.track('canvas', 'node', 'generate', { type: 'text', model: modelId });
+  sendMessage(...);
+};
+```
+
+### Server-Side Responsibility
+
+The API route that handles the AI operation (e.g., `/api/chat`) is responsible for:
+
+1.  Identifying the authenticated user from the request.
+2.  Calculating the cost of the operation based on the model and usage (e.g., input/output tokens).
+3.  Decrementing the user's credit balance in the database (e.g., Supabase).
+
+This ensures that credit deduction is secure and centralized on the backend.
+
+---
+
 ## Audio node UI and behavior
 
 The `audio` node follows the Fill Frame pattern and provides two primary inputs with matched styling and a taller content area:

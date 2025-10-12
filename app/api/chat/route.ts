@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: selectedModel,
-    messages: convertToModelMessages(normalizedMessages),
+    messages: convertToModelMessages(normalizedMessages.map((m: any) => ({ ...m, userId: undefined, userInfo: undefined }))),
     system: 'You are a helpful assistant that can answer questions and help with tasks',
     tools: undefined,
   });

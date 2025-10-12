@@ -35,6 +35,8 @@ import { Sources, SourcesContent, SourcesTrigger, Source } from '@/components/ai
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
 import { Loader } from '@/components/ai-elements/loader';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAnalytics } from '@/hooks/use-analytics';
+import { mutate } from 'swr';
 
 type ChatPanelProps = {
   nodeId: string;
@@ -51,10 +53,16 @@ type ChatPanelProps = {
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
   const { messages, status, sendMessage, regenerate, setMessages } = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
+    onFinish: () => {
+      setTimeout(() => mutate('credits'), 3000);
+    }
   });
   const me = useSelf();
   const others = useOthers();
   const updatePresence = useUpdateMyPresence();
+  const analytics = useAnalytics();
+  const myId = me?.id;
+  const myAvatar = (me?.info as any)?.avatar as string | undefined;
   const [input, setInput] = useState('');
   const getDefaultModel = (ms: Record<string, any>) => {
     if (ms['gpt-5-mini']) return 'gpt-5-mini';
@@ -126,6 +134,38 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, sessionId]);
+
+  useEffect(() => {
+    if (status === 'ready') {
+      const last = messages[messages.length - 1] as any;
+      if (last?.role === 'assistant') {
+        const imageParts = (last.parts ?? []).filter((p: any) => p.type === 'image' && p.image instanceof ArrayBuffer);
+        if (imageParts.length > 0) {
+          (async () => {
+            const uploadedParts = await Promise.all(
+              imageParts.map(async (p: any) => {
+                try {
+                  const r = await fetch('/api/upload', { method: 'POST', body: p.image });
+                  const { url } = await r.json();
+                  return { ...p, image: url };
+                } catch {
+                  return p; // Keep original on error
+                }
+              })
+            );
+            const nextMessages = messages.map((m: any) =>
+              m.id === last.id
+                ? { ...m, parts: m.parts.map((p: any) => uploadedParts.find((up) => up === p) || p) }
+                : m
+            );
+            const nextSessions = sessions.map((s) => (s.id === sessionId ? { ...s, messages: nextMessages as any } : s));
+            updateNodeData(nodeId, { sessions: nextSessions });
+          })();
+        }
+      }
+    }
+  }, [status, messages, sessions, sessionId, nodeId, updateNodeData]);
+
   useEffect(() => {
     const nowTyping = Boolean(input);
     updatePresence({ typing: nowTyping, draftText: input });
@@ -173,11 +213,13 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
     const textToSend = message.text;
     setInput('');
     setAttachedFiles([]);
+    const parts = [{ type: 'text', text: textToSend }];
     if (aiEnabled) {
-      await sendMessage({ text: textToSend }, { body: { modelId: selectedModel, webSearch: search, aiEnabled } });
+      analytics.track('canvas', 'node', 'chat', { model: selectedModel, webSearch: search });
+      await sendMessage({ parts, userId: myId, userInfo: me?.info } as any, { body: { modelId: selectedModel, webSearch: search, aiEnabled } });
     } else {
       // Append a local user message without triggering AI
-      const newMsg: any = { id: `u_${Date.now()}`, role: 'user', parts: [{ type: 'text', text: textToSend }] };
+      const newMsg: any = { id: `u_${Date.now()}`, role: 'user', userId: myId, userInfo: me?.info, parts };
       setMessages([...(messages as any[]), newMsg] as any);
     }
   };
@@ -201,9 +243,10 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
                 {message.parts?.map((part: any, i: number) => {
                   switch (part.type) {
                      case 'text':
+                       const isMe = Boolean((message as any).userId) && Boolean(myId) && ((message as any).userId === myId);
                        return (
-                        <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
-                           {message.role === 'user' ? (
+                        <Message key={`${message.id}-${i}`} from={isMe ? 'user' : 'assistant'} avatarUrl={isMe ? myAvatar : '/Easel-Logo.svg'}>
+                           {isMe ? (
                              <div className="text-white">{part.text}</div>
                            ) : (
                              <MessageContent>
@@ -215,7 +258,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
                     case 'file':
                     if (typeof part.mediaType === 'string' && part.mediaType.startsWith('image/') && typeof part.url === 'string') {
                        return (
-                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
+                         <Message key={`${message.id}-${i}`} from={((message as any).userId && myId && (message as any).userId === myId) ? 'user' : 'assistant'} avatarUrl={((message as any).userId && myId && (message as any).userId === myId) ? myAvatar : '/Easel-Logo.svg'}>
                            <div className="overflow-hidden rounded-xl border bg-card/60">
                              <img src={part.url} alt="Generated image" className="block max-h-[420px] w-auto" />
                            </div>
@@ -229,7 +272,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
                        const src = typeof part.image === 'string' ? part.image : (part.image ? URL.createObjectURL(new Blob([part.image as any])) : undefined);
                        if (!src) return null;
                        return (
-                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
+                         <Message key={`${message.id}-${i}`} from={((message as any).userId && myId && (message as any).userId === myId) ? 'user' : 'assistant'} avatarUrl={((message as any).userId && myId && (message as any).userId === myId) ? myAvatar : '/Easel-Logo.svg'}>
                            <div className="overflow-hidden rounded-xl border bg-card/60">
                              <img src={src} alt="Image" className="block max-h-[420px] w-auto" />
                            </div>
@@ -435,15 +478,16 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
   const aiEnabled = (props.data as any)?.aiEnabled ?? true;
 
   const ensureSession = () => {
-    if (active) return active.id;
-    const id = nanoid();
-    const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
-    updateNodeData(props.id, {
-      sessions: [...sessions, next],
-      activeSessionId: id,
-    });
-    return id;
-  };
+		const existing = sessions.find((s) => s.id === activeId) || sessions[0];
+		if (existing) return existing.id;
+		const deterministicId = `${props.id}-default`;
+		const next: ChatSession = { id: deterministicId, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+		updateNodeData(props.id, {
+			sessions: [...sessions, next],
+			activeSessionId: deterministicId,
+		});
+		return deterministicId;
+	};
 
   const setActiveSession = (id: string) => {
     updateNodeData(props.id, { activeSessionId: id });

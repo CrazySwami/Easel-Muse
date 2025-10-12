@@ -6,6 +6,8 @@ import { DefaultChatTransport } from 'ai';
 import { SearchResult } from '@/components/nodes/perplexity/search-result';
 import { AnthropicIcon, OpenAiIcon, GeminiIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon } from 'lucide-react';
+import { useAnalytics } from '@/hooks/use-analytics';
+import { mutate } from 'swr';
 
 const root = (u: string) => {
   try { return new URL(u).hostname.replace(/^www\./,''); } catch { return ''; }
@@ -15,6 +17,7 @@ export default function AICompareTestPage() {
   const [q, setQ] = useState('What is quantum computing? Cite sources.');
   const [out, setOut] = useState<any>({ openai: null, gemini: null, anthropic: null, serp: null });
   const [status, setStatus] = useState('');
+  const analytics = useAnalytics();
 
   // ---- Simple Chat Upload Test (OpenAI / Gemini / Anthropic) ----
   const [modelId, setModelId] = useState<string>('openai/gpt-4o');
@@ -22,6 +25,9 @@ export default function AICompareTestPage() {
   const [chatFiles, setChatFiles] = useState<Array<File>>([]);
   const { messages, status: chatStatus, sendMessage, setMessages } = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
+    onFinish: () => {
+      setTimeout(() => mutate('credits'), 3000);
+    }
   });
 
 
@@ -29,6 +35,7 @@ export default function AICompareTestPage() {
     const hasText = Boolean(chatText);
     const hasFiles = chatFiles.length > 0;
     if (!hasText && !hasFiles) return;
+    analytics.track('ai_compare', 'chat_upload_test', 'run', { modelId, promptLength: chatText.length, fileCount: chatFiles.length });
     const dt = new DataTransfer();
     chatFiles.slice(0,3).forEach((f)=> dt.items.add(f));
     await sendMessage({ text: chatText, files: dt.files }, { body: { modelId } });
@@ -38,6 +45,7 @@ export default function AICompareTestPage() {
 
   const runAll = async () => {
     setStatus('running…');
+    analytics.track('ai_compare', 'search_compare', 'run_all', { query: q });
     const [o, g, a, s] = await Promise.allSettled([
       fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
       fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }) }).then(r=>r.json()),
@@ -51,6 +59,7 @@ export default function AICompareTestPage() {
       serp: s.status==='fulfilled'?s.value:null,
     });
     setStatus('done');
+    setTimeout(() => mutate('credits'), 3000);
   };
 
   const domains = useMemo(() => {
