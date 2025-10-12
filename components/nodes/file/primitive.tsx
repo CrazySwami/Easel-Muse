@@ -102,8 +102,8 @@ export const FilePrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} className="w-80 min-h-[200px]">
-      <div className="p-4">
+    <NodeLayout id={id} data={{ ...data, width: data.width ?? 680, height: data.height ?? 520, resizable: false }} type={type} title={title}>
+      <div className="flex h-full min-h-0 flex-col p-4">
         {data.content ? (
           <FilePreview {...data.content} />
         ) : (

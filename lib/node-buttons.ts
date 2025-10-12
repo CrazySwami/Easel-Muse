@@ -88,6 +88,11 @@ export const nodeButtons = [
     id: 'file',
     label: 'File',
     icon: FileIcon,
+    data: {
+      width: 680,
+      height: 520,
+      resizable: false,
+    },
   },
   {
     id: 'tweet',

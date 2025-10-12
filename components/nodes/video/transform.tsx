@@ -100,6 +100,17 @@ export const VideoTransform = ({
   };
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    {
+      children: (
+        <ModelSelector
+          value={modelId}
+          options={videoModels}
+          key={`${id}-model-inline`}
+          className="w-[220px] rounded-full"
+          onChange={(value) => updateNodeData(id, { model: value })}
+        />
+      ),
+    },
     loading
       ? {
           tooltip: 'Generating...',
@@ -165,15 +176,7 @@ export const VideoTransform = ({
   return (
     <NodeLayout id={id} data={{ ...data, width: data.width ?? 1280, height: data.height ?? 720, resizable: false }} type={type} title={title} toolbar={toolbar}>
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
-        <div className="shrink-0 rounded-2xl border border-border bg-card/60 px-3 py-2">
-          <ModelSelector
-            value={modelId}
-            options={videoModels}
-            key={`${id}-model`}
-            className="w-[220px] rounded-full"
-            onChange={(value) => updateNodeData(id, { model: value })}
-          />
-        </div>
+        {/* Model selector moved to toolbar */}
 
         {loading && (
           <Skeleton className="flex flex-1 min-h-0 items-center justify-center rounded-2xl">
