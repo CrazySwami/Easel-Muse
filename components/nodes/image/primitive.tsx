@@ -68,41 +68,42 @@ export const ImagePrimitive = ({
 
   return (
     <NodeLayout id={id} data={{ ...data, width: data.width ?? 840, height: data.height ?? 560, resizable: false }} type={type} title={title}>
-      {isUploading && (
-        <Skeleton className="flex aspect-video w-full animate-pulse items-center justify-center">
-          <Loader2Icon
-            size={16}
-            className="size-4 animate-spin text-muted-foreground"
-          />
-        </Skeleton>
-      )}
-      {!isUploading && data.content && (
-        <Image
-          src={data.content.url}
-          alt="Image"
-          width={data.width ?? 1000}
-          height={data.height ?? 1000}
-          className="h-auto w-full"
-        />
-      )}
-      {!isUploading && !data.content && (
-        <Dropzone
-          maxSize={1024 * 1024 * 10}
-          minSize={1024}
-          maxFiles={1}
-          multiple={false}
-          accept={{
-            'image/*': [],
-          }}
-          onDrop={handleDrop}
-          src={files}
-          onError={console.error}
-          className="rounded-none border-none bg-transparent p-0 shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
-        >
-          <DropzoneEmptyState className="p-4" />
-          <DropzoneContent />
-        </Dropzone>
-      )}
+      <div className="flex h-full min-h-0 flex-col p-3">
+        {isUploading && (
+          <Skeleton className="flex h-full w-full animate-pulse items-center justify-center rounded-2xl">
+            <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
+          </Skeleton>
+        )}
+        {!isUploading && data.content && (
+          <div className="flex h-full min-h-0 items-center justify-center overflow-hidden rounded-2xl border bg-card">
+            <Image
+              src={data.content.url}
+              alt="Image"
+              width={data.width ?? 1600}
+              height={data.height ?? 1200}
+              className="h-full w-full object-contain"
+            />
+          </div>
+        )}
+        {!isUploading && !data.content && (
+          <div className="flex h-full min-h-0 items-center justify-center">
+            <Dropzone
+              maxSize={1024 * 1024 * 10}
+              minSize={1024}
+              maxFiles={1}
+              multiple={false}
+              accept={{ 'image/*': [] }}
+              onDrop={handleDrop}
+              src={files}
+              onError={console.error}
+              className="rounded-none border-none bg-transparent p-0 shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
+            >
+              <DropzoneEmptyState className="p-6" />
+              <DropzoneContent />
+            </Dropzone>
+          </div>
+        )}
+      </div>
     </NodeLayout>
   );
 };
