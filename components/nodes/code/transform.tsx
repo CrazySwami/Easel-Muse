@@ -1,5 +1,6 @@
 import { NodeLayout } from '@/components/nodes/layout';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAnalytics } from '@/hooks/use-analytics';
@@ -163,6 +164,17 @@ export const CodeTransform = ({
 
   const toolbar = useMemo(() => {
     const items: ComponentProps<typeof NodeLayout>['toolbar'] = [
+      {
+        children: (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Generate</span>
+            <Switch
+              checked={Boolean(data.generateMode)}
+              onCheckedChange={(v) => updateNodeData(id, { generateMode: v })}
+            />
+          </div>
+        ),
+      },
       {
         children: (
           <LanguageSelector
