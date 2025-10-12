@@ -418,20 +418,21 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
             )}
 
             {inputMode === 'batch' && (
-              <div className="grid h-full min-h-0 grid-cols-12 gap-3">
-                <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
-                  <div className="flex h-full min-h-0 flex-col gap-2">
-                    {/* Generate Questions (inline) */}
-                    <div className="rounded-xl border bg-card/60 p-3">
+              <div className="flex h-full min-h-0 flex-col gap-3">
+                {/* Full-width generate panel */}
+                <div className="rounded-xl border bg-card/60 p-3">
                       <div className="mb-2 flex items-center justify-between">
                         <div className="text-xs text-muted-foreground">Generate questions</div>
                         <ModelSelector value={model} options={filteredModels} className="w-[200px] rounded-full" onChange={(v)=> updateNodeData(props.id, { model: v })} />
                       </div>
                       <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e)=> updateNodeData(props.id, { generatePrompt: e.target.value })} />
                       <div className="mt-2 flex items-center justify-end">
-                        <Button size="sm" onClick={async ()=>{ await handleGenerate(); const existing = Array.isArray(queries) ? queries : []; updateNodeData(props.id, { inputMode: 'batch', queries: [...existing, ...((props.data as any)?.generatedQuestions ?? [])] }); }} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate to Batch'}</Button>
+                        <Button size="sm" onClick={async ()=>{ await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate to Batch'}</Button>
                       </div>
-                    </div>
+                </div>
+
+                <div className="grid h-full min-h-0 grid-cols-12 gap-3">
+                  <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                     <div className="flex items-center justify-between">
                       <div />
                       <Button variant="ghost" size="sm" onClick={() => updateNodeData(props.id, { batchEdit: !batchEdit })}>
@@ -493,8 +494,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                       </Button>
                     </div>
                   </div>
-                </div>
-                <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
+                  <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   {(() => {
                     const idx = (props.data as any)?.selectedQueryIndex ?? 0;
                     if (pxMode === 'model') {

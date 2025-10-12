@@ -356,7 +356,7 @@ const OPENAI_WHITELIST_LABELS = [
   'gpt-4.1', 'gpt-4.1 mini', 'gpt-4.1 nano', 'gpt-4o mini', 'gpt-5', 'gpt-5 mini', 'gpt-5 nano',
 ];
 const BatchGenerateSection = ({ nodeId }: { nodeId: string }) => {
-  const { updateNodeData, getNodes } = useReactFlow();
+  const { updateNodeData } = useReactFlow();
   const { models } = useGateway();
   const filteredModels = useMemo(() => Object.fromEntries(
     Object.entries(models).filter(([id, m]: any) => {
@@ -379,10 +379,13 @@ const BatchGenerateSection = ({ nodeId }: { nodeId: string }) => {
       });
       const data = await response.json();
       const newQs: string[] = data?.questions ?? [];
-      const existingNode = getNodes().find((n) => n.id === nodeId);
-      const existing = Array.isArray((existingNode?.data as any)?.queries) ? (existingNode?.data as any).queries : [];
-      const merged = [...existing, ...newQs];
-      updateNodeData(nodeId, { serpMode: 'batch', queries: merged, updatedAt: new Date().toISOString() });
+      const merged = [...(typeof (window as any) !== 'undefined' ? [] : []), ...newQs];
+      // Update local state and node data so UI reflects immediately
+      setQueries((prev) => {
+        const next = [...prev, ...newQs];
+        updateNodeData(nodeId, { serpMode: 'batch', queries: next, updatedAt: new Date().toISOString() });
+        return next;
+      });
     } finally { setLoading(false); }
   };
   return (
