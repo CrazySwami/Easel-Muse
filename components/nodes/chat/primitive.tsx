@@ -51,10 +51,11 @@ type ChatPanelProps = {
 };
 
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
+  const initialMessages = (sessions.find((s) => s.id === sessionId)?.messages ?? []) as any[];
   const { messages, status, sendMessage, regenerate } = useChat();
   const [draft, setDraft] = useState('');
 
-  // Sync to node data for this session
+  // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
     // Auto-name by first user message
     const firstUser = messages.find((m) => m.role === 'user');
@@ -62,10 +63,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       const text = (firstUser.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
       renameSessionIfNeeded(sessionId, text);
     }
-    const nextSessions = (sessions ?? []).map((s) =>
-      s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
-    );
-    updateNodeData(nodeId, { sessions: nextSessions });
+    if ((messages ?? []).length > 0) {
+      const nextSessions = (sessions ?? []).map((s) =>
+        s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
+      );
+      updateNodeData(nodeId, { sessions: nextSessions });
+    }
 
     // Push latest assistant text
     const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
@@ -101,9 +104,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   // Prefer session messages; if streaming has begun and new tokens are arriving, merge by id
   const displayMessages = ((): any[] => {
     const saved = (session?.messages ?? []) as any[];
-    if (saved.length === 0) return messages as any[];
-    const liveById = new Map((messages as any[]).map((m) => [m.id, m]));
-    return saved.map((m) => liveById.get(m.id) ?? m);
+    const liveArr = (messages as any[]) ?? [];
+    if (saved.length === 0) return liveArr;
+    // If we switched sessions, prefer saved history unless live has same ids
+    const liveById = new Map(liveArr.map((m) => [m.id, m]));
+    const merged = saved.map((m) => liveById.get(m.id) ?? m);
+    return merged;
   })();
 
   return (

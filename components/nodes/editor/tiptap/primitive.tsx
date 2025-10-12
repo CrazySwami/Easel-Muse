@@ -48,6 +48,7 @@ import { useSelf } from '@liveblocks/react';
 import { nanoid } from 'nanoid';
 import { CommentSidebar } from './comment-sidebar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 
 // A simple debounce function
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
@@ -641,12 +642,12 @@ const HeadingDropdown = ({ editor }: { editor: any }) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="z-[100] min-w-[160px] bg-cyan-600 text-white border border-cyan-700"
         sideOffset={6} align="start">
-        <DropdownMenuItem onSelect={() => editor.chain().focus().setParagraph().run()} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().clearNodes().setParagraph().run()} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().clearNodes().setHeading({ level: 1 }).run()} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().clearNodes().setHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().clearNodes().setHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().clearNodes().setHeading({ level: 4 }).run()} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().clearNodes().setHeading({ level: 5 }).run()} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -715,9 +716,24 @@ const FontSizeDropdown = ({ editor }: { editor: any }) => {
           <span className="text-xs">{getCurrentSize()}</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="z-[100] min-w-[140px] max-h-64 overflow-y-auto bg-cyan-600 text-white border border-cyan-700"
+      <DropdownMenuContent className="z-[100] min-w-[140px] max-h-72 overflow-y-auto bg-cyan-600 text-white border border-cyan-700 p-1"
         sideOffset={6} align="start">
         <DropdownMenuItem onSelect={() => (editor.chain().focus() as any).unsetFontSize().run()}>Default</DropdownMenuItem>
+        <div className="px-2 py-1">
+          <div className="text-[10px] opacity-80 mb-1">Custom (px)</div>
+          <Input
+            className="h-7 text-xs bg-white/10 border-white/20 placeholder:text-white/60"
+            placeholder="e.g., 17px"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const v = (e.target as HTMLInputElement).value.trim();
+                if (/^\d+px$/.test(v)) {
+                  (editor.chain().focus() as any).setFontSize(v).run();
+                }
+              }
+            }}
+          />
+        </div>
         {sizes.map(size => (
           <DropdownMenuItem key={size}
             onSelect={() => (editor.chain().focus() as any).setFontSize(size).run()}

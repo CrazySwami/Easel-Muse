@@ -251,27 +251,11 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
         <div className="shrink-0 rounded-2xl border bg-card/60 p-2">
           <div className="flex flex-wrap items-center gap-2">
             {/* Single/Batch moved to toolbar to match AI Compare */}
-            {/* Engine toggle for Single/Batch */}
-            <div className="inline-flex rounded-full border p-0.5">
+            {/* Engine toggle */}
+            <div className="inline-flex rounded-md border p-0.5">
               <Button size="sm" variant={engine==='search'?'default':'ghost'} className="rounded-full" onClick={() => setEngine('search')}>Search</Button>
               <Button size="sm" variant={engine==='aio'?'default':'ghost'} className="rounded-full" onClick={() => setEngine('aio')}>AI Overview</Button>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => {
-                setEngine('aio');
-                setQuery('drop shipping');
-                setLocation('United States');
-                setHl('en');
-                setGl('US');
-                setGoogleDomain('google.com');
-                setNoCache(true);
-              }}
-            >
-              Prefill AIO test
-            </Button>
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Enter query…" className="w-[320px]" />
             <div className="relative">
               <Input

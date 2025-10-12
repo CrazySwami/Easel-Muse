@@ -349,40 +349,31 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}
-        <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-card/60 p-2">
+        <div className="shrink-0 flex items-center gap-2 rounded-2xl border bg-card/60 p-2">
+          {/* Mode selector: Search vs Perplexity model */}
           <div className="inline-flex rounded-md border p-0.5">
-            <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
-            <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
+            <Button
+              variant={pxMode === 'search' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => updateNodeData(props.id, { pxMode: 'search' })}
+            >
+              Search API
+            </Button>
+            <Button
+              variant={pxMode === 'model' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => updateNodeData(props.id, { pxMode: 'model' })}
+            >
+              Perplexity model
+            </Button>
           </div>
-          {/* Mode within Single/Batch: Search API vs Perplexity model */}
-          {inputMode !== 'generate' ? (
-            <div className="flex items-center gap-2">
-              <div className="inline-flex rounded-md border p-0.5">
-                <Button
-                  variant={pxMode === 'search' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => updateNodeData(props.id, { pxMode: 'search' })}
-                >
-                  Search API
-                </Button>
-                <Button
-                  variant={pxMode === 'model' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => updateNodeData(props.id, { pxMode: 'model' })}
-                >
-                  Perplexity model
-                </Button>
-              </div>
-              {pxMode === 'model' && (
-                <ModelSelector
-                  value={(props.data as any)?.pxModel ?? Object.keys(pxModels)[0]}
-                  options={pxModels}
-                  className="w-[220px] rounded-full"
-                  onChange={(v) => updateNodeData(props.id, { pxModel: v })}
-                />
-              )}
-            </div>
-          ) : null}
+          <ModelSelector
+            value={(props.data as any)?.pxModel ?? Object.keys(pxModels)[0]}
+            options={pxModels}
+            className="w-[220px] rounded-full"
+            onChange={(v) => updateNodeData(props.id, { pxModel: v })}
+            disabled={pxMode !== 'model'}
+          />
         </div>
 
         {/* Dynamic Input Area */}
