@@ -543,7 +543,19 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 <button title="Blockquote" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('blockquote') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
                   <QuoteIcon className="h-4 w-4" />
                 </button>
-                <ColorDropdown editor={editor} />
+                <button title="Highlight" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('highlight') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleHighlight().run()}>
+                  <span className="text-[10px]">HL</span>
+                </button>
+                <button title="Color" className={`rounded-md p-2 hover:bg-cyan-700`} onClick={() => {
+                  const color = window.prompt('Color (e.g. #ff0 or red)');
+                  if (!color) return;
+                  editor.chain().focus().setColor(color).run();
+                }}>
+                  <span className="text-[10px]">A</span>
+                </button>
+                <button title="Clear color" className={`rounded-md p-2 hover:bg-cyan-700`} onClick={() => editor.chain().focus().unsetColor().run()}>
+                  <span className="text-[10px]">Ac</span>
+                </button>
                 <span className="mx-1 h-4 w-px bg-white/30" />
                 <button title="Align left" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'left' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
                   <AlignLeftIcon className="h-4 w-4" />

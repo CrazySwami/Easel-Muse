@@ -20,9 +20,10 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <div className="text-xs text-muted-foreground">Batch queries</div>
-      <div className="space-y-2 pb-16 min-h-0 overflow-auto">
-        {queries.map((q, idx) => (
-          <div key={idx} className="group flex items-center gap-2">
+      <div className="relative min-h-0 flex-1 overflow-auto">
+        <div className="space-y-2 pb-20">
+          {queries.map((q, idx) => (
+            <div key={idx} className="group flex items-center gap-2">
             <button
               onClick={() => onSelect?.(idx)}
               className={`shrink-0 rounded border px-2 py-1 text-xs ${selectedIndex===idx ? 'bg-primary/10 border-primary' : 'border-border'}`}
@@ -44,13 +45,14 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
               >{q || `Query #${idx+1}`}</div>
             )}
             <Button variant="ghost" size="icon" className="invisible group-hover:visible" onClick={() => onChange(queries.filter((_,i)=>i!==idx))}><XIcon className="h-4 w-4"/></Button>
+            </div>
+          ))}
+        </div>
+        <div className={`${stickyFooter ? 'sticky bottom-2' : ''}`}>
+          <div className="flex w-full items-center justify-end gap-2 pr-2">
+            <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
+            <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
           </div>
-        ))}
-      </div>
-      <div className={`${stickyFooter ? 'absolute bottom-2 right-2' : ''}`}>
-        <div className="flex w-full items-center justify-end gap-2 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 rounded-md px-2 py-2 border">
-          <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
-          <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
         </div>
       </div>
     </div>
