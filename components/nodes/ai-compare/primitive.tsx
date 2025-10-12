@@ -166,7 +166,10 @@ export const AIComparePrimitive = (props: Props) => {
         {/* Content */}
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3">
           {/* Left: sources in single mode; generator + questions list in batch mode */}
-          <div className="col-span-4 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
+          <div
+            className="col-span-4 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2 nowheel nodrag nopan"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             {inputMode === 'batch' ? (
               <div className="flex h-full min-h-0 flex-col gap-2">
                 {/* Generate questions (copied pattern from Perplexity) */}
@@ -181,7 +184,10 @@ export const AIComparePrimitive = (props: Props) => {
                   </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-auto space-y-2">
+                <div
+                  className="min-h-0 flex-1 overflow-auto space-y-2 nowheel nodrag nopan"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   {queries.map((q, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <button
@@ -358,14 +364,19 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
   if (!payload) return <div className="text-xs text-muted-foreground">Run to see sources.</div>;
 
   const answers = extractAnswersByProvider(payload);
+  const preview = (t?: string) => (t ? (t.length > 120 ? t.slice(0, 120) + '…' : t) : '');
   return (
-    <div className="text-xs h-full min-h-0 overflow-auto pr-1">
+    <div
+      className="text-xs h-full min-h-0 overflow-auto pr-1 nowheel nodrag nopan"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {/* Collapsible answers with per-provider sources */}
       {answers.openai && (
         <div className="mb-3 rounded border bg-card/60 p-2">
           <details>
             <summary className="cursor-pointer list-none">
               <span className="inline-flex items-center gap-2 font-semibold"><OpenAiIcon className="h-3.5 w-3.5"/> ChatGPT</span>
+              <span className="ml-2 text-muted-foreground">{preview(answers.openai)}</span>
             </summary>
             <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.openai}</p>
             <div className="mt-2">{renderGroup('Sources', <OpenAiIcon className="h-3.5 w-3.5" />, sources.openai)}</div>
@@ -377,6 +388,7 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
           <details>
             <summary className="cursor-pointer list-none">
               <span className="inline-flex items-center gap-2 font-semibold"><GeminiIcon className="h-3.5 w-3.5"/> Gemini</span>
+              <span className="ml-2 text-muted-foreground">{preview(answers.gemini)}</span>
             </summary>
             <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.gemini}</p>
             <div className="mt-2">{renderGroup('Sources', <GeminiIcon className="h-3.5 w-3.5" />, sources.gemini)}</div>
@@ -388,6 +400,7 @@ function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex:
           <details>
             <summary className="cursor-pointer list-none">
               <span className="inline-flex items-center gap-2 font-semibold"><AnthropicIcon className="h-3.5 w-3.5"/> Claude</span>
+              <span className="ml-2 text-muted-foreground">{preview(answers.anthropic)}</span>
             </summary>
             <p className="mt-2 whitespace-pre-wrap text-foreground/90">{answers.anthropic}</p>
             <div className="mt-2">{renderGroup('Sources', <AnthropicIcon className="h-3.5 w-3.5" />, sources.anthropic)}</div>
@@ -444,9 +457,18 @@ function extractAnswersByProvider(payload: any): { openai?: string; gemini?: str
   const out: { openai?: string; gemini?: string; anthropic?: string } = {};
   try {
     const o = payload?.openai;
+    // Responses API common shapes
+    const outputArray = Array.isArray(o?.output) ? o.output : [];
+    const msg = outputArray.find((x: any) => x?.type === 'message' && Array.isArray(x?.content));
+    const msgText = msg ? msg.content.map((p: any) => p?.text).filter(Boolean).join('\n') : '';
     out.openai = o?.output_text
+      || msgText
       || (Array.isArray(o?.content) ? o.content.map((c: any) => c?.text).filter(Boolean).join('\n') : '')
-      || (o?.choices?.[0]?.message?.content ? (Array.isArray(o.choices[0].message.content) ? o.choices[0].message.content.map((p: any) => p?.text).filter(Boolean).join('\n') : String(o.choices[0].message.content)) : '');
+      || (o?.choices?.[0]?.message?.content
+            ? (Array.isArray(o.choices[0].message.content)
+                ? o.choices[0].message.content.map((p: any) => p?.text).filter(Boolean).join('\n')
+                : String(o.choices[0].message.content))
+            : '');
     if (out.openai) out.openai = String(out.openai).slice(0, 1200);
   } catch {}
   try {
