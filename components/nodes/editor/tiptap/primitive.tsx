@@ -4,6 +4,13 @@ import { NodeLayout } from '@/components/nodes/layout';
 import { useYDoc } from '@/providers/liveblocks';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import { useLiveblocksExtension } from '@liveblocks/react-tiptap';
+import Blockquote from '@tiptap/extension-blockquote';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
+import ListItem from '@tiptap/extension-list-item';
+import Heading from '@tiptap/extension-heading';
+import TextStyle from '@tiptap/extension-text-style';
+import FontFamily from '@tiptap/extension-font-family';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
@@ -78,6 +85,13 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             Link.configure({
                 openOnClick: false,
             }),
+            Heading.configure({ levels: [1,2,3,4,5,6] }),
+            BulletList,
+            OrderedList,
+            ListItem,
+            Blockquote,
+            TextStyle,
+            FontFamily,
             // Liveblocks extension registered after mount to avoid setState during render
         ],
         editorProps: {
