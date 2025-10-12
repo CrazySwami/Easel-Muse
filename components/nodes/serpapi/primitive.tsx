@@ -262,10 +262,10 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
                 value={location}
                 onChange={(e) => { setLocation(e.target.value); setLocQuery(e.target.value); }}
                 placeholder="Search locations…"
-                className="w-[300px]"
+                className="w-[220px]"
               />
               {!!locOptions.length && (
-                <div className="absolute z-50 mt-1 max-h-56 w-[300px] overflow-auto rounded-md border bg-card shadow">
+                <div className="absolute z-50 mt-1 max-h-56 w-[220px] overflow-auto rounded-md border bg-card shadow">
                   {locOptions.map((l, i) => (
                     <button key={i} className="block w-full truncate px-2 py-1 text-left hover:bg-accent" onClick={() => { setLocation(l.canonical_name); setLocOptions([]); setLocQuery(''); }}>
                       {l.canonical_name}

@@ -601,7 +601,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             )}
             <div className="relative flex h-full w-full">
                 <div className={`relative flex-1 overflow-auto ${sidebarOpen ? 'mr-80' : ''}`}>
-                    <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
+                <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
                 </div>
                 {sidebarOpen && (
                     <CommentSidebar 
@@ -638,17 +638,17 @@ const HeadingDropdown = ({ editor }: { editor: any }) => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button title="Heading" className="rounded-md p-2 hover:bg-cyan-700">
-          <span className="text-xs">Text</span>
-        </button>
+        <span className="text-xs">Text</span>
+      </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="z-[100] min-w-[160px] bg-cyan-600 text-white border border-cyan-700"
         sideOffset={6} align="start">
-        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setParagraph().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setParagraph().run(); }} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 1 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 1 }).run(); }} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 2 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 2 }).run(); }} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 3 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 3 }).run(); }} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 4 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 4 }).run(); }} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 5 }).run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 5 }).run(); }} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setParagraph().setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setParagraph().setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run(); }} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 1 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 1 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run(); }} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 2 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 2 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run(); }} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 3 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 3 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run(); }} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 4 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 4 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run(); }} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => editor.chain().focus().liftListItem('listItem').setHeading({ level: 5 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run()} onSelect={(e) => { e.preventDefault(); editor.chain().focus().liftListItem('listItem').setHeading({ level: 5 }).setMark('textStyle',{ fontSize: null }).removeEmptyTextStyle().run(); }} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
