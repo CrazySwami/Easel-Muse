@@ -59,12 +59,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             Link.configure({
                 openOnClick: false,
             }),
-            // Type definitions may vary across versions; cast to any to satisfy TS
-            // Type definitions may vary across versions; cast to any to satisfy TS
-            useLiveblocksExtension({
-                fragment: yXmlFragment,
-                allowExtension: ({ editor }: { editor: any }) => editor.isEditable,
-            } as any),
+            // Liveblocks extension registered after mount to avoid setState during render
         ],
         editorProps: {
             attributes: {
@@ -87,6 +82,18 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             ],
         },
     });
+
+    useEffect(() => {
+        if (!editor) return;
+        // Defer Liveblocks extension until editor is ready
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (editor as any)?.registerPlugin?.(useLiveblocksExtension({
+            fragment: yXmlFragment,
+            allowExtension: ({ editor }: { editor: any }) => editor.isEditable,
+          } as any));
+        } catch {}
+    }, [editor, yXmlFragment]);
 
     useEffect(() => {
         if (!editor) return;
@@ -135,7 +142,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
 
     return (
         <div className="lb-tiptap flex h-full w-full flex-col">
-            {editor && (
+            {editor && editor.view && !editor.isDestroyed && (
                 <div className="sticky top-0 z-10 bg-primary text-primary-foreground [&_svg]:text-primary-foreground [&_button]:text-primary-foreground">
                     <Toolbar
                       editor={editor}
@@ -146,7 +153,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                       [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!h-8 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!px-2 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:shrink-0"/>
                 </div>
             )}
-            {editor && (
+            {editor && editor.view && !editor.isDestroyed && (
                 <BubbleMenu
                     editor={editor}
                     tippyOptions={{ duration: 100 }}
@@ -186,7 +193,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             )}
             <div className="relative h-full w-full">
                 <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
-                {editor && (
+                {editor && editor.view && !editor.isDestroyed && (
                     <>
                         <FloatingThreads threads={threads ?? []} editor={editor} className="lb-threads" />
                         <FloatingComposer editor={editor} className="lb-composer w-[350px]" />
