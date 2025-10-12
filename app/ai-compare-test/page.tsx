@@ -101,23 +101,22 @@ export default function AICompareTestPage() {
   // Optionally resolve Vertex redirectors before render of pills/table
   // For simplicity in this test page, do a best-effort pass when status becomes 'done'
   // (Avoids modifying upstream extraction logic.)
-  const [resolved, setResolved] = useState<string[] | null>(null);
+  const [resolved, setResolved] = useState<Map<string, string> | null>(null);
   useMemo(() => {
     const doResolve = async () => {
-      const work = await Promise.all(
+      const entries = await Promise.all(
         urls.map(async (u) => {
           try {
             const host = new URL(u).hostname;
-            if (!host.endsWith('vertexaisearch.cloud.google.com')) return u;
+            if (!host.endsWith('vertexaisearch.cloud.google.com')) return [u, u] as const;
             const r = await fetch(`/api/resolve?url=${encodeURIComponent(u)}`).then((r) => r.json());
-            return r.finalUrl || u;
+            return [u, r.finalUrl || u] as const;
           } catch {
-            return u;
+            return [u, u] as const;
           }
         })
       );
-      // Keep order stable
-      setResolved(work);
+      setResolved(new Map(entries));
     };
     if (status === 'done' && urls.length) doResolve();
   }, [status, urls]);
@@ -155,13 +154,16 @@ export default function AICompareTestPage() {
 
       <section className="grid gap-3">
         <h2 className="font-semibold">Citations</h2>
-        {(resolved ?? urls).length === 0 ? (
+        {((resolved ? urls : []).length === 0 && urls.length === 0) ? (
           <p className="text-sm text-muted-foreground">Run All to see extracted citations.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {(resolved ?? urls).map((u) => (
-              <SearchResult key={u} result={{ url: u, title: u, snippet: '' }} />
-            ))}
+            {urls.map((u) => {
+              const finalUrl = resolved?.get(u) ?? u;
+              return (
+                <SearchResult key={u} result={{ url: finalUrl, title: finalUrl, snippet: '' }} />
+              );
+            })}
           </div>
         )}
       </section>
@@ -182,8 +184,8 @@ export default function AICompareTestPage() {
             </thead>
             <tbody>
               {coverage.map((row) => {
-                const finalUrl = (resolved ?? urls).find((u) => root(u) === row.domain) || row.url;
-                const domain = root(finalUrl) || row.domain;
+                const finalUrl = resolved?.get(row.url) ?? row.url;
+                const domain = root(finalUrl) || root(row.url) || row.domain;
                 return (
                 <tr key={row.url}>
                   <td className="border-b p-2">
