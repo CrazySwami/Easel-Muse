@@ -766,9 +766,34 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                   <button
                     className="rounded-full bg-emerald-600 px-3 py-1 text-xs text-white shadow hover:bg-emerald-700"
                     onClick={() => {
-                      const x0 = 100; const y0 = 100; const dx = 260; const dy = 200;
-                      const types = Object.keys(nodeTypes);
-                      types.forEach((t, i) => addNode(t, { position: { x: x0 + (i % 4) * dx, y: y0 + Math.floor(i / 4) * dy } }));
+                      try {
+                        // Prefer palette defaults for dimensions if available
+                        // eslint-disable-next-line @typescript-eslint/no-var-requires
+                        const { nodeButtons } = require('@/lib/node-buttons');
+                        const defaults = new Map<string, { width?: number; height?: number }>();
+                        for (const b of nodeButtons as any[]) defaults.set(b.id, (b as any).data ?? {});
+
+                        const ids = (nodeButtons as any[]).map((b: any) => b.id);
+                        const startX = 100; let currentY = 100; const GAP = 80;
+                        for (let i = 0; i < ids.length; i += 2) {
+                          const idA = ids[i];
+                          const idB = ids[i + 1];
+                          const a = defaults.get(idA) ?? {}; const b = idB ? (defaults.get(idB) ?? {}) : {};
+                          const wA = (a.width ?? 680) + GAP; const hA = (a.height ?? 520) + GAP;
+                          const wB = (b.width ?? 680) + GAP; const hB = (b.height ?? 520) + GAP;
+
+                          const xA = startX; const yA = currentY;
+                          const xB = startX + wA; const yB = currentY;
+                          addNode(idA, { position: { x: xA, y: yA } });
+                          if (idB) addNode(idB, { position: { x: xB, y: yB } });
+                          currentY += Math.max(hA, hB);
+                        }
+                      } catch {
+                        // Fallback: simple spaced grid
+                        const x0 = 100; const y0 = 100; const dx = 680 + 80; const dy = 520 + 80;
+                        const types = Object.keys(nodeTypes);
+                        types.forEach((t, i) => addNode(t, { position: { x: x0 + (i % 2) * dx, y: y0 + Math.floor(i / 2) * dy } }));
+                      }
                     }}
                   >
                     Add all nodes
