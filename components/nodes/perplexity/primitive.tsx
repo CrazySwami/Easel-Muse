@@ -133,7 +133,14 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
   const isGenerateDisabled = isLoading || !generatePrompt.trim();
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
-    { children: <div className="px-2 text-xs text-muted-foreground">Perplexity Search</div> },
+    {
+      children: (
+        <div className="inline-flex rounded-md border p-0.5">
+          <Button size="sm" variant={inputMode==='single'?'default':'ghost'} onClick={()=> setInputMode('single')}>Single</Button>
+          <Button size="sm" variant={inputMode==='batch'?'default':'ghost'} onClick={()=> setInputMode('batch')}>Batch</Button>
+        </div>
+      ),
+    },
   ];
 
   // --- UI Handlers ---

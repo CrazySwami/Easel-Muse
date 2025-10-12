@@ -16,7 +16,7 @@ export const Message = ({ className, from, children, ...props }: MessageProps) =
     )}
     {...props}
   >
-    <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm', from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground')}>
+    <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm', from === 'user' ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground')}>
       {children}
     </div>
   </div>

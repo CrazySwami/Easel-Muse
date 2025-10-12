@@ -81,7 +81,19 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
     return () => clearTimeout(t);
   }, [locQuery]);
 
-  const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] | undefined = undefined;
+  const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    {
+      children: (
+        <div className="inline-flex rounded-md border p-0.5">
+          {(['single','batch'] as const).map((m) => (
+            <Button key={m} size="sm" variant={mode===m? 'default':'ghost'} onClick={() => setMode(m)}>
+              {m === 'single' ? 'Single' : 'Batch'}
+            </Button>
+          ))}
+        </div>
+      ),
+    },
+  ];
 
   const deriveOutputs = (json: any) => {
     const organic = json?.organic_results ?? json?.results ?? [];
@@ -238,13 +250,7 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
         {/* Header Controls */}
         <div className="shrink-0 rounded-2xl border bg-card/60 p-2">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-full border p-0.5">
-              {(['single','batch'] as const).map((m) => (
-                <Button key={m} size="sm" variant={mode===m? 'default':'ghost'} className="rounded-full" onClick={() => setMode(m)}>
-                  {m === 'single' ? 'Single' : 'Batch'}
-                </Button>
-              ))}
-            </div>
+            {/* Single/Batch moved to toolbar to match AI Compare */}
             {/* Engine toggle for Single/Batch */}
             <div className="inline-flex rounded-full border p-0.5">
               <Button size="sm" variant={engine==='search'?'default':'ghost'} className="rounded-full" onClick={() => setEngine('search')}>Search</Button>

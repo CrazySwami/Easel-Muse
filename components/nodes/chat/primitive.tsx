@@ -76,16 +76,19 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       const sess = (sessions ?? []).find((s) => s.id === sessionId);
       const isDefault = sess && (sess.name === 'New chat' || !sess.name);
       const firstUser = messages.find((m) => m.role === 'user');
-      if (isDefault && firstUser) {
-        fetch('/api/chat/title', {
+    if (isDefault && firstUser) {
+      const abort = new AbortController();
+      fetch('/api/chat/title', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user: (firstUser.parts ?? []).map((p: any)=>p.text||'').join(' '), assistant: text }),
-        }).then(async (r)=>{
+        body: JSON.stringify({ user: (firstUser.parts ?? []).map((p: any)=>p.text||'').join(' '), assistant: text }),
+        signal: abort.signal,
+      }).then(async (r)=>{
           const { title } = await r.json().catch(()=>({ title: 'New chat' }));
           const next = (sessions ?? []).map((s)=> s.id === sessionId ? { ...s, name: title } : s);
           updateNodeData(nodeId, { sessions: next });
         }).catch(()=>{});
+      return () => abort.abort();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,6 +175,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
           const text = (msg?.text as string) ?? draft;
           const files = (msg as any)?.files;
           if (isSending || !(text || files?.length)) return;
+          // Ensure there is at least one session registered before first send
+          if (!sessions.length) {
+            const id = nanoid();
+            const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+            updateNodeData(nodeId, { sessions: [next], activeSessionId: id });
+          }
           setIsSending(true);
           await sendMessage({ text: text || 'Sent with attachments', files }, { body: { model, webSearch } });
           setIsSending(false);

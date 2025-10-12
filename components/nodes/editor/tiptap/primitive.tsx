@@ -47,6 +47,7 @@ import { useLocks } from '@/providers/locks';
 import { useSelf } from '@liveblocks/react';
 import { nanoid } from 'nanoid';
 import { CommentSidebar } from './comment-sidebar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 // A simple debounce function
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {
@@ -631,32 +632,27 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
 
 // small dropdown helpers
 const HeadingDropdown = ({ editor }: { editor: any }) => {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="relative inline-flex items-center">
-      <button
-        title="Heading"
-        className="rounded-md p-2 hover:bg-cyan-700"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="text-xs">Text</span>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 min-w-[140px] rounded-md border border-cyan-700 bg-cyan-600 text-white shadow">
-          <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('paragraph') ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().setParagraph().run(); setOpen(false); }}>Paragraph</button>
-          <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 1 }).run(); setOpen(false); }}>Heading 1</button>
-          <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 2 }).run(); setOpen(false); }}>Heading 2</button>
-          <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 3 }).run(); setOpen(false); }}>Heading 3</button>
-          <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 4 }).run(); setOpen(false); }}>Heading 4</button>
-          <button className={`block w-full px-3 py-1 text-left hover:bg-cyan-700 ${editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700' : ''}`} onClick={() => { editor.chain().focus().toggleHeading({ level: 5 }).run(); setOpen(false); }}>Heading 5</button>
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button title="Heading" className="rounded-md p-2 hover:bg-cyan-700">
+          <span className="text-xs">Text</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="z-[100] min-w-[160px] bg-cyan-600 text-white border border-cyan-700"
+        sideOffset={6} align="start">
+        <DropdownMenuItem onSelect={() => editor.chain().focus().setParagraph().run()} className={editor.isActive('paragraph') ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Paragraph</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 1</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 2</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 3</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} className={editor.isActive('heading', { level: 4 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 4</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => editor.chain().focus().toggleHeading({ level: 5 }).run()} className={editor.isActive('heading', { level: 5 }) ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Heading 5</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
 const FontFamilyDropdown = ({ editor }: { editor: any }) => {
-  const [open, setOpen] = useState(false);
   const fonts = [
     { name: 'Default', value: null },
     { name: 'Arial', value: 'Arial, sans-serif' },
@@ -679,42 +675,28 @@ const FontFamilyDropdown = ({ editor }: { editor: any }) => {
   };
 
   return (
-    <div className="relative inline-flex items-center">
-      <button
-        title="Font Family"
-        className="rounded-md p-2 hover:bg-cyan-700"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="text-xs">{getCurrentFont()}</span>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 min-w-[180px] max-h-64 overflow-y-auto rounded-md border border-cyan-700 bg-cyan-600 text-white shadow"
-             onMouseLeave={() => setOpen(false)}>
-          {fonts.map(font => (
-            <button
-              key={font.name}
-              className="block w-full px-3 py-1 text-left hover:bg-cyan-700"
-              style={{ fontFamily: font.value || undefined }}
-              onClick={() => {
-                if (font.value) {
-                  (editor.chain().focus() as any).setFontFamily(font.value).run();
-                } else {
-                  (editor.chain().focus() as any).unsetFontFamily().run();
-                }
-                setOpen(false);
-              }}
-            >
-              {font.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button title="Font Family" className="rounded-md p-2 hover:bg-cyan-700">
+          <span className="text-xs">{getCurrentFont()}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="z-[100] min-w-[200px] max-h-64 overflow-y-auto bg-cyan-600 text-white border border-cyan-700"
+        sideOffset={6} align="start">
+        <DropdownMenuItem onSelect={() => (editor.chain().focus() as any).unsetFontFamily().run()} className={!editor.getAttributes('textStyle')?.fontFamily ? 'bg-cyan-700 focus:bg-cyan-700' : ''}>Default</DropdownMenuItem>
+        {fonts.slice(1).map(font => (
+          <DropdownMenuItem key={font.name}
+            onSelect={() => (editor.chain().focus() as any).setFontFamily(font.value as string).run()}
+            style={{ fontFamily: font.value || undefined }}>
+            {font.name}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
 const FontSizeDropdown = ({ editor }: { editor: any }) => {
-  const [open, setOpen] = useState(false);
   const sizes = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px', '64px'];
 
   const getCurrentSize = () => {
@@ -727,42 +709,24 @@ const FontSizeDropdown = ({ editor }: { editor: any }) => {
   };
 
   return (
-    <div className="relative inline-flex items-center">
-      <button
-        title="Font Size"
-        className="rounded-md p-2 hover:bg-cyan-700"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="text-xs">{getCurrentSize()}</span>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 min-w-[120px] max-h-64 overflow-y-auto rounded-md border border-cyan-700 bg-cyan-600 text-white shadow"
-             onMouseLeave={() => setOpen(false)}>
-          <button
-            className="block w-full px-3 py-1 text-left hover:bg-cyan-700"
-            onClick={() => {
-              (editor.chain().focus() as any).unsetFontSize().run();
-              setOpen(false);
-            }}
-          >
-            Default
-          </button>
-          {sizes.map(size => (
-            <button
-              key={size}
-              className="block w-full px-3 py-1 text-left hover:bg-cyan-700"
-              style={{ fontSize: size }}
-              onClick={() => {
-                (editor.chain().focus() as any).setFontSize(size).run();
-                setOpen(false);
-              }}
-            >
-              {size}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button title="Font Size" className="rounded-md p-2 hover:bg-cyan-700">
+          <span className="text-xs">{getCurrentSize()}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="z-[100] min-w-[140px] max-h-64 overflow-y-auto bg-cyan-600 text-white border border-cyan-700"
+        sideOffset={6} align="start">
+        <DropdownMenuItem onSelect={() => (editor.chain().focus() as any).unsetFontSize().run()}>Default</DropdownMenuItem>
+        {sizes.map(size => (
+          <DropdownMenuItem key={size}
+            onSelect={() => (editor.chain().focus() as any).setFontSize(size).run()}
+            style={{ fontSize: size }}>
+            {size}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
