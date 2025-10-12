@@ -11,6 +11,11 @@ import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import Typography from '@tiptap/extension-typography';
+import TextStyle from '@tiptap/extension-text-style';
+import FontFamily from '@tiptap/extension-font-family';
+import Color from '@tiptap/extension-color';
+import { Extension } from '@tiptap/core';
+import { Mark } from '@tiptap/core';
 // Lists and blockquote are provided by StarterKit
 import { useEffect, type ComponentProps, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
@@ -35,9 +40,13 @@ import {
   AlignLeftIcon,
   AlignCenterIcon,
   AlignRightIcon,
+  MessageSquareIcon,
+  MessageSquarePlusIcon,
+  TypeIcon,
 } from 'lucide-react';
-// Comments removed for now
 import { useLocks } from '@/providers/locks';
+import { useSelf } from '@liveblocks/react';
+import { nanoid } from 'nanoid';
 
 // A simple debounce function
 function debounce<T extends (...args: any[]) => any>(func: T, delay: number) {

@@ -184,7 +184,21 @@ export const AIComparePrimitive = (props: Props) => {
               <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
             </div>
           ) : (
-            <div />
+            <div className="flex w-full items-center gap-2">
+              <ModelSelector
+                value={model}
+                options={filterTextModels(models)}
+                className="w-[220px] rounded-full"
+                onChange={(v) => updateNodeData(props.id, { model: v })}
+              />
+              <Input
+                className="flex-1"
+                placeholder="Describe questions to generate…"
+                value={generatePrompt}
+                onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })}
+              />
+              <Button onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
+            </div>
           )}
         </div>
 
@@ -197,18 +211,6 @@ export const AIComparePrimitive = (props: Props) => {
           >
             {inputMode === 'batch' ? (
               <div className="flex h-full min-h-0 flex-col gap-2">
-                {/* Generate questions (copied pattern from Perplexity) */}
-                <div className="shrink-0 rounded-xl border bg-card/60 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Generate questions</div>
-                    <ModelSelector value={model} options={filterTextModels(models)} className="w-[220px] rounded-full" onChange={(v) => updateNodeData(props.id, { model: v })} />
-                  </div>
-                  <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })} />
-                  <div className="mt-2">
-                    <Button className="w-full" size="sm" onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
-                  </div>
-                </div>
-
                 <div
                   className="min-h-0 flex-1 overflow-auto space-y-2 nowheel nodrag nopan"
                   onPointerDown={(e) => e.stopPropagation()}
