@@ -190,20 +190,20 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
         const text = data?.choices?.[0]?.message?.content ?? '';
         const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
         // ensure single-mode storage only
-        updateNodeData(props.id, { modelSingleAnswer: text, modelSingleCitations: citations, searchSingleResults: [] });
+        updateNodeData(props.id, (prev: any) => ({ modelSingleAnswer: text, modelSingleCitations: citations, searchSingleResults: [], searchBatchResults: prev?.searchBatchResults ?? [] }));
         return;
       }
       if (inputMode === 'single') {
         const single = data.results ?? [];
         const out = deriveOutputsFromResults(single);
-        updateNodeData(props.id, { searchSingleResults: single });
+        updateNodeData(props.id, (prev: any) => ({ searchSingleResults: single, searchBatchResults: prev?.searchBatchResults ?? [] }));
       } else {
         // batch: backend returns grouped [{ query, results: [...] }] or flat
         const grouped = Array.isArray(data) ? data : [];
         const nextResults = grouped.length ? grouped : (data.results ?? []);
         const statuses = Array.from({ length: (grouped.length || validQueries.length) }, () => 'done');
         const out = deriveOutputsFromResults(nextResults as any);
-        updateNodeData(props.id, { searchBatchResults: nextResults, batchStatuses: statuses as any });
+        updateNodeData(props.id, (prev: any) => ({ searchBatchResults: nextResults, batchStatuses: statuses as any, searchSingleResults: prev?.searchSingleResults ?? [] }));
       }
     } catch (error) {
       console.error('Perplexity API request failed:', error);

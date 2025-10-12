@@ -225,11 +225,11 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
           const json = await res.json();
           const { texts, links } = deriveOutputs(json);
           // store single-mode only
-          updateNodeData(props.id, { results: json?.organic_results ?? [], serpMode: mode, updatedAt: new Date().toISOString() });
+          updateNodeData(props.id, (prev: any) => ({ results: json?.organic_results ?? [], serpMode: mode, updatedAt: new Date().toISOString(), batchGroups: prev?.batchGroups ?? [] }));
         } else {
           const res = await fetch('/api/serpapi/ai-overview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q: query, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
           const json = await res.json();
-          updateNodeData(props.id, { results: [json], serpMode: mode, updatedAt: new Date().toISOString() });
+          updateNodeData(props.id, (prev: any) => ({ results: [json], serpMode: mode, updatedAt: new Date().toISOString(), batchGroups: prev?.batchGroups ?? [] }));
         }
       }
     } finally {

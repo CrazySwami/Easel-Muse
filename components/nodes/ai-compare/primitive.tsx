@@ -101,7 +101,7 @@ export const AIComparePrimitive = (props: Props) => {
         fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
         fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
       ]);
-      updateNodeData(props.id, {
+      updateNodeData(props.id, (prev: any) => ({
         results: {
           single: {
             openai: o.status==='fulfilled'?o.value:null,
@@ -109,8 +109,9 @@ export const AIComparePrimitive = (props: Props) => {
             anthropic: a.status==='fulfilled'?a.value:null,
             serp: s.status==='fulfilled'?s.value:null,
           },
+          groups: Array.isArray(prev?.results?.groups) ? prev.results.groups : [],
         },
-      });
+      }));
     } finally {
       setIsRunning(false);
     }
@@ -122,7 +123,11 @@ export const AIComparePrimitive = (props: Props) => {
     const statuses = valid.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
     // Keep a single accumulating array so prior indices retain their state
     let currentStatuses = [...statuses];
-    updateNodeData(props.id, { batchStatuses: currentStatuses, selectedQueryIndex: 0, results: null });
+    updateNodeData(props.id, (prev: any) => ({
+      batchStatuses: currentStatuses,
+      selectedQueryIndex: 0,
+      results: { single: prev?.results?.single ?? null, groups: [] },
+    }));
     const accum: any[] = [];
     setIsBatchRunning(true);
     for (let i = 0; i < valid.length; i++) {
@@ -145,7 +150,11 @@ export const AIComparePrimitive = (props: Props) => {
           serp: s,
         };
         currentStatuses[i] = 'done';
-        updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i, results: { groups: accum } });
+        updateNodeData(props.id, (prev: any) => ({
+          batchStatuses: [...currentStatuses],
+          selectedQueryIndex: i,
+          results: { single: prev?.results?.single ?? null, groups: accum },
+        }));
       } catch {
         currentStatuses[i] = 'error';
         updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i });
