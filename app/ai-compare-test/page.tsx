@@ -84,18 +84,34 @@ export default function AICompareTestPage() {
     const tGemini = JSON.stringify(out.gemini ?? {});
     const tAnthropic = JSON.stringify(out.anthropic ?? {});
     const tSerp = JSON.stringify(out.serp ?? {});
-    return urls.map((u) => {
-      const row: any = {
-        domain: root(u) || u,
-        url: u,
-        openai: tOpenAI.includes(u),
-        gemini: tGemini.includes(u),
-        anthropic: tAnthropic.includes(u),
-        serp: tSerp.includes(u),
-      };
-      row.total = [row.openai, row.gemini, row.anthropic, row.serp].filter(Boolean).length;
-      return row;
-    }).sort((a,b) => b.total - a.total || a.domain.localeCompare(b.domain));
+
+    // Aggregate by domain (collapse multiple URLs from the same site)
+    const map = new Map<string, { domain: string; url: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }>();
+
+    for (const u of urls) {
+      const domain = root(u) || u;
+      const openai = tOpenAI.includes(u);
+      const gemini = tGemini.includes(u);
+      const anthropic = tAnthropic.includes(u);
+      const serp = tSerp.includes(u);
+      const existing = map.get(domain);
+      if (existing) {
+        existing.openai = existing.openai || openai;
+        existing.gemini = existing.gemini || gemini;
+        existing.anthropic = existing.anthropic || anthropic;
+        existing.serp = existing.serp || serp;
+        // keep the first representative URL
+      } else {
+        map.set(domain, { domain, url: u, openai, gemini, anthropic, serp, total: 0 });
+      }
+    }
+
+    const rows = Array.from(map.values()).map((r) => ({
+      ...r,
+      total: [r.openai, r.gemini, r.anthropic, r.serp].filter(Boolean).length,
+    }));
+    rows.sort((a, b) => b.total - a.total || a.domain.localeCompare(b.domain));
+    return rows;
   }, [urls, out]);
 
   // Optionally resolve Vertex redirectors before render of pills/table
@@ -206,9 +222,9 @@ export default function AICompareTestPage() {
             <tbody>
               {coverage.map((row) => {
                 const finalUrl = resolved?.get(row.url) ?? row.url;
-                const domain = root(finalUrl) || root(row.url) || row.domain;
+                const domain = row.domain;
                 return (
-                <tr key={row.url}>
+                <tr key={row.domain}>
                   <td className="border-b p-2">
                     <a href={finalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:underline">
                       <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`} width={14} height={14} className="rounded" alt="favicon" />
