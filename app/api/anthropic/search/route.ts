@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         tools: [{ type: 'web_search' }],
-        tool_choice: 'auto',
+        tool_choice: { type: 'auto' },
         messages: [
           { role: 'user', content: q }
         ],

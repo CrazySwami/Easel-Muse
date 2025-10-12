@@ -4,6 +4,7 @@ import {
   ContextMenuItem,
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
+  ContextMenuCheckboxItem,
   ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubContent,
@@ -403,33 +404,53 @@ export const NodeLayout = ({
           )}
           <ContextMenuSub>
             <ContextMenuSubTrigger>
-            <LockIcon size={12} className="mr-2" />
+              <LockIcon size={12} className="mr-2" />
               <span>Lock edits</span>
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
-              <ContextMenuRadioGroup
-                value={lock?.level ?? 'unlocked'}
-                onValueChange={(value) => {
-                  if (value === 'unlocked') {
-                    release(id);
+              <ContextMenuCheckboxItem
+                checked={isPositionLocked}
+                onCheckedChange={(checked) => {
+                  const nextPos = Boolean(checked);
+                  const nextEdit = isContentLocked;
+                  if (nextPos && nextEdit) {
+                    acquire(id, 'manual-lock', 'full');
+                  } else if (nextPos && !nextEdit) {
+                    acquire(id, 'manual-lock', 'move');
+                  } else if (!nextPos && nextEdit) {
+                    acquire(id, 'manual-lock', 'edit');
                   } else {
-                    acquire(id, 'manual-lock', value as 'move' | 'edit');
+                    release(id);
                   }
                 }}
               >
-                <ContextMenuRadioItem value="unlocked">
-            <UnlockIcon size={12} className="mr-2" />
-                  <span>Unlocked</span>
-                </ContextMenuRadioItem>
-                <ContextMenuRadioItem value="move">
-                  <LockIcon size={12} className="mr-2" />
-                  <span>Lock position</span>
-                </ContextMenuRadioItem>
-                <ContextMenuRadioItem value="edit">
-                  <LockIcon size={12} className="mr-2" />
-                  <span>Lock edits</span>
-                </ContextMenuRadioItem>
-              </ContextMenuRadioGroup>
+                <LockIcon size={12} className="mr-2" />
+                <span>Lock position</span>
+              </ContextMenuCheckboxItem>
+              <ContextMenuCheckboxItem
+                checked={isContentLocked}
+                onCheckedChange={(checked) => {
+                  const nextEdit = Boolean(checked);
+                  const nextPos = isPositionLocked;
+                  if (nextPos && nextEdit) {
+                    acquire(id, 'manual-lock', 'full');
+                  } else if (nextPos && !nextEdit) {
+                    acquire(id, 'manual-lock', 'move');
+                  } else if (!nextPos && nextEdit) {
+                    acquire(id, 'manual-lock', 'edit');
+                  } else {
+                    release(id);
+                  }
+                }}
+              >
+                <LockIcon size={12} className="mr-2" />
+                <span>Lock edits</span>
+              </ContextMenuCheckboxItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => release(id)}>
+                <UnlockIcon size={12} className="mr-2" />
+                <span>Unlock</span>
+              </ContextMenuItem>
             </ContextMenuSubContent>
           </ContextMenuSub>
           <ContextMenuItem onClick={() => duplicateNode(id)}>
