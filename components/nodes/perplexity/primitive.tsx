@@ -338,7 +338,6 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
             <div className="inline-flex rounded-md border p-0.5">
                 <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
                 <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
-                <Button variant={inputMode === 'generate' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('generate')}>Generate</Button>
             </div>
             {/* Mode within Single/Batch: Search API vs Perplexity model */}
             {inputMode !== 'generate' && (
@@ -372,7 +371,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
         </div>
 
         {/* Dynamic Input Area */}
-        <div className={inputMode === 'generate' ? 'flex-1 min-h-0' : 'shrink-0'}>
+        <div className={'shrink-0'}>
           {inputMode === 'single' && (
             <div className="flex items-center gap-2">
               <Input value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your search query..."/>
@@ -387,47 +386,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
               </Button>
             </div>
           )}
-          {/* Batch inputs are rendered in the left pane of the split view below */}
-          {inputMode === 'generate' && (
-            <div className="h-full rounded-2xl border bg-card/60 p-3 flex flex-col gap-2 min-h-0">
-                <Textarea placeholder="Describe the kind of questions you want to generate..." value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })}/>
-                <div className="flex justify-between items-center">
-                    <ModelSelector
-                      value={model}
-                      options={filteredModels}
-                      className="w-[240px] rounded-full"
-                      onChange={(v) => updateNodeData(props.id, { model: v })}
-                    />
-                    <Button onClick={handleGenerate} disabled={isGenerateDisabled}>{isLoading ? 'Generating...' : 'Generate Queries'}</Button>
-                </div>
-                {/* Editable generated list */}
-                <div className="rounded-xl border bg-card/60 p-3 flex-1 min-h-0 flex flex-col">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">Generated questions</p>
-                  <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-auto">
-                    {generatedQuestions.map((q: string, i: number) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Input value={q} onChange={(e) => updateGeneratedQuestion(i, e.target.value)} />
-                        <Button variant="ghost" size="icon" onClick={() => removeGeneratedQuestion(i)}>
-                          <XIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <Button variant="outline" size="sm" onClick={addGeneratedQuestion}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
-                    <Button
-                      size="sm"
-                      onClick={sendToBatch}
-                      disabled={!generatedQuestions.length}
-                      className="text-white"
-                      style={{ backgroundColor: '#32B9C6' }}
-                    >
-                      Send to Batch
-                    </Button>
-                  </div>
-                </div>
-            </div>
-          )}
+          {/* Generate questions panel is shown at top of Batch */}
         </div>
 
         {/* Results View (hidden in Generate tab) */}
@@ -462,6 +421,31 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
               <div className="grid h-full min-h-0 grid-cols-12 gap-3">
                 <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   <div className="flex h-full min-h-0 flex-col gap-2">
+                    {/* Generate Questions (inline) */}
+                    <div className="rounded-xl border bg-card/60 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground">Generate questions</div>
+                        <ModelSelector value={model} options={filteredModels} className="w-[200px] rounded-full" onChange={(v)=> updateNodeData(props.id, { model: v })} />
+                      </div>
+                      <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e)=> updateNodeData(props.id, { generatePrompt: e.target.value })} />
+                      <div className="mt-2 flex items-center justify-between">
+                        <Button variant="outline" size="sm" onClick={addGeneratedQuestion}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={handleGenerate} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate'}</Button>
+                          <Button size="sm" className="text-white" style={{ backgroundColor: '#32B9C6' }} onClick={sendToBatch} disabled={!generatedQuestions.length}>Send to Batch</Button>
+                        </div>
+                      </div>
+                      {!!generatedQuestions.length && (
+                        <div className="mt-2 max-h-48 overflow-auto space-y-2">
+                          {generatedQuestions.map((q,i)=> (
+                            <div key={i} className="flex items-center gap-2">
+                              <Input value={q} onChange={(e)=> updateGeneratedQuestion(i, e.target.value)} />
+                              <Button variant="ghost" size="icon" onClick={()=> removeGeneratedQuestion(i)}><XIcon className="h-4 w-4"/></Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between">
                       <div />
                       <Button variant="ghost" size="sm" onClick={() => updateNodeData(props.id, { batchEdit: !batchEdit })}>
