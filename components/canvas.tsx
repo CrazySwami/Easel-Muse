@@ -762,6 +762,18 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                 {/* Dev-only stress utilities */}
                 {debug ? <StressPanel /> : null}
                 {children}
+                <Panel position="bottom-right" className="m-2 flex gap-2">
+                  <button
+                    className="rounded-full bg-emerald-600 px-3 py-1 text-xs text-white shadow hover:bg-emerald-700"
+                    onClick={() => {
+                      const x0 = 100; const y0 = 100; const dx = 260; const dy = 200;
+                      const types = Object.keys(nodeTypes);
+                      types.forEach((t, i) => addNode(t, { position: { x: x0 + (i % 4) * dx, y: y0 + Math.floor(i / 4) * dy } }));
+                    }}
+                  >
+                    Add all nodes
+                  </button>
+                </Panel>
               </ReactFlow>
             </div>
           </ContextMenuTrigger>
