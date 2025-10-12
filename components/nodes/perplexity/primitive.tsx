@@ -166,10 +166,14 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
       const data = await response.json();
 
       if (pxMode === 'model') {
-        // Model-based: normalize to result items with title/snippet when possible
+        // Model-based: Perplexity chat includes citations array
         const text = data?.choices?.[0]?.message?.content ?? '';
-        const pseudoResult = [{ title: 'Answer', snippet: text }];
-        updateNodeData(props.id, { searchSingleResults: pseudoResult, outputTexts: [text], outputLinks: [] });
+        const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
+        const results = [
+          { title: 'Answer', snippet: text },
+          ...citations.map((u: string) => ({ title: new URL(u).hostname, snippet: u, url: u })),
+        ];
+        updateNodeData(props.id, { searchSingleResults: results, outputTexts: [text], outputLinks: citations });
         return;
       }
       if (inputMode === 'single') {
@@ -222,14 +226,26 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
         }
         const data = await resp.json();
         const results = pxMode === 'model'
-          ? [{ title: 'Answer', snippet: data?.choices?.[0]?.message?.content ?? '' }]
+          ? (() => {
+              const text = data?.choices?.[0]?.message?.content ?? '';
+              const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
+              groups[i] = { query: q, results: [{ title: 'Answer', snippet: text }, ...citations.map((u: string) => ({ title: new URL(u).hostname, snippet: u, url: u }))] };
+              const out = deriveOutputsFromResults(groups as any);
+              updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: [text, ...out.texts], outputLinks: citations });
+              const doneStatuses = [...nextStatuses];
+              doneStatuses[i] = 'done';
+              updateNodeData(props.id, { batchStatuses: doneStatuses });
+              return groups[i].results;
+            })()
           : (data.results ?? []);
-        groups[i] = { query: q, results };
-        const out = deriveOutputsFromResults(groups as any);
-        updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: out.texts, outputLinks: out.links });
-        const doneStatuses = [...nextStatuses];
-        doneStatuses[i] = 'done';
-        updateNodeData(props.id, { batchStatuses: doneStatuses });
+        if (pxMode !== 'model') {
+          groups[i] = { query: q, results };
+          const out = deriveOutputsFromResults(groups as any);
+          updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: out.texts, outputLinks: out.links });
+          const doneStatuses = [...nextStatuses];
+          doneStatuses[i] = 'done';
+          updateNodeData(props.id, { batchStatuses: doneStatuses });
+        }
       } catch (e) {
         const errStatuses = [...(props.data.batchStatuses ?? initStatuses)];
         errStatuses[i] = 'error';

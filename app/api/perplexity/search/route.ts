@@ -173,7 +173,13 @@ export async function POST(req: Request) {
       }
 
       const data = await response.json();
-      return NextResponse.json(data);
+      // Ensure citations is a top-level array when available
+      if (Array.isArray((data as any)?.citations)) {
+        return NextResponse.json(data);
+      }
+      // Some responses include references in choices[0].citations
+      const citations = (data as any)?.choices?.[0]?.citations ?? [];
+      return NextResponse.json({ ...data, citations });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       return new NextResponse(`Internal Server Error: ${errorMessage}`, { status: 500 });
