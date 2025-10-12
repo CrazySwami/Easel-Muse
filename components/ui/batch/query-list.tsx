@@ -20,8 +20,8 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <div className="text-xs text-muted-foreground">Batch queries</div>
-      <div className="relative min-h-0 flex-1 overflow-auto">
-        <div className="space-y-2 pb-20">
+      <div className="relative min-h-0 flex-1 overflow-auto pb-24">
+        <div className="space-y-2">
           {queries.map((q, idx) => (
             <div key={idx} className="group flex items-center gap-2">
             <button
@@ -48,13 +48,15 @@ export function QueryList({ queries, onChange, selectedIndex = 0, onSelect, onAd
             </div>
           ))}
         </div>
-        <div className={`${stickyFooter ? 'sticky bottom-2' : ''}`}>
-          <div className="flex w-full items-center justify-end gap-2 pr-2">
+      </div>
+      {stickyFooter && (
+        <div className="absolute bottom-2 right-2">
+          <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onAdd}>+ Add</Button>
             <Button size="sm" onClick={onRun}><CheckIcon className="mr-1 h-3 w-3"/>Run Batch</Button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

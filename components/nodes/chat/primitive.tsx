@@ -124,15 +124,9 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                     case 'text':
                       return (
                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'}>
-                          {message.role === 'user' ? (
-                            <MessageContent className="text-white">
-                              {part.text}
-                            </MessageContent>
-                          ) : (
-                            <MessageContent>
-                              <Response>{part.text}</Response>
-                            </MessageContent>
-                          )}
+                          <MessageContent className={message.role === 'user' ? 'text-white' : undefined}>
+                            {message.role === 'user' ? (part.text) : (<Response>{part.text}</Response>)}
+                          </MessageContent>
                         </Message>
                       );
                     case 'reasoning':
