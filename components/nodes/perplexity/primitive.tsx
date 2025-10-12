@@ -410,6 +410,10 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
             {inputMode === 'single' && (
               pxMode === 'model' ? (
                 <div className="space-y-3">
+                  {/* Question header */}
+                  <div className="rounded-lg border bg-card/60 p-3 text-sm font-medium text-foreground/80">
+                    {queries[0] || 'Question'}
+                  </div>
                   <div className="rounded-lg border bg-card/60 p-4">
                     <ReactMarkdown>{modelSingleAnswer}</ReactMarkdown>
                   </div>
@@ -502,6 +506,10 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                       const ans = modelBatchAnswers[idx];
                       return (
                         <div className="space-y-3">
+                          {/* Question header */}
+                          <div className="rounded-lg border bg-card/60 p-3 text-sm font-medium text-foreground/80">
+                            {queries[idx] || `Query #${idx + 1}`}
+                          </div>
                           <div className="rounded-lg border bg-card/60 p-4">
                             <ReactMarkdown>{ans.answer}</ReactMarkdown>
                           </div>
