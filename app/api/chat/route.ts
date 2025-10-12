@@ -32,6 +32,12 @@ export async function POST(req: Request) {
     model = body.model;
     modelId = body.modelId;
     webSearch = body.webSearch;
+    if (body.aiEnabled === false) {
+      return new Response(
+        JSON.stringify({ message: 'AI disabled' }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 
   // Honor the exact selected id from the client (same as Text node uses)

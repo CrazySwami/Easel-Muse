@@ -41,13 +41,14 @@ type ChatPanelProps = {
   sessionId: string;
   model: string;
   webSearch: boolean;
+  aiEnabled: boolean;
   sessions: ChatSession[];
   renameSessionIfNeeded: (sessId: string, firstUserText: string) => void;
   updateNodeData: ReturnType<typeof useReactFlow>['updateNodeData'];
   modelsMap: Record<string, any>;
 };
 
-const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
+const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
   const { messages, status, sendMessage, regenerate, setMessages } = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
   });
@@ -69,7 +70,6 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const micBaseInputRef = useRef<string>('');
   const micLastIndexRef = useRef<number>(-1);
   const lastHydratedSessionIdRef = useRef<string | null>(null);
-  const [aiEnabled, setAiEnabled] = useState<boolean>(true);
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
@@ -173,7 +173,13 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const textToSend = message.text;
     setInput('');
     setAttachedFiles([]);
-    await sendMessage({ text: textToSend }, { body: { modelId: selectedModel, webSearch: search } });
+    if (aiEnabled) {
+      await sendMessage({ text: textToSend }, { body: { modelId: selectedModel, webSearch: search, aiEnabled } });
+    } else {
+      // Append a local user message without triggering AI
+      const newMsg: any = { id: `u_${Date.now()}`, role: 'user', parts: [{ type: 'text', text: textToSend }] };
+      setMessages([...(messages as any[]), newMsg] as any);
+    }
   };
 
   return (
@@ -206,8 +212,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                            )}
                          </Message>
                        );
-                   case 'file':
-                     if (typeof part.mediaType === 'string' && part.mediaType.startsWith('image/') && typeof part.url === 'string') {
+                    case 'file':
+                    if (typeof part.mediaType === 'string' && part.mediaType.startsWith('image/') && typeof part.url === 'string') {
                        return (
                          <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
                            <div className="overflow-hidden rounded-xl border bg-card/60">
@@ -217,6 +223,21 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                        );
                      }
                      return null;
+                   case 'image':
+                     // Provider normalized image; could be URL or binary
+                     try {
+                       const src = typeof part.image === 'string' ? part.image : (part.image ? URL.createObjectURL(new Blob([part.image as any])) : undefined);
+                       if (!src) return null;
+                       return (
+                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
+                           <div className="overflow-hidden rounded-xl border bg-card/60">
+                             <img src={src} alt="Image" className="block max-h-[420px] w-auto" />
+                           </div>
+                         </Message>
+                       );
+                     } catch {
+                       return null;
+                     }
                     case 'reasoning':
                       return (
                         <Reasoning key={`${message.id}-${i}`} className="w-full" isStreaming={status === 'streaming' && i === message.parts.length - 1 && message.id === (messages as any).at(-1)?.id}>
@@ -411,6 +432,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
   const model = props.data.model ?? defaultModel;
   const webSearch = Boolean(props.data.webSearch);
+  const aiEnabled = (props.data as any)?.aiEnabled ?? true;
 
   const ensureSession = () => {
     if (active) return active.id;
@@ -482,11 +504,11 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                className={`px-2 py-1 text-xs rounded-md border ${true ? 'bg-emerald-600 text-white border-transparent' : 'bg-muted text-foreground'}`}
-                onClick={() => {}}
-                title={'AI responses on (click to pause)'}
+                className={`px-2 py-1 text-xs rounded-md border ${aiEnabled ? 'bg-emerald-600 text-white border-transparent' : 'bg-muted text-foreground'}`}
+                onClick={() => updateNodeData(props.id, { aiEnabled: !aiEnabled })}
+                title={aiEnabled ? 'AI responses on (click to pause)' : 'AI responses paused (click to resume)'}
               >
-                {'AI On'}
+                {aiEnabled ? 'AI On' : 'AI Off'}
               </button>
               <Button size="icon" className="rounded-md bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => {
                 const id = nanoid();
@@ -504,6 +526,7 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
             sessionId={activeId ?? ensureSession()}
             model={model}
             webSearch={webSearch}
+            aiEnabled={aiEnabled}
             sessions={sessions}
             renameSessionIfNeeded={renameSessionIfNeeded}
             updateNodeData={updateNodeData}

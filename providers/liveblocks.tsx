@@ -14,6 +14,7 @@ import { useReactFlow, useStore } from '@xyflow/react';
 import type { PropsWithChildren } from 'react';
 import * as Y from 'yjs';
 import { LiveblocksYjsProvider as LiveblocksYjsProvider_ } from '@liveblocks/yjs';
+import Cursor from '@/components/cursor';
 
 type LiveblocksYjsProviderProps = PropsWithChildren & {
   projectId: string;
@@ -129,13 +130,14 @@ export const CursorsLayer = () => {
       key={key}
       style={{
         position: 'fixed',
-        left: x,
-        top: y,
-        transform: 'translate(-2px, -2px)',
+        left: 0,
+        top: 0,
+        transform: `translateX(${x}px) translateY(${y}px)`,
         zIndex: 50,
         pointerEvents: 'none',
       }}
     >
+      <Cursor color={color} x={0} y={0} />
       {label ? (
         <div
           style={{
@@ -175,7 +177,10 @@ export const CursorsLayer = () => {
           const color = (user.info as any)?.color ?? '#06f';
           const name = (user.info as any)?.name ?? 'User';
           const avatar = (user.info as any)?.avatar as string | undefined;
-          return renderCursor(cursor.x, cursor.y, color, name, user.connectionId, avatar);
+          const [tx, ty, zoom] = transform ?? [0, 0, 1];
+          const x = (cursor.x * zoom + tx) + (paneRect?.left ?? 0);
+          const y = (cursor.y * zoom + ty) + (paneRect?.top ?? 0);
+          return <Cursor key={user.connectionId} color={color} x={x} y={y} message={name} avatar={avatar} />;
         })}
       {me?.presence?.cursor
         ? renderCursor(
