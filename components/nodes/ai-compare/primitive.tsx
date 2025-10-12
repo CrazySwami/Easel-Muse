@@ -60,9 +60,9 @@ export const AIComparePrimitive = (props: Props) => {
   const generatePrompt = (props.data as any)?.generatePrompt ?? '';
   const model = (props.data as any)?.model ?? getDefaultModel(models);
   // Per-provider model selections (with sensible defaults)
-  const openaiModel = (props.data as any)?.openaiModel ?? 'gpt-4o-mini';
+  const openaiModel = (props.data as any)?.openaiModel ?? 'gpt-4.1-mini';
   const geminiModel = (props.data as any)?.geminiModel ?? 'gemini-2.5-flash';
-  const anthropicModel = (props.data as any)?.anthropicModel ?? 'claude-3-5-sonnet-20241022';
+  const anthropicModel = (props.data as any)?.anthropicModel ?? 'claude-3-5-haiku-20241022';
 
   const setInputMode = (value: 'single'|'batch'|'settings') => updateNodeData(props.id, { inputMode: value });
   const updateQuery = (i: number, v: string) => {

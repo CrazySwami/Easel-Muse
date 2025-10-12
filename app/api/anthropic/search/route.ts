@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: model || 'claude-3-5-sonnet-20241022',
+        model: model || 'claude-3-5-haiku-20241022',
         max_tokens: 1024,
         // Revert to known-working tool id (falls back gracefully if unsupported)
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],

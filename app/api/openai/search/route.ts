@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         'OpenAI-Beta': 'responses-2024-10-22',
       },
       body: JSON.stringify({
-        model: model || 'gpt-4o-mini-2024-07-18',
+        model: model || 'gpt-4.1-mini',
         input: q,
         tools: [{ type: 'web_search_preview' }],
         tool_choice: 'auto',
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: model || 'gpt-4o-mini-2024-07-18',
+          model: model || 'gpt-4.1-mini',
           input: [{ role: 'user', content: q }],
           tools: [{ type: 'web_search_preview' }],
           tool_choice: 'auto',
