@@ -114,6 +114,17 @@ export const AudioTransform = ({
   };
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
+    {
+      children: (
+        <ModelSelector
+          value={modelId}
+          options={speechModels}
+          key={`${id}-model-inline`}
+          className="w-[220px] rounded-full"
+          onChange={(value) => updateNodeData(id, { model: value })}
+        />
+      ),
+    },
     loading
       ? {
           tooltip: 'Generating...',
@@ -177,16 +188,9 @@ export const AudioTransform = ({
   ) => updateNodeData(id, { instructions: event.target.value });
 
   return (
-    <NodeLayout id={id} data={data} type={type} title={title} toolbar={toolbar} className="w-80 min-h-[200px]">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 px-3 py-2">
-          <ModelSelector
-            value={modelId}
-            options={speechModels}
-            key={`${id}-model`}
-            className="w-[220px] rounded-full"
-            onChange={(value) => updateNodeData(id, { model: value })}
-          />
+    <NodeLayout id={id} data={{ ...data, width: 840, height: 560, resizable: false, dualModeSupported: true, titleOverride: 'Audio generation' }} type={type} title={title} toolbar={toolbar}>
+      <div className="flex h-full flex-col min-h-0 p-3">
+        <div className="shrink-0 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 px-3 py-2">
           {model?.voices.length ? (
             <VoiceSelector
               value={data.voice ?? model.voices[0]}
@@ -197,31 +201,33 @@ export const AudioTransform = ({
             />
           ) : null}
         </div>
+        <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-3" onPointerDown={(e) => e.stopPropagation()}>
+          {loading && (
+            <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
+              <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
+            </Skeleton>
+          )}
 
-        {loading && (
-          <Skeleton className="flex h-[50px] w-full animate-pulse items-center justify-center">
-            <Loader2Icon size={16} className="size-4 animate-spin text-muted-foreground" />
-          </Skeleton>
-        )}
+          {!loading && !data.generated?.url && (
+            <div className="flex h-[50px] w-full items-center justify-center rounded-full bg-secondary">
+              <p className="text-muted-foreground text-sm">
+                Press <PlayIcon size={12} className="-translate-y-px inline" /> to generate audio
+              </p>
+            </div>
+          )}
 
-        {!loading && !data.generated?.url && (
-          <div className="flex h-[50px] w-full items-center justify-center rounded-full bg-secondary">
-            <p className="text-muted-foreground text-sm">
-              Press <PlayIcon size={12} className="-translate-y-px inline" /> to generate audio
-            </p>
-          </div>
-        )}
-
-        {!loading && data.generated?.url && (
-          // biome-ignore lint/a11y/useMediaCaption: <explanation>
-          <audio src={data.generated.url} controls className="w-full rounded-none" />
-        )}
+          {!loading && data.generated?.url && (
+            // biome-ignore lint/a11y/useMediaCaption: <explanation>
+            <audio src={data.generated.url} controls className="w-full rounded-none" />
+          )}
+        </div>
 
         <Textarea
           value={data.instructions ?? ''}
           onChange={handleInstructionsChange}
           placeholder="Enter instructions"
-          className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
+          className="nowheel nodrag nopan shrink-0 max-h-48 overflow-auto rounded-none border-x-0 border-b-0 border-t"
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </div>
     </NodeLayout>

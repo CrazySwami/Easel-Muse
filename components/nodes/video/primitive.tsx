@@ -11,7 +11,6 @@ import { useReactFlow } from '@xyflow/react';
 import { Loader2Icon } from 'lucide-react';
 import { useState, type ComponentProps } from 'react';
 import type { VideoNodeProps } from '.';
-import { Switch } from '@/components/ui/switch';
 
 type VideoPrimitiveProps = VideoNodeProps & {
   title: string;
