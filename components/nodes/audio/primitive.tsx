@@ -11,7 +11,7 @@ import { handleError } from '@/lib/error/handle';
 import { uploadFile } from '@/lib/upload';
 import { useProject } from '@/providers/project';
 import { useReactFlow } from '@xyflow/react';
-import { Loader2Icon, MicIcon, SquareIcon, CopyIcon, UploadIcon } from 'lucide-react';
+import { Loader2Icon, MicIcon, SquareIcon, CopyIcon, UploadIcon, TrashIcon } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { useEffect, useRef, useState } from 'react';
 import type { AudioNodeProps } from '.';
@@ -227,7 +227,8 @@ export const AudioPrimitive = ({
     <NodeLayout id={id} data={{ ...data, width: 840, height: 480, resizable: false, dualModeSupported: true, titleOverride: 'Audio' }} type={type} title={title}>
       {/* Content wrapper fills the frame */}
       <div className="flex h-full flex-col min-h-0 p-3">
-      {/* Options: two equal columns filling available space */}
+      {/* Options: two equal columns filling available space (hidden after upload/transcription) */}
+      {!(data as any)?.content && !(data as any)?.transcript && (
       <div className="grid grid-cols-2 gap-3 flex-1 min-h-0">
         {/* Record column */}
         <div className="rounded-2xl border bg-card/60 p-3 h-full flex items-center justify-center">
@@ -319,8 +320,14 @@ export const AudioPrimitive = ({
           </div>
         </div>
       </div>
+      )}
       {!isUploading && data.content && (
         <div className="nodrag nopan nowheel">
+          <div className="mb-1 flex justify-end">
+            <Button size="icon" variant="ghost" className="rounded-full" onClick={() => updateNodeData(id, { content: undefined, transcript: undefined })}>
+              <TrashIcon size={14} />
+            </Button>
+          </div>
           {/* biome-ignore lint/a11y/useMediaCaption: native controls */}
           <audio
             src={data.content.url}
@@ -334,14 +341,24 @@ export const AudioPrimitive = ({
         <div className="mt-2 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Transcript</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="rounded-full"
-              onClick={() => navigator.clipboard.writeText(data.transcript ?? '')}
-            >
-              <CopyIcon size={14} />
-            </Button>
+            <div className="inline-flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => navigator.clipboard.writeText(data.transcript ?? '')}
+              >
+                <CopyIcon size={14} />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => updateNodeData(id, { content: undefined, transcript: undefined })}
+              >
+                <TrashIcon size={14} />
+              </Button>
+            </div>
           </div>
           <div className="nowheel nodrag nopan min-h-0 flex-1 overflow-auto rounded-md border bg-background p-2 text-sm whitespace-pre-wrap"
                onPointerDown={(e) => e.stopPropagation()}>
