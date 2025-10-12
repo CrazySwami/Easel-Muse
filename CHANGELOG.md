@@ -2,6 +2,55 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.10 — Perplexity Model Mode, Audio/Web fixes, UX polish (2025-10-11 → 2025-10-12)
+
+-   **Perplexity (major)**
+    -   Added a new "Perplexity model" mode that calls the `chat/completions` endpoint with a system prompt for longer, well‑structured Markdown answers. Answers render at top with compact source pills (favicon + hostname), capped to 6.
+    -   Batch mode now stores and renders per‑query `{ answer, citations }` entries (right pane mirrors Single mode). Question text is shown above each answer in both Single and Batch views.
+    -   Normalized model IDs to supported `sonar`/`sonar-pro` (dropped legacy `*-online`). UI accepts gateway ids like `perplexity/sonar-pro` and maps them correctly.
+    -   Backend route `/api/perplexity/search` updated: supports `mode=search | chat | generate_questions`, accepts optional `system` string for chat, sanitizes search payload, normalizes model ids, and flattens citations from multiple shapes.
+    -   UI hardening: invalid/missing source URLs handled gracefully; fixed `ReactMarkdown` import and children handling.
+    -   Sizing: default height reduced to `680` (was `800`) for a tighter node; fullscreen enabled; output‑only connectors enforced.
+
+-   **Audio node (consolidation + UX)**
+    -   Voice Memo node removed; Audio now includes recording as a first‑class option.
+    -   Two‑column 50/50 layout with consistent green iconography; transcript area is fully scrollable and copyable.
+    -   Immediate client‑side validation for file type/size (MP3/WAV/WEBM/M4A/MP4/OGG, ≤10MB); invalid uploads are blocked with messaging.
+    -   Dual‑mode support wired into NodeLayout (Plain/Generate), matching Text/Image/Code patterns.
+
+-   **Web Renderer (HTML/URL)**
+    -   Secure iframe (`sandbox="allow-scripts allow-same-origin"`).
+    -   URL vs Code toggle with "Load Source" via `/api/proxy`; connecting a Code node clears URL and vice‑versa.
+    -   Device viewport toggles (Mobile/Tablet/Desktop) and collapsible HTML editor with capped height.
+    -   Fixed missing `useState` import and layout expansion of the bottom editor.
+
+-   **Tiptap stability**
+    -   Liveblocks extension registration moved into a guarded `useEffect` after editor/provider are ready; UI elements (Toolbar, BubbleMenu, Threads/Composer) are guarded to avoid render‑phase updates. Resolves "Cannot update a component while rendering a different component" and undefined `state` errors.
+
+-   **Canvas, toolbar, and palette**
+    -   "Add node" palette opens centered, autofocuses search, scales relative to zoom, hides connectors, and avoids the double‑frame effect.
+    -   New node spawning aligns horizontally with the farthest‑right node, uses width‑aware spacing, and recenters the camera with a slight zoom‑out.
+    -   Added a testing action to add one of every node type in a spaced grid.
+    -   Save indicator moved into the top bar (to the left of the avatar); canvas controls moved to the bottom‑left above the "+" button.
+
+-   **NodeLayout window chrome (refinements)**
+    -   Fullscreen button lives in the left cluster and only shows when supported.
+    -   Added separate Position‑lock and Content‑lock buttons (content lock no longer affects dragging). Active state uses green icon on white background; tooltips added for all controls.
+    -   Delete action now shows a confirmation modal; bar uses the darker emerald accent and proper spacing to avoid content overlap.
+
+-   **Text/Image/Video/Code**
+    -   Text: transform view resized; prompt and output areas use `min-h-0 overflow-auto` with `nowheel nodrag nopan` to prevent canvas pan. Added compact Sources panel and copy button; plain view matches size and includes copy.
+    -   Image/Video/Code: larger defaults; dual‑mode toggles enabled; prompt inputs capped with internal scroll. Video’s model selector moved to the bottom toolbar.
+
+-   **Docs**
+    -   `docs/ui-and-component-guide.md` expanded with: dual‑mode pattern (including `titleOverride` and `dualModeSupported`), per‑node min/max sizing guidance, consistent sizing contract (palette vs component), scrolling/overscroll best practices, fullscreen/window‑chrome flags, and custom connectors (`allowIncoming`/`allowOutgoing`).
+    -   `docs/xyflow-data-consumption.md` updated to include Perplexity as a producer and new extractors.
+
+-   **Utilities & APIs**
+    -   New `/api/proxy` endpoint for CORS‑safe HTML fetching used by Web Renderer.
+    -   `lib/xyflow.ts` gained `getTextFromPerplexityNodes` and `getLinksFromPerplexityNodes`; Text Transform consumes both for better context.
+
+
 ## v0.0.9 — Architectural UI Overhaul & Node Consistency (2025-10-05 → 2025-10-11)
 
 -   **Architectural Layout Fixes**
