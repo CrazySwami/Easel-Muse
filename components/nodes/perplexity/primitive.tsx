@@ -97,6 +97,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
   const batchStatuses = props.data.batchStatuses ?? [] as Array<'idle'|'running'|'done'|'error'>;
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const batchEdit = (props.data as any)?.batchEdit ?? true;
+  const modelSingleAnswer = (props.data as any)?.modelSingleAnswer ?? '';
+  const modelSingleCitations = (props.data as any)?.modelSingleCitations ?? [] as string[];
+  const modelBatchAnswers = (props.data as any)?.modelBatchAnswers ?? [] as Array<{ answer: string; citations: string[] }>;
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -166,14 +169,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
       const data = await response.json();
 
       if (pxMode === 'model') {
-        // Model-based: Perplexity chat includes citations array
         const text = data?.choices?.[0]?.message?.content ?? '';
         const citations: string[] = Array.isArray(data?.citations) ? data.citations : [];
-        const results = [
-          { title: 'Answer', snippet: text },
-          ...citations.map((u: string) => ({ title: new URL(u).hostname, snippet: u, url: u })),
-        ];
-        updateNodeData(props.id, { searchSingleResults: results, outputTexts: [text], outputLinks: citations });
+        updateNodeData(props.id, { modelSingleAnswer: text, modelSingleCitations: citations, outputTexts: [text], outputLinks: citations, searchSingleResults: [] });
         return;
       }
       if (inputMode === 'single') {
@@ -413,11 +411,26 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
             {isLoading && <p className="text-xs text-muted-foreground">Loading...</p>}
 
             {inputMode === 'single' && (
-              <div className="grid grid-cols-2 gap-3">
-                {(searchSingleResults as any[]).map((res: any, i: number) => (
-                  <SearchResult key={i} result={res} />
-                ))}
-              </div>
+              pxMode === 'model' ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg border bg-card/60 p-4">
+                    <ReactMarkdown>{modelSingleAnswer}</ReactMarkdown>
+                  </div>
+                  {Array.isArray(modelSingleCitations) && modelSingleCitations.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {modelSingleCitations.map((u: string, i: number) => (
+                        <SearchResult key={i} result={{ title: new URL(u).hostname, snippet: u, url: u }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {(searchSingleResults as any[]).map((res: any, i: number) => (
+                    <SearchResult key={i} result={res} />
+                  ))}
+                </div>
+              )
             )}
 
             {inputMode === 'batch' && (
@@ -488,6 +501,23 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                 <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   {(() => {
                     const idx = (props.data as any)?.selectedQueryIndex ?? 0;
+                    if (pxMode === 'model' && Array.isArray(modelBatchAnswers) && modelBatchAnswers[idx]) {
+                      const ans = modelBatchAnswers[idx];
+                      return (
+                        <div className="space-y-3">
+                          <div className="rounded-lg border bg-card/60 p-4">
+                            <ReactMarkdown>{ans.answer}</ReactMarkdown>
+                          </div>
+                          {Array.isArray(ans.citations) && ans.citations.length > 0 && (
+                            <div className="grid grid-cols-2 gap-3">
+                              {ans.citations.map((u: string, j: number) => (
+                                <SearchResult key={j} result={{ title: new URL(u).hostname, snippet: u, url: u }} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
                     if (Array.isArray(searchBatchResults) && searchBatchResults.length > 0 && typeof searchBatchResults[0] === 'object' && 'query' in (searchBatchResults[0] as any)) {
                       const group = (searchBatchResults as any[])[idx];
                       return (
