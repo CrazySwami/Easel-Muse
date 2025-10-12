@@ -314,7 +314,7 @@ export const AIComparePrimitive = (props: Props) => {
                         const groups = Array.isArray(props.data.results?.groups) ? [...props.data.results.groups] : [];
                         groups[i] = { query: q, openai: o, gemini: g, anthropic: a, serp: s };
                         current[i] = 'done';
-                        updateNodeData(props.id, { results: { groups }, batchStatuses: current });
+                        updateNodeData(props.id, (prev: any) => ({ results: { single: prev?.results?.single ?? null, groups }, batchStatuses: current }));
                       } catch {
                         const next = Array.isArray(props.data.batchStatuses) ? [...props.data.batchStatuses] : [];
                         next[i] = 'error';

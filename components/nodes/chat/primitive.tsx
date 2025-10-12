@@ -145,13 +145,33 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     lastSavedCountRef.current = current;
   }, [messages, session?.messages?.length]);
 
-  const handleSubmit = (message: any) => {
+  const convertFilesToDataURLs = async (files: Array<File>) => {
+    const list = files.slice(0, 3);
+    return await Promise.all(
+      list.map(
+        (file) =>
+          new Promise<any>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve({ type: 'file', mediaType: file.type, url: reader.result as string });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+  };
+
+  const handleSubmit = async (message: any) => {
     const hasText = Boolean(message.text);
     const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
     if (!(hasText || hasAttachments)) return;
-    const filesToSend = (message.files && message.files.length ? message.files : attachedFiles).slice(0,3);
-    // Send using the transport's attachment path; do NOT clear local history here
-    void sendMessage({ text: message.text || 'Sent with attachments', files: filesToSend }, { body: { modelId: selectedModel, webSearch: search } });
+    const filesToSend: Array<File> = (message.files && message.files.length ? Array.from(message.files as FileList) : attachedFiles).slice(0, 3);
+    const fileParts = filesToSend.length ? await convertFilesToDataURLs(filesToSend) : [];
+    const parts: any[] = [];
+    if (hasText) parts.push({ type: 'text', text: message.text });
+    parts.push(...fileParts);
+    await sendMessage({ parts }, { body: { modelId: selectedModel, webSearch: search } });
     setInput('');
     setAttachedFiles([]);
   };
@@ -161,7 +181,13 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-muted/20" onPointerDown={(e) => e.stopPropagation()}>
         <Conversation className="h-full">
           <ConversationContent className="px-2">
-            {(displayMessages ?? []).map((message: any, msgIdx: number) => (
+            {(displayMessages ?? []).map((message: any, msgIdx: number) => {
+              // Skip rendering empty assistant placeholders (no text, no files, no sources yet)
+              if (message.role === 'assistant') {
+                const hasRenderable = (message.parts ?? []).some((p: any) => p.type === 'text' || (p.type === 'file' && (p.url || p.data)) || p.type === 'source-url');
+                if (!hasRenderable) return null;
+              }
+              return (
               <div key={message.id}>
                 {/* Sources above message like the example */}
                 {/* Inline sources pills under the assistant reply (favicon + host) */}
@@ -235,7 +261,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                 })()}
                 {/* copy action removed per design */}
               </div>
-            ))}
+            )})}
             {/* loader removed to avoid transient placeholder box */}
           </ConversationContent>
           <ConversationScrollButton />
