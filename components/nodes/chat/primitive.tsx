@@ -53,11 +53,12 @@ type ChatPanelProps = {
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
   const { messages, status, sendMessage, regenerate } = useChat();
   const [input, setInput] = useState('');
-  const models = [
-    { name: 'GPT 4o', value: 'openai/gpt-4o' },
-    { name: 'Deepseek R1', value: 'deepseek/deepseek-r1' },
-  ];
-  const [selectedModel, setSelectedModel] = useState<string>(models[0].value);
+  const getDefaultModel = (ms: Record<string, any>) => {
+    if (ms['gpt-5-mini']) return 'gpt-5-mini';
+    const entry = Object.entries(ms).find(([id]) => id.includes('gpt-5') || id.includes('mini'));
+    return entry?.[0] ?? Object.keys(ms)[0];
+  };
+  const [selectedModel, setSelectedModel] = useState<string>(model || getDefaultModel(modelsMap || {}));
   const [search, setSearch] = useState<boolean>(false);
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
@@ -133,23 +134,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
                 {/* Sources above message like the example */}
-                {(() => {
-                  if (message.role !== 'assistant') return null;
-                  const count = (message.parts ?? []).filter((p: any) => p.type === 'source-url').length;
-                  if (count <= 0) return null;
-                  return (
-                    <Sources>
-                      <SourcesTrigger count={count} />
-                      {(message.parts ?? []).map((part: any, i: number) => (
-                        part.type === 'source-url' ? (
-                          <SourcesContent key={`${message.id}-${i}`}>
-                            <Source href={part.url} title={part.url} />
-                          </SourcesContent>
-                        ) : null
-                      ))}
-                    </Sources>
-                  );
-                })()}
+                {/* Inline sources pills under the assistant reply (favicon + host) */}
+                {/* We render these after the message content below */}
                 {message.parts?.map((part: any, i: number) => {
                   switch (part.type) {
                      case 'text':
@@ -175,8 +161,40 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       return null;
                   }
                 })}
+                {message.role === 'assistant' && (() => {
+                  const urls: string[] = (message.parts ?? [])
+                    .filter((p: any) => p.type === 'source-url' && typeof p.url === 'string')
+                    .map((p: any) => p.url)
+                    .slice(0, 12);
+                  if (!urls.length) return null;
+                  const getHost = (u: string) => {
+                    try { return new URL(u).hostname; } catch { return u; }
+                  };
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {urls.map((u, i) => {
+                        const host = getHost(u);
+                        const icon = `https://icons.duckduckgo.com/ip3/${host}.ico`;
+                        return (
+                          <a
+                            key={`${message.id}-pill-${i}`}
+                            href={u}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full border bg-card/60 px-2 py-1 text-xs hover:bg-accent"
+                            title={u}
+                          >
+                            <img src={icon} alt="" className="h-3.5 w-3.5" />
+                            <span className="max-w-[160px] truncate">{host}</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
                 {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
-                  <Actions className="mt-1">
+                  <div className="mt-1 pl-9 max-w-[80%]">
+                  <Actions className="">
                     <Action
                       onClick={() => {
                         const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');
@@ -188,6 +206,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       <CopyIcon className="size-3" />
                     </Action>
                   </Actions>
+                  </div>
                 )}
               </div>
             ))}
@@ -221,9 +240,9 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                 <PromptInputModelSelectValue />
               </PromptInputModelSelectTrigger>
               <PromptInputModelSelectContent>
-                {models.map((m) => (
-                  <PromptInputModelSelectItem key={m.value} value={m.value}>
-                    {m.name}
+                {Object.entries(modelsMap || {}).map(([id, m]: any) => (
+                  <PromptInputModelSelectItem key={id} value={id}>
+                    {m?.label ?? id}
                   </PromptInputModelSelectItem>
                 ))}
               </PromptInputModelSelectContent>
@@ -295,13 +314,33 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
   // useChat is now scoped inside ChatPanel and remounted via key on session change
 
-  const toolbar = undefined as any;
+  const toolbar = [
+    {
+      children: (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Button size="icon" variant="ghost" onClick={() => updateNodeData(props.id, { sidebarCollapsed: !(props.data as any)?.sidebarCollapsed })}>
+            <span className="h-4 w-4">≡</span>
+          </Button>
+          <div className="truncate max-w-[220px]">
+            {(props.data.sessions ?? []).find((s)=> s.id === activeId)?.name || 'New chat'}
+          </div>
+          <Button size="icon" variant="ghost" onClick={() => {
+            const id = nanoid();
+            const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+            updateNodeData(props.id, { sessions: [...(props.data.sessions ?? []), next], activeSessionId: id });
+          }}>
+            <PlusIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ] as any;
 
   return (
     <NodeLayout
       {...props}
       toolbar={toolbar}
-      data={{ ...props.data, width: props.data.width ?? 1280, height: props.data.height ?? 880, resizable: false, fullscreenSupported: true, allowIncoming: true, allowOutgoing: true, titleOverride: 'Chat' }}
+      data={{ ...props.data, width: props.data.width ?? 1400, height: props.data.height ?? 980, resizable: false, fullscreenSupported: true, allowIncoming: true, allowOutgoing: true, titleOverride: 'Chat' }}
     >
       <div className="flex h-full min-h-0 gap-3 p-3">
         {/* Sidebar */}

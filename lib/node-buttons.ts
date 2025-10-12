@@ -18,8 +18,8 @@ export const nodeButtons = [
     label: 'Chat',
     icon: MessageSquareIcon,
     data: {
-      width: 1280,
-      height: 880,
+      width: 1400,
+      height: 980,
       resizable: false,
       fullscreenSupported: true,
       allowIncoming: true,

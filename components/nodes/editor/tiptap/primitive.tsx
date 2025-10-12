@@ -490,7 +490,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
     return (
         <div className="lb-tiptap relative h-full w-full">
             {editor && editor.view && !editor.isDestroyed && (
-              <div className="absolute top-0 left-0 right-0 z-10 flex h-10 items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white rounded-t-3xl border-b border-cyan-700">
+              <div className="absolute top-0 left-0 right-0 z-20 flex h-10 items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white rounded-t-3xl border-b border-cyan-700">
                 <button title="Undo" className="rounded-md p-2 hover:bg-cyan-700" onClick={() => editor.chain().focus().undo().run()}>
                   <Undo2Icon className="h-4 w-4" />
                 </button>
@@ -616,7 +616,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                     </button>
                 </BubbleMenu>
             )}
-            <div className="relative flex h-full w-full pt-10 min-h-0">
+            <div className="relative flex h-full w-full pt-12 min-h-0">
                 <div
                   className={`relative flex-1 min-h-0 overflow-auto nowheel nodrag nopan ${sidebarOpen ? 'mr-80' : ''}`}
                   onPointerDown={(e) => e.stopPropagation()}

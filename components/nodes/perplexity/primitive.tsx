@@ -287,8 +287,15 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
         }),
       });
       const data = await response.json();
-      if (data.questions) {
-        updateNodeData(props.id, { generatedQuestions: data.questions });
+      const questions: string[] = Array.isArray(data?.questions) ? data.questions : [];
+      if (questions.length) {
+        // Populate batch editor immediately and switch to batch mode
+        updateNodeData(props.id, {
+          generatedQuestions: questions,
+          queries: questions,
+          inputMode: 'batch',
+          selectedQueryIndex: 0,
+        });
       }
     } catch (error) {
       console.error('Question generation failed:', error);
@@ -429,8 +436,8 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                 onModelChange={(v) => updateNodeData(props.id, { model: v })}
                 prompt={generatePrompt}
                 onPromptChange={(v) => updateNodeData(props.id, { generatePrompt: v })}
-                onGenerate={async () => { await handleGenerate(); updateNodeData(props.id, { inputMode: 'batch' }); }}
-                generating={false}
+                onGenerate={handleGenerate}
+                generating={isLoading}
               />
 
               <div className="grid h-full min-h-0 grid-cols-12 gap-3">
