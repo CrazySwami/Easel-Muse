@@ -226,13 +226,11 @@ export const AudioPrimitive = ({
   return (
     <NodeLayout id={id} data={{ ...data, width: 840, height: 480, resizable: false, dualModeSupported: true, titleOverride: 'Audio' }} type={type} title={title}>
       {/* Options: two equal columns */}
-      <div className="mb-3 grid grid-cols-2 gap-3">
+      <div className="mb-3 grid grid-cols-2 gap-3 h-44">
         {/* Record column */}
-        <div className="rounded-2xl border bg-card/60 p-3 h-44 flex items-center justify-center">
+        <div className="rounded-2xl border bg-card/60 p-3 h-full flex items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="rounded-full bg-emerald-600/10 p-3">
-              <MicIcon className="h-5 w-5 text-emerald-600" />
-            </div>
+            <div className="rounded-full bg-emerald-600 p-3 text-white"><MicIcon className="h-5 w-5" /></div>
             <div className="text-sm text-muted-foreground">Record audio</div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {!isRecording && (
@@ -269,9 +267,9 @@ export const AudioPrimitive = ({
         </div>
 
         {/* Upload column */}
-        <div className="rounded-2xl border bg-card/60 p-3 h-44 flex flex-col">
-          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <UploadIcon className="h-4 w-4" />
+        <div className="rounded-2xl border bg-card/60 p-3 h-full flex flex-col">
+          <div className="mb-2 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="rounded-full bg-emerald-600 p-2 text-white"><UploadIcon className="h-4 w-4" /></div>
             <span>Upload a file</span>
           </div>
           {isUploading ? (
