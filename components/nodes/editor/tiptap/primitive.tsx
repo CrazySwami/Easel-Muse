@@ -3,7 +3,7 @@
 import { NodeLayout } from '@/components/nodes/layout';
 import { useYDoc } from '@/providers/liveblocks';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
-import { useLiveblocksExtension, Toolbar } from '@liveblocks/react-tiptap';
+import { useLiveblocksExtension } from '@liveblocks/react-tiptap';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
@@ -15,7 +15,26 @@ import { useEffect, type ComponentProps } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import * as Y from 'yjs';
 import type { TiptapNodeProps } from '.';
-import { FileTextIcon, Loader2Icon, BoldIcon, ItalicIcon, StrikethroughIcon, Heading1Icon, Heading2Icon } from 'lucide-react';
+import {
+  FileTextIcon,
+  Loader2Icon,
+  BoldIcon,
+  ItalicIcon,
+  StrikethroughIcon,
+  Heading1Icon,
+  Heading2Icon,
+  UnderlineIcon,
+  Link2Icon,
+  ListIcon,
+  ListOrderedIcon,
+  QuoteIcon,
+  CodeIcon,
+  Undo2Icon,
+  Redo2Icon,
+  AlignLeftIcon,
+  AlignCenterIcon,
+  AlignRightIcon,
+} from 'lucide-react';
 // Comments removed for now
 import { useLocks } from '@/providers/locks';
 
@@ -142,15 +161,78 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
     return (
         <div className="lb-tiptap flex h-full w-full flex-col">
             {editor && editor.view && !editor.isDestroyed && (
-                <div className="sticky top-0 z-10 bg-cyan-600 text-white [&_svg]:text-white [&_button]:text-white">
-                    <Toolbar
-                      editor={editor}
-                      className="lb-toolbar-compact flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap px-3 py-2 text-sm leading-none
-                      [&_*]:!text-sm [&_*]:!leading-none
-                      [&_svg]:!h-4 [&_svg]:!w-4
-                      [&_button]:!h-8 [&_button]:!min-w-8 [&_button]:!w-8 [&_button]:!px-0 [&_button]:!py-0 [&_button]:!rounded-md [&_button]:shrink-0
-                      [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!h-8 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:!px-2 [&_[data-liveblocks-ui='Toolbar.SelectTrigger']]:shrink-0"/>
+              <div className="sticky top-0 z-10 flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white">
+                <button title="Undo" className="rounded-md p-2 hover:bg-cyan-700" onClick={() => editor.chain().focus().undo().run()}>
+                  <Undo2Icon className="h-4 w-4" />
+                </button>
+                <button title="Redo" className="rounded-md p-2 hover:bg-cyan-700" onClick={() => editor.chain().focus().redo().run()}>
+                  <Redo2Icon className="h-4 w-4" />
+                </button>
+                <span className="mx-1 h-4 w-px bg-white/30" />
+                <div className="inline-flex items-center">
+                  <span className="text-xs/none pr-1">Text</span>
+                  <button title="Paragraph" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('paragraph') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setParagraph().run()}>
+                    <FileTextIcon className="h-4 w-4" />
+                  </button>
+                  <button title="Heading 1" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('heading', { level: 1 }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
+                    <Heading1Icon className="h-4 w-4" />
+                  </button>
+                  <button title="Heading 2" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('heading', { level: 2 }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+                    <Heading2Icon className="h-4 w-4" />
+                  </button>
                 </div>
+                <span className="mx-1 h-4 w-px bg-white/30" />
+                <button title="Bold" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('bold') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()}>
+                  <BoldIcon className="h-4 w-4" />
+                </button>
+                <button title="Italic" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('italic') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()}>
+                  <ItalicIcon className="h-4 w-4" />
+                </button>
+                <button title="Underline" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('underline') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+                  <UnderlineIcon className="h-4 w-4" />
+                </button>
+                <button title="Strike" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('strike') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()}>
+                  <StrikethroughIcon className="h-4 w-4" />
+                </button>
+                <button title="Code" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('code') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleCode().run()}>
+                  <CodeIcon className="h-4 w-4" />
+                </button>
+                <button
+                  title="Link"
+                  className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('link') ? 'bg-cyan-700' : ''}`}
+                  onClick={() => {
+                    if (editor.isActive('link')) {
+                      editor.chain().focus().unsetLink().run();
+                      return;
+                    }
+                    const url = window.prompt('Enter URL');
+                    if (!url) return;
+                    editor.chain().focus().setLink({ href: url, target: '_blank' }).run();
+                  }}
+                >
+                  <Link2Icon className="h-4 w-4" />
+                </button>
+                <span className="mx-1 h-4 w-px bg-white/30" />
+                <button title="Bullet list" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('bulletList') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+                  <ListIcon className="h-4 w-4" />
+                </button>
+                <button title="Ordered list" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('orderedList') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+                  <ListOrderedIcon className="h-4 w-4" />
+                </button>
+                <button title="Blockquote" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive('blockquote') ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+                  <QuoteIcon className="h-4 w-4" />
+                </button>
+                <span className="mx-1 h-4 w-px bg-white/30" />
+                <button title="Align left" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'left' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+                  <AlignLeftIcon className="h-4 w-4" />
+                </button>
+                <button title="Align center" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'center' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+                  <AlignCenterIcon className="h-4 w-4" />
+                </button>
+                <button title="Align right" className={`rounded-md p-2 hover:bg-cyan-700 ${editor.isActive({ textAlign: 'right' }) ? 'bg-cyan-700' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+                  <AlignRightIcon className="h-4 w-4" />
+                </button>
+              </div>
             )}
             {editor && editor.view && !editor.isDestroyed && (
                 <BubbleMenu
