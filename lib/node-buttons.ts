@@ -111,10 +111,22 @@ export const nodeButtons = [
     icon: SearchIcon,
     data: {
       width: 1200,
-      height: 560,
+      height: 640,
       resizable: false,
       minWidth: 400,
       minHeight: 300,
+      fullscreenSupported: true,
+      fullscreenOnly: false,
+    },
+  },
+  {
+    id: 'serpapi',
+    label: 'SerpApi',
+    icon: GlobeIcon,
+    data: {
+      width: 1200,
+      height: 800,
+      resizable: false,
       fullscreenSupported: true,
       fullscreenOnly: false,
     },

@@ -107,7 +107,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     const currentH = (props.data as any)?.height;
     const updates: any = {};
     if (typeof currentW === 'number' && currentW !== 1200) updates.width = 1200;
-    if (typeof currentH === 'number' && currentH !== 560) updates.height = 560;
+    if (typeof currentH === 'number' && currentH !== 640) updates.height = 640;
     if (Object.keys(updates).length) {
       updateNodeData(props.id, updates);
     }
@@ -208,7 +208,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     const validQueries = queries.map((q: string) => q.trim()).filter(Boolean);
     if (!validQueries.length) return;
     setIsBatchRunning(true);
-    // initialize statuses and results containers
+    // initialize statuses and results containers; do not alter pxMode during run
     const initStatuses = validQueries.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
     // clear previous results for a fresh run
     updateNodeData(props.id, { batchStatuses: initStatuses, searchBatchResults: [], modelBatchAnswers: [] });
@@ -326,7 +326,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     <NodeLayout
       {...props}
       toolbar={toolbar}
-      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 560, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
+      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 640, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}
@@ -340,8 +340,20 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
             {inputMode !== 'generate' && (
               <div className="flex items-center gap-2">
                 <div className="inline-flex rounded-md border p-0.5">
-                  <Button variant={pxMode === 'search' ? 'default' : 'ghost'} size="sm" onClick={() => updateNodeData(props.id, { pxMode: 'search' })}>Search API</Button>
-                  <Button variant={pxMode === 'model' ? 'default' : 'ghost'} size="sm" onClick={() => updateNodeData(props.id, { pxMode: 'model' })}>Perplexity model</Button>
+                  <Button
+                    variant={pxMode === 'search' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => updateNodeData(props.id, { pxMode: 'search', /* preserve other state */ })}
+                  >
+                    Search API
+                  </Button>
+                  <Button
+                    variant={pxMode === 'model' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => updateNodeData(props.id, { pxMode: 'model' })}
+                  >
+                    Perplexity model
+                  </Button>
                 </div>
                 {pxMode === 'model' && (
                   <ModelSelector
