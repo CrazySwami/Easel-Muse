@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NodeLayout } from '@/components/nodes/layout';
 import type { ChatNodeProps, ChatSession, UIMessage } from './index';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useGateway } from '@/providers/gateway/client';
 import { nanoid } from 'nanoid';
 import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon, PaperclipIcon, MicIcon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { useReactFlow } from '@xyflow/react';
 import { useSelf } from '@liveblocks/react';
 import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation';
@@ -47,7 +48,9 @@ type ChatPanelProps = {
 };
 
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
-  const { messages, status, sendMessage, regenerate } = useChat();
+  const { messages, status, sendMessage, regenerate } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat' }),
+  });
   const me = useSelf();
   const [input, setInput] = useState('');
   const getDefaultModel = (ms: Record<string, any>) => {
@@ -61,6 +64,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const [listening, setListening] = useState<boolean>(false);
   const recognitionRef = (typeof window !== 'undefined') ? (window as any).__chatRecognitionRef || { current: null } : { current: null };
   if (typeof window !== 'undefined') { (window as any).__chatRecognitionRef = recognitionRef; }
+  const micBaseInputRef = useRef<string>('');
+  const micLastIndexRef = useRef<number>(-1);
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
@@ -118,6 +123,15 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const merged = saved.map((m) => liveById.get(m.id) ?? m);
     return merged;
   })();
+
+  // Guard against accidental overwrites of history with fewer/empty messages
+  const lastSavedCountRef = useRef<number>(session?.messages?.length ?? 0);
+  useEffect(() => {
+    const current = (messages ?? []).length;
+    if (current === 0) return; // never overwrite with empty
+    if ((session?.messages?.length ?? 0) > current) return; // don't replace with fewer
+    lastSavedCountRef.current = current;
+  }, [messages, session?.messages?.length]);
 
   const handleSubmit = (message: any) => {
     const hasText = Boolean(message.text);
@@ -231,8 +245,25 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       </div>
 
       <PromptInput className="mt-2 rounded-2xl border bg-muted/20" onSubmit={handleSubmit}>
-        <PromptInputBody>
-          <PromptInputTextarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything…" />
+        <PromptInputBody className="max-h-40 overflow-y-auto">
+          {attachedFiles.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachedFiles.slice(0,3).map((f, i) => {
+                const isImg = f.type.startsWith('image/');
+                const url = URL.createObjectURL(f);
+                return (
+                  <div key={`attach-${i}`} className="overflow-hidden rounded-md border bg-card/60">
+                    {isImg ? (
+                      <img src={url} alt={f.name} className="block h-16 w-16 object-cover" />
+                    ) : (
+                      <div className="h-16 w-16 flex items-center justify-center text-xs px-2 text-center">{f.name}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <PromptInputTextarea className="max-h-32" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything…" />
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
@@ -291,9 +322,18 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                   rec.lang = 'en-US';
                   rec.interimResults = true;
                   rec.continuous = true;
+                  micBaseInputRef.current = input;
+                  micLastIndexRef.current = -1;
                   rec.onresult = (e: any) => {
-                    const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join(' ');
-                    setInput((prev) => prev ? `${prev} ${transcript}` : transcript);
+                    let combined = '';
+                    for (let i = 0; i < e.results.length; i++) {
+                      const res = e.results[i];
+                      if (i <= micLastIndexRef.current && !res.isFinal) continue;
+                      combined += (res[0]?.transcript || '') + ' ';
+                      if (res.isFinal) micLastIndexRef.current = i;
+                    }
+                    const text = `${micBaseInputRef.current}${micBaseInputRef.current ? ' ' : ''}${combined.trim()}`.trim();
+                    setInput(text);
                   };
                   rec.onend = () => { setListening(false); recognitionRef.current = null; };
                   rec.onerror = () => { setListening(false); recognitionRef.current = null; };

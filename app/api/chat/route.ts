@@ -2,7 +2,33 @@ import { streamText, type UIMessage, convertToModelMessages } from 'ai';
 import { z } from 'zod';
 
 export async function POST(req: Request) {
-  const { messages, model, modelId, webSearch }: { messages: UIMessage[]; model?: string; modelId?: string; webSearch?: boolean } = await req.json();
+  const contentType = req.headers.get('content-type') || '';
+  // Support both JSON (AI SDK default) and multipart (file uploads)
+  let messages: UIMessage[] = [];
+  let model: string | undefined;
+  let modelId: string | undefined;
+  let webSearch: boolean | undefined;
+
+  if (contentType.includes('application/json')) {
+    const body = await req.json();
+    messages = body.messages;
+    model = body.model;
+    modelId = body.modelId;
+    webSearch = body.webSearch;
+  } else if (contentType.startsWith('multipart/form-data')) {
+    const form = await req.formData();
+    messages = JSON.parse((form.get('messages') as string) || '[]');
+    model = (form.get('model') as string) || undefined;
+    modelId = (form.get('modelId') as string) || undefined;
+    webSearch = ((form.get('webSearch') as string) || 'false') === 'true';
+    // Files are uploaded and referenced by the SDK as file parts; no extra handling needed here
+  } else {
+    const body = await req.json().catch(() => ({}));
+    messages = body.messages ?? [];
+    model = body.model;
+    modelId = body.modelId;
+    webSearch = body.webSearch;
+  }
 
   // Honor the exact selected id from the client (same as Text node uses)
   const requested = (modelId || model || '').trim();

@@ -404,7 +404,7 @@ export const NodeLayout = ({
           <ContextMenuSub>
             <ContextMenuSubTrigger>
             <LockIcon size={12} className="mr-2" />
-              <span>Lock state</span>
+              <span>Lock edits</span>
             </ContextMenuSubTrigger>
             <ContextMenuSubContent>
               <ContextMenuRadioGroup
@@ -423,11 +423,11 @@ export const NodeLayout = ({
                 </ContextMenuRadioItem>
                 <ContextMenuRadioItem value="move">
                   <LockIcon size={12} className="mr-2" />
-                  <span>Lock position only</span>
+                  <span>Lock position</span>
                 </ContextMenuRadioItem>
                 <ContextMenuRadioItem value="edit">
                   <LockIcon size={12} className="mr-2" />
-                  <span>Lock position & edits</span>
+                  <span>Lock edits</span>
                 </ContextMenuRadioItem>
               </ContextMenuRadioGroup>
             </ContextMenuSubContent>
