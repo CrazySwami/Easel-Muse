@@ -457,7 +457,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
     const hasSelection = editor && !editor.state.selection.empty;
 
     return (
-        <div className="lb-tiptap flex h-full w-full">
+        <div className="lb-tiptap flex h-full w-full flex-col">
             {editor && editor.view && !editor.isDestroyed && (
               <div className="sticky top-0 z-10 flex h-10 w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap bg-cyan-600 px-2 text-white rounded-t-3xl border-b border-cyan-700">
                 <button title="Undo" className="rounded-md p-2 hover:bg-cyan-700" onClick={() => editor.chain().focus().undo().run()}>
@@ -665,19 +665,14 @@ const FontFamilyDropdown = ({ editor }: { editor: any }) => {
     }
   };
 
-  console.log('FontFamilyDropdown rendered', { editor: !!editor, open });
-
   return (
     <div className="relative inline-flex items-center">
       <button
         title="Font Family"
-        className="rounded-md p-2 hover:bg-cyan-700 bg-yellow-500"
-        onClick={() => {
-          console.log('Font family button clicked');
-          setOpen((o) => !o);
-        }}
+        className="rounded-md p-2 hover:bg-cyan-700"
+        onClick={() => setOpen((o) => !o)}
       >
-        <span className="text-xs text-black">{getCurrentFont()}</span>
+        <span className="text-xs">{getCurrentFont()}</span>
       </button>
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1 min-w-[180px] max-h-64 overflow-y-auto rounded-md border border-cyan-700 bg-cyan-600 text-white shadow">
@@ -717,19 +712,14 @@ const FontSizeDropdown = ({ editor }: { editor: any }) => {
     }
   };
 
-  console.log('FontSizeDropdown rendered', { editor: !!editor, open });
-
   return (
     <div className="relative inline-flex items-center">
       <button
         title="Font Size"
-        className="rounded-md p-2 hover:bg-cyan-700 bg-green-500"
-        onClick={() => {
-          console.log('Font size button clicked');
-          setOpen((o) => !o);
-        }}
+        className="rounded-md p-2 hover:bg-cyan-700"
+        onClick={() => setOpen((o) => !o)}
       >
-        <span className="text-xs text-black">{getCurrentSize()}</span>
+        <span className="text-xs">{getCurrentSize()}</span>
       </button>
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1 min-w-[120px] max-h-64 overflow-y-auto rounded-md border border-cyan-700 bg-cyan-600 text-white shadow">

@@ -95,11 +95,17 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
   // Prefer persisted session messages for display so switching sessions shows history
   const session = sessions.find((s) => s.id === sessionId);
-  const displayMessages = (session?.messages?.length ? (session.messages as any) : (messages as any)) as any[];
+  // Prefer session messages; if streaming has begun and new tokens are arriving, merge by id
+  const displayMessages = ((): any[] => {
+    const saved = (session?.messages ?? []) as any[];
+    if (saved.length === 0) return messages as any[];
+    const liveById = new Map((messages as any[]).map((m) => [m.id, m]));
+    return saved.map((m) => liveById.get(m.id) ?? m);
+  })();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-card/60" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-muted/20" onPointerDown={(e) => e.stopPropagation()}>
         <Conversation className="h-full">
           <ConversationContent>
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
@@ -161,7 +167,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       </div>
 
       <PromptInput
-        className="mt-2"
+        className="mt-2 rounded-2xl border bg-muted/20"
         onSubmit={async (msg: any) => {
           const text = (msg?.text as string) ?? draft;
           const files = (msg as any)?.files;
