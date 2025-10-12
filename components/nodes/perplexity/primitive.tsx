@@ -314,7 +314,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     <NodeLayout
       {...props}
       toolbar={toolbar}
-      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 680, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
+      data={{ ...props.data, width: props.data.width ?? 1200, height: props.data.height ?? 560, resizable: false, fullscreenSupported: true, fullscreenOnly: false, allowIncoming: false, allowOutgoing: true }}
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}
@@ -352,10 +352,10 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                 onClick={handleSearch}
                 disabled={isSearchDisabled}
                 className="inline-flex items-center gap-2 text-white"
-                style={{ backgroundColor: '#32B9C6' }}
+                style={{ backgroundColor: '#059669' }}
               >
                 {isLoading ? 'Searching…' : 'Search with Perplexity'}
-                {!isLoading && <PerplexityIcon className="h-4 w-4" />}
+                {!isLoading && <PerplexityIcon className="h-4 w-4 text-white" />}
               </Button>
             </div>
           )}
@@ -493,8 +493,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                       <Button variant="outline" size="sm" onClick={addQuery}>
                         <PlusIcon className="mr-2 h-4 w-4" /> Add Query
                       </Button>
-                      <Button onClick={runBatchProgressive} disabled={isBatchSearchDisabled || isBatchRunning} size="sm">
+                      <Button onClick={runBatchProgressive} disabled={isBatchSearchDisabled || isBatchRunning} size="sm" className="inline-flex items-center gap-2 text-white" style={{ backgroundColor: '#059669' }}>
                         {isBatchRunning ? 'Running…' : 'Run Batch'}
+                        {!isBatchRunning && <PerplexityIcon className="h-4 w-4 text-white" />}
                       </Button>
                     </div>
                   </div>
