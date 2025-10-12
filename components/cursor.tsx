@@ -18,8 +18,8 @@ export default function Cursor({ color, x, y, message, avatar }: Props) {
     >
       <svg
         className="relative"
-        width="24"
-        height="36"
+        width="28"
+        height="42"
         viewBox="0 0 24 36"
         fill="none"
         stroke="white"
@@ -33,13 +33,13 @@ export default function Cursor({ color, x, y, message, avatar }: Props) {
 
       {message && (
         <div
-          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl px-4 py-2"
+          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl px-6 py-2"
           style={{ backgroundColor: color, borderRadius: 20 }}
         >
           {avatar ? (
             <img src={avatar} alt={message} width={24} height={24} className="rounded-full" />
           ) : null}
-          <p className="whitespace-nowrap text-sm leading-relaxed text-white">
+          <p className="whitespace-nowrap text-xs leading-normal text-white">
             {message}
           </p>
         </div>

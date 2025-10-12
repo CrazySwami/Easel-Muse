@@ -137,13 +137,13 @@ export const CursorsLayer = () => {
       {/* Note: The user's own cursor is the native mouse pointer. We only render the name tag to follow it. */}
       {label && (
         <div
-          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl px-4 py-2"
+          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl px-6 py-2"
           style={{ backgroundColor: color, borderRadius: 20 }}
         >
           {avatar ? (
             <img src={avatar} alt={label} width={24} height={24} className="rounded-full" />
           ) : null}
-          <p className="whitespace-nowrap text-sm leading-relaxed text-white">
+          <p className="whitespace-nowrap text-xs leading-normal text-white">
             {label}
           </p>
         </div>
