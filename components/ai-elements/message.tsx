@@ -16,9 +16,15 @@ export const Message = ({ className, from, children, ...props }: MessageProps) =
     )}
     {...props}
   >
+    {from !== 'user' && (
+      <div className="mt-1 h-6 w-6 shrink-0 rounded-full bg-muted" aria-hidden />
+    )}
     <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm', from === 'user' ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground')}>
       {children}
     </div>
+    {from === 'user' && (
+      <div className="mt-1 h-6 w-6 shrink-0 rounded-full bg-emerald-600" aria-hidden />
+    )}
   </div>
 );
 

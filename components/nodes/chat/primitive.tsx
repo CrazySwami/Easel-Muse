@@ -51,9 +51,14 @@ type ChatPanelProps = {
 };
 
 const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
-  const initialMessages = (sessions.find((s) => s.id === sessionId)?.messages ?? []) as any[];
   const { messages, status, sendMessage, regenerate } = useChat();
-  const [draft, setDraft] = useState('');
+  const [input, setInput] = useState('');
+  const models = [
+    { name: 'GPT 4o', value: 'openai/gpt-4o' },
+    { name: 'Deepseek R1', value: 'deepseek/deepseek-r1' },
+  ];
+  const [selectedModel, setSelectedModel] = useState<string>(models[0].value);
+  const [search, setSearch] = useState<boolean>(false);
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
@@ -112,6 +117,14 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     return merged;
   })();
 
+  const handleSubmit = (message: any) => {
+    const hasText = Boolean(message.text);
+    const hasAttachments = Boolean(message.files?.length);
+    if (!(hasText || hasAttachments)) return;
+    void sendMessage({ text: message.text || 'Sent with attachments', files: message.files }, { body: { model: selectedModel, webSearch: search } });
+    setInput('');
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-muted/20" onPointerDown={(e) => e.stopPropagation()}>
@@ -119,6 +132,19 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
           <ConversationContent>
             {(displayMessages ?? []).map((message: any, msgIdx: number) => (
               <div key={message.id}>
+                {/* Sources above message like the example */}
+                {message.role === 'assistant' && (
+                  <Sources>
+                    <SourcesTrigger count={(message.parts ?? []).filter((p: any)=> p.type==='source-url').length} />
+                    {(message.parts ?? []).map((part: any, i: number) => (
+                      part.type === 'source-url' ? (
+                        <SourcesContent key={`${message.id}-${i}`}>
+                          <Source href={part.url} title={part.url} />
+                        </SourcesContent>
+                      ) : null
+                    ))}
+                  </Sources>
+                )}
                 {message.parts?.map((part: any, i: number) => {
                   switch (part.type) {
                     case 'text':
@@ -140,18 +166,6 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                       return null;
                   }
                 })}
-                {message.role === 'assistant' && Array.isArray(message.parts) && message.parts.some((p: any) => p.type === 'source-url') && (
-                  <div className="mt-2">
-                    <Sources>
-                      <SourcesTrigger count={message.parts.filter((p: any) => p.type === 'source-url').length} />
-                      <SourcesContent>
-                        {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
-                          <Source key={`${message.id}-src-${i}`} href={part.url} title={part.url} />
-                        ))}
-                      </SourcesContent>
-                    </Sources>
-                  </div>
-                )}
                 {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
                   <Actions className="mt-1">
                     <Action
@@ -174,29 +188,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
         </Conversation>
       </div>
 
-      <PromptInput
-        className="mt-2 rounded-2xl border bg-muted/20"
-        onSubmit={async (msg: any) => {
-          const text = (msg?.text as string) ?? draft;
-          const files = (msg as any)?.files;
-          if (isSending || !(text || files?.length)) return;
-          // Ensure there is at least one session registered before first send
-          if (!sessions.length) {
-            const id = nanoid();
-            const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
-            updateNodeData(nodeId, { sessions: [next], activeSessionId: id });
-          }
-          setIsSending(true);
-          await sendMessage({ text: text || 'Sent with attachments', files }, { body: { model, webSearch } });
-          setIsSending(false);
-          setDraft('');
-        }}
-      >
+      <PromptInput className="mt-2 rounded-2xl border bg-muted/20" onSubmit={handleSubmit}>
         <PromptInputBody>
           <PromptInputAttachments>
             {(attachment) => <PromptInputAttachment data={attachment} />}
           </PromptInputAttachments>
-          <PromptInputTextarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ask anything…" />
+          <PromptInputTextarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything…" />
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
@@ -206,24 +203,24 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                 <PromptInputActionAddAttachments />
               </PromptInputActionMenuContent>
             </PromptInputActionMenu>
-            <PromptInputButton variant={webSearch ? 'default' : 'ghost'} onClick={() => updateNodeData(nodeId, { webSearch: !webSearch })}>
+            <PromptInputButton variant={search ? 'default' : 'ghost'} onClick={() => setSearch(!search)}>
               <GlobeIcon size={16} />
               <span>Search</span>
             </PromptInputButton>
-            <PromptInputModelSelect onValueChange={(value) => updateNodeData(nodeId, { model: value })} value={model}>
+            <PromptInputModelSelect onValueChange={(value) => setSelectedModel(value)} value={selectedModel}>
               <PromptInputModelSelectTrigger>
                 <PromptInputModelSelectValue />
               </PromptInputModelSelectTrigger>
               <PromptInputModelSelectContent>
-                {Object.keys(modelsMap).map((id) => (
-                  <PromptInputModelSelectItem key={id} value={id}>
-                    {(modelsMap as any)[id]?.label ?? id}
+                {models.map((m) => (
+                  <PromptInputModelSelectItem key={m.value} value={m.value}>
+                    {m.name}
                   </PromptInputModelSelectItem>
                 ))}
               </PromptInputModelSelectContent>
             </PromptInputModelSelect>
           </PromptInputTools>
-          <PromptInputSubmit disabled={!draft && status !== 'streaming'} status={status as any} />
+          <PromptInputSubmit disabled={!input && !status} status={status as any} />
         </PromptInputToolbar>
       </PromptInput>
     </div>

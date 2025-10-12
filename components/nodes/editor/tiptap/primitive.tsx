@@ -754,7 +754,7 @@ const FontSizeDropdown = ({ editor }: { editor: any }) => {
 };
 
 
-const ColorDropdown = ({ editor }: { editor: any }) => {
+const TextColorDropdown = ({ editor }: { editor: any }) => {
   const palette = [
     '#000000','#111827','#6B7280','#9CA3AF','#D1D5DB','#FFFFFF',
     '#EF4444','#F59E0B','#FBBF24','#10B981','#3B82F6','#6366F1','#8B5CF6'
@@ -762,7 +762,7 @@ const ColorDropdown = ({ editor }: { editor: any }) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button title="Color" className="rounded-md p-2 hover:bg-cyan-700">
+        <button title="Text Color" className="rounded-md p-2 hover:bg-cyan-700">
           <span className="text-[10px]">A</span>
         </button>
       </DropdownMenuTrigger>
@@ -788,11 +788,31 @@ const ColorDropdown = ({ editor }: { editor: any }) => {
             />
           </label>
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <button className="rounded bg-cyan-700 px-2 py-1 text-xs" onClick={() => editor.chain().focus().toggleHighlight().run()}>
-            Toggle highlight
-          </button>
+        <div className="mt-2 flex items-center justify-end">
           <button className="rounded bg-cyan-700 px-2 py-1 text-xs" onClick={() => editor.chain().focus().unsetColor().run()}>
+            Clear
+          </button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const HighlightDropdown = ({ editor }: { editor: any }) => {
+  const swatches = ['#fef08a','#fde68a','#fca5a5','#93c5fd','#bbf7d0','#f9a8d4'];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button title="Highlight" className="rounded-md p-2 hover:bg-cyan-700">
+          <span className="text-[10px]">HL</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="z-[100] p-2 bg-cyan-600 text-white border border-cyan-700" sideOffset={6} align="start">
+        <div className="flex flex-wrap gap-2">
+          {swatches.map((c) => (
+            <button key={c} className="h-5 w-5 rounded-sm border border-white/20" style={{ backgroundColor: c }} onClick={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color: c }).run(); }} />
+          ))}
+          <button className="rounded bg-cyan-700 px-2 py-1 text-xs" onClick={() => editor.chain().focus().unsetHighlight().run()}>
             Clear
           </button>
         </div>

@@ -131,25 +131,24 @@ export const CursorsLayer = () => {
         position: 'fixed',
         left: x,
         top: y,
-        transform: 'translate(-50%, -50%)',
+        transform: 'translate(-2px, -2px)',
         zIndex: 50,
         pointerEvents: 'none',
       }}
     >
-      {/* SVG pointer arrow – colored per user */}
-      <svg width="18" height="18" viewBox="0 0 24 24" fill={color} stroke="white" strokeWidth="1.5" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,.25))' }}>
-        <path d="M3 2l14 6-6 2 4 9-3 1-4-9-5 3z" />
-      </svg>
       {label ? (
         <div
           style={{
-            marginTop: 6,
+            position: 'absolute',
+            left: 14,
+            top: 12,
             padding: '2px 6px',
             borderRadius: 6,
-            background: 'rgba(0,0,0,.65)',
+            background: color,
             color: 'white',
             fontSize: 10,
             whiteSpace: 'nowrap',
+            boxShadow: '0 1px 2px rgba(0,0,0,.35)'
           }}
         >
           {label}

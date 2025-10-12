@@ -50,19 +50,22 @@ export const Menu = () => {
     );
   }
 
+  const meta = user.user_metadata || {} as any;
+  const avatar = meta.avatar || meta.avatar_url || meta.picture || undefined;
+  const displayName = meta.name || meta.full_name || (user.email ? user.email.split('@')[0] : user.id);
+  const initials = (displayName || '')
+    .split(' ')
+    .map((n: string) => n.at(0))
+    .join('');
+
   return (
     <>
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
             <Avatar>
-              <AvatarImage src={user.user_metadata.avatar} />
-              <AvatarFallback className="bg-primary text-primary-foreground uppercase">
-                {(user.user_metadata.name ?? user.email ?? user.id)
-                  ?.split(' ')
-                  .map((name: string) => name.at(0))
-                  .join('')}
-              </AvatarFallback>
+              <AvatarImage src={avatar} />
+              <AvatarFallback className="bg-primary text-primary-foreground uppercase">{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
@@ -75,18 +78,13 @@ export const Menu = () => {
         >
           <DropdownMenuLabel>
             <Avatar>
-              <AvatarImage src={user.user_metadata.avatar} />
-              <AvatarFallback className="bg-primary text-primary-foreground uppercase">
-                {(user.user_metadata.name ?? user.email ?? user.id)
-                  ?.split(' ')
-                  .map((name: string) => name.at(0))
-                  .join('')}
-              </AvatarFallback>
+              <AvatarImage src={avatar} />
+              <AvatarFallback className="bg-primary text-primary-foreground uppercase">{initials}</AvatarFallback>
             </Avatar>
             <p className="mt-2 truncate">
-              {user.user_metadata.name ?? user.email ?? user.id}
+              {displayName}
             </p>
-            {user.user_metadata.name && user.email && (
+            {displayName && user.email && (
               <p className="truncate font-normal text-muted-foreground text-xs">
                 {user.email}
               </p>
