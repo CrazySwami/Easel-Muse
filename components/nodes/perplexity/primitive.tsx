@@ -46,6 +46,15 @@ const getDefaultModel = (models: Record<string, any>) => {
   return firstAllowed?.[0] ?? Object.keys(models)[0];
 };
 
+// Perplexity-only model filter (for model-based query mode)
+const filterPerplexityModels = (models: Record<string, any>) =>
+  Object.fromEntries(
+    Object.entries(models).filter(([_, m]: any) => {
+      const isPerplexity = m?.chef?.id === 'perplexity' || (Array.isArray(m?.providers) && m.providers.some((p: any) => p.id === 'perplexity'));
+      return isPerplexity;
+    })
+  );
+
 type PerplexityPrimitiveProps = PerplexityNodeProps & { title: string };
 
 export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
@@ -67,6 +76,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
   const queries = props.data.queries ?? [''];
   const generatePrompt = props.data.generatePrompt ?? '';
   const model = props.data.model ?? getDefaultModel(filteredModels);
+  const pxModels = filterPerplexityModels(models);
+  const pxModel = (props.data as any)?.pxModel ?? Object.keys(pxModels)[0];
+  const pxMode = (props.data as any)?.pxMode ?? 'search'; // 'search' | 'model'
   const searchSingleResults = props.data.searchSingleResults ?? [];
   const searchBatchResults = props.data.searchBatchResults ?? [];
   const generatedQuestions = props.data.generatedQuestions ?? [];
@@ -122,7 +134,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     if (inputMode === 'batch' && validQueries.length === 0) return;
 
     setIsLoading(true);
-    const body = { mode: 'search', query: inputMode === 'single' ? validQueries[0] : validQueries } as const;
+    const body = pxMode === 'model'
+      ? { mode: 'chat', messages: [{ role: 'user', content: (inputMode === 'single' ? validQueries[0] : validQueries).toString() }], model: pxModel }
+      : { mode: 'search', query: inputMode === 'single' ? validQueries[0] : validQueries } as const;
 
     try {
       const response = await fetch('/api/perplexity/search', {
@@ -139,6 +153,13 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
 
       const data = await response.json();
 
+      if (pxMode === 'model') {
+        // Model-based: normalize to result items with title/snippet when possible
+        const text = data?.choices?.[0]?.message?.content ?? '';
+        const pseudoResult = [{ title: 'Answer', snippet: text }];
+        updateNodeData(props.id, { searchSingleResults: pseudoResult, outputTexts: [text], outputLinks: [] });
+        return;
+      }
       if (inputMode === 'single') {
         const single = data.results ?? [];
         const out = deriveOutputsFromResults(single);
@@ -175,17 +196,22 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
       nextStatuses[i] = 'running';
       updateNodeData(props.id, { batchStatuses: nextStatuses, selectedQueryIndex: i });
       try {
+        const payload = pxMode === 'model'
+          ? { mode: 'chat', messages: [{ role: 'user', content: q }], model: pxModel }
+          : { mode: 'search', query: q };
         const resp = await fetch('/api/perplexity/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'search', query: q }),
+          body: JSON.stringify(payload),
         });
         if (!resp.ok) {
           const txt = await resp.text();
           throw new Error(txt || 'API error');
         }
         const data = await resp.json();
-        const results = data.results ?? [];
+        const results = pxMode === 'model'
+          ? [{ title: 'Answer', snippet: data?.choices?.[0]?.message?.content ?? '' }]
+          : (data.results ?? []);
         groups[i] = { query: q, results };
         const out = deriveOutputsFromResults(groups as any);
         updateNodeData(props.id, { searchBatchResults: [...groups], outputTexts: out.texts, outputLinks: out.links });
@@ -269,13 +295,29 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
     >
       <div className="flex h-full min-h-0 flex-col gap-3 p-3">
         {/* Header Controls */}
-        <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-white p-2">
+        <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-card/60 p-2">
             <div className="inline-flex rounded-md border p-0.5">
                 <Button variant={inputMode === 'single' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('single')}>Single</Button>
                 <Button variant={inputMode === 'batch' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('batch')}>Batch</Button>
                 <Button variant={inputMode === 'generate' ? 'default' : 'ghost'} size="sm" onClick={() => setInputMode('generate')}>Generate</Button>
             </div>
-            {/* Chat option removed; always Search API */}
+            {/* Mode within Single/Batch: Search API vs Perplexity model */}
+            {inputMode !== 'generate' && (
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-md border p-0.5">
+                  <Button variant={pxMode === 'search' ? 'default' : 'ghost'} size="sm" onClick={() => updateNodeData(props.id, { pxMode: 'search' })}>Search API</Button>
+                  <Button variant={pxMode === 'model' ? 'default' : 'ghost'} size="sm" onClick={() => updateNodeData(props.id, { pxMode: 'model' })}>Perplexity model</Button>
+                </div>
+                {pxMode === 'model' && (
+                  <ModelSelector
+                    value={pxModel}
+                    options={pxModels}
+                    className="w-[220px] rounded-full"
+                    onChange={(v) => updateNodeData(props.id, { pxModel: v })}
+                  />
+                )}
+              </div>
+            )}
         </div>
 
         {/* Dynamic Input Area */}
@@ -296,7 +338,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
           )}
           {/* Batch inputs are rendered in the left pane of the split view below */}
           {inputMode === 'generate' && (
-            <div className="h-full rounded-2xl border bg-white p-3 flex flex-col gap-2 min-h-0">
+            <div className="h-full rounded-2xl border bg-card/60 p-3 flex flex-col gap-2 min-h-0">
                 <Textarea placeholder="Describe the kind of questions you want to generate..." value={generatePrompt} onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })}/>
                 <div className="flex justify-between items-center">
                     <ModelSelector
@@ -308,7 +350,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                     <Button onClick={handleGenerate} disabled={isGenerateDisabled}>{isLoading ? 'Generating...' : 'Generate Queries'}</Button>
                 </div>
                 {/* Editable generated list */}
-                <div className="rounded-xl border bg-white p-3 flex-1 min-h-0 flex flex-col">
+                <div className="rounded-xl border bg-card/60 p-3 flex-1 min-h-0 flex flex-col">
                   <p className="mb-2 text-xs font-medium text-muted-foreground">Generated questions</p>
                   <div className="flex-1 min-h-0 flex flex-col gap-2 overflow-auto">
                     {generatedQuestions.map((q: string, i: number) => (
@@ -339,7 +381,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
 
         {/* Results View (hidden in Generate tab) */}
         {inputMode !== 'generate' && (
-        <div className="nowheel flex-1 overflow-auto rounded-2xl border bg-white p-3 min-h-0">
+        <div className="nowheel flex-1 overflow-auto rounded-2xl border bg-card/60 p-3 min-h-0">
             {isLoading && <p className="text-xs text-muted-foreground">Loading...</p>}
 
             {inputMode === 'single' && (
@@ -352,7 +394,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
 
             {inputMode === 'batch' && (
               <div className="grid h-full min-h-0 grid-cols-12 gap-3">
-                <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-white p-3">
+                <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   <div className="flex h-full min-h-0 flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div />
@@ -386,7 +428,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                         ) : (
                           <button
                             key={idx}
-                            className="flex w-full items-center justify-between rounded-xl border bg-white px-3 py-2 text-left text-sm hover:bg-muted/50"
+                            className="flex w-full items-center justify-between rounded-xl border bg-card/60 px-3 py-2 text-left text-sm hover:bg-muted/50"
                             onClick={() => updateNodeData(props.id, { selectedQueryIndex: idx })}
                           >
                             <span className="block truncate">{q || `Query #${idx + 1}`}</span>
@@ -415,7 +457,7 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                     </div>
                   </div>
                 </div>
-                <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-white p-3">
+                <div className="col-span-8 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
                   {(() => {
                     const idx = (props.data as any)?.selectedQueryIndex ?? 0;
                     if (Array.isArray(searchBatchResults) && searchBatchResults.length > 0 && typeof searchBatchResults[0] === 'object' && 'query' in (searchBatchResults[0] as any)) {
