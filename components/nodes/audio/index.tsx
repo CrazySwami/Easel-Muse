@@ -18,6 +18,8 @@ export type AudioNodeProps = {
     voice?: string;
     transcript?: string;
     instructions?: string;
+    autoTranscribe?: boolean;
+    transcribing?: boolean;
   };
   id: string;
 };
@@ -27,7 +29,8 @@ export const AudioNode = (props: AudioNodeProps) => {
     id: props.id,
     handleType: 'target',
   });
-  const Component = connections.length ? AudioTransform : AudioPrimitive;
+  const hasIncomers = connections.length > 0;
+  const Component = hasIncomers || (props.data as any)?.generateMode ? AudioTransform : AudioPrimitive;
 
-  return <Component {...props} title="Audio" />;
+  return <Component key={(hasIncomers || (props.data as any)?.generateMode) ? 'transform' : 'primitive'} {...props} title="Audio" />;
 };

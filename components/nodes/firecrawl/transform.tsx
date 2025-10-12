@@ -44,36 +44,7 @@ export const FirecrawlTransform = ({ data, id, type, title }: FirecrawlTransform
 
   const toolbar = useMemo(() => {
     const items: NonNullable<Parameters<typeof NodeLayout>[0]['toolbar']> = [];
-
-    if (status === 'running') {
-      items.push({
-        tooltip: 'Stop',
-        children: (
-          <Button size="icon" className="rounded-full" onClick={() => updateNodeData(id, { status: 'idle' })} disabled={!projectId}>
-            <SquareIcon size={12} />
-          </Button>
-        ),
-      });
-    } else if (data.generated) {
-      items.push({
-        tooltip: 'Regenerate',
-        children: (
-          <Button size="icon" className="rounded-full" onClick={handleGenerate} disabled={!projectId}>
-            <RotateCcwIcon size={12} />
-          </Button>
-        ),
-      });
-    } else {
-      items.push({
-        tooltip: 'Generate',
-        children: (
-          <Button size="icon" className="rounded-full" onClick={handleGenerate} disabled={!projectId}>
-            <PlayIcon size={12} />
-          </Button>
-        ),
-      });
-    }
-
+    // Firecrawl has its own primary action inside the node UI.
     if (data.updatedAt) {
       items.push({
         tooltip: `Last updated: ${new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(data.updatedAt))}`,
@@ -84,9 +55,8 @@ export const FirecrawlTransform = ({ data, id, type, title }: FirecrawlTransform
         ),
       });
     }
-
     return items;
-  }, [status, data.generated, data.updatedAt, handleGenerate, id, projectId, updateNodeData]);
+  }, [data.updatedAt]);
 
   return (
     <NodeLayout id={id} data={data} title={title} type={type} toolbar={toolbar}>

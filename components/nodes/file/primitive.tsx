@@ -107,32 +107,34 @@ export const FilePrimitive = ({
         {data.content ? (
           <FilePreview {...data.content} />
         ) : (
-          <Dropzone
-            maxSize={1024 * 1024 * 10}
-            minSize={1024}
-            maxFiles={1}
-            multiple={false}
-            onDrop={handleDrop}
-            src={files}
-            onError={console.error}
-            className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
-          >
-            <DropzoneEmptyState />
-            <DropzoneContent>
-              {files && files.length > 0 && (
-                <div className="relative">
-                  <FilePreview
-                    name={files[0].name}
-                    type={files[0].type}
-                    url={URL.createObjectURL(files[0])}
-                  />
-                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/50">
-                    <Loader2Icon className="size-12 animate-spin text-white" />
+          <div className="flex flex-1 min-h-0 items-center justify-center">
+            <Dropzone
+              maxSize={1024 * 1024 * 10}
+              minSize={1024}
+              maxFiles={1}
+              multiple={false}
+              onDrop={handleDrop}
+              src={files}
+              onError={console.error}
+              className="rounded-none border-none bg-transparent shadow-none hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent"
+            >
+              <DropzoneEmptyState />
+              <DropzoneContent>
+                {files && files.length > 0 && (
+                  <div className="relative">
+                    <FilePreview
+                      name={files[0].name}
+                      type={files[0].type}
+                      url={URL.createObjectURL(files[0])}
+                    />
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/50">
+                      <Loader2Icon className="size-12 animate-spin text-white" />
+                    </div>
                   </div>
-                </div>
-              )}
-            </DropzoneContent>
-          </Dropzone>
+                )}
+              </DropzoneContent>
+            </Dropzone>
+          </div>
         )}
       </div>
     </NodeLayout>

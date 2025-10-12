@@ -224,7 +224,7 @@ export const AudioPrimitive = ({
   };
 
   return (
-    <NodeLayout id={id} data={{ ...data, width: 840, height: 480, resizable: false }} type={type} title={title}>
+    <NodeLayout id={id} data={{ ...data, width: 840, height: 480, resizable: false, dualModeSupported: true, titleOverride: 'Audio' }} type={type} title={title}>
       {/* Options: two equal columns */}
       <div className="mb-3 grid grid-cols-2 gap-3">
         {/* Record column */}
