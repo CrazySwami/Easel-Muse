@@ -230,7 +230,7 @@ export const AIComparePrimitive = (props: Props) => {
           </div>
 
           {/* Right: provider answers + table */}
-          <div className="col-span-8 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2">
+          <div className="col-span-8 min-h-0 overflow-auto rounded-2xl border bg-card/60 p-2 nowheel nodrag nopan" onPointerDown={(e)=> e.stopPropagation()}>
             {inputMode === 'batch' && (() => {
               const payload = getActivePayload(props.data.results, props.data.selectedQueryIndex ?? 0);
               return <AnswersCollapsible payload={payload} />;
@@ -584,7 +584,19 @@ function extractAnswersByProvider(payload: any): { openai?: string; gemini?: str
   try {
     const g = payload?.gemini;
     const parts = g?.candidates?.[0]?.content?.parts ?? g?.candidates?.[0]?.content?.[0]?.parts ?? [];
-    out.gemini = parts.map((p: any) => p?.text).filter(Boolean).join('\n');
+    // Replace redirector URLs inline with their titles when present in grounding chunks
+    const chunks: any[] = g?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+    const redirectMap = new Map<string, string>();
+    for (const c of chunks) {
+      const u = c?.web?.uri || c?.web?.url; const t = c?.web?.title || c?.web?.domain;
+      if (u && t) redirectMap.set(String(u), String(t));
+    }
+    const raw = parts.map((p: any) => p?.text).filter(Boolean).join('\n');
+    let text = raw;
+    for (const [u, t] of redirectMap.entries()) {
+      text = text.replaceAll(u, t);
+    }
+    out.gemini = text;
     if (out.gemini) out.gemini = String(out.gemini).slice(0, 1200);
   } catch {}
   try {
