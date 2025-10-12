@@ -10,6 +10,7 @@ import { FirecrawlNode } from './firecrawl';
 import { WebRendererNode } from './web-renderer';
 import { PerplexityNode } from './perplexity';
 import { SerpApiNode } from './serpapi';
+import { ChatNode } from './chat';
 
 export const nodeTypes = {
   image: ImageNode,
@@ -24,4 +25,5 @@ export const nodeTypes = {
   'web-renderer': WebRendererNode,
   perplexity: PerplexityNode,
   serpapi: SerpApiNode,
+  chat: ChatNode,
 };

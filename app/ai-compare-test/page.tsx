@@ -121,6 +121,23 @@ export default function AICompareTestPage() {
     if (status === 'done' && urls.length) doResolve();
   }, [status, urls]);
 
+  // Gemini grounding-aware citations (use title/domain + redirector href)
+  const geminiCitations = useMemo(() => {
+    try {
+      const chunks: any[] = out.gemini?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+      return chunks
+        .map((c: any) => c?.web)
+        .filter(Boolean)
+        .map((w: any) => ({
+          title: w?.title || w?.domain || 'Source',
+          href: w?.uri,
+        }))
+        .filter((x: any) => !!x.href);
+    } catch {
+      return [] as Array<{ title: string; href: string }>;
+    }
+  }, [out.gemini]);
+
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-6">
       <h1 className="text-xl font-semibold">AI Search Compare (OpenAI / Gemini 2.5 Flash / Claude / SerpApi)</h1>
@@ -154,8 +171,12 @@ export default function AICompareTestPage() {
 
       <section className="grid gap-3">
         <h2 className="font-semibold">Citations</h2>
-        {((resolved ? urls : []).length === 0 && urls.length === 0) ? (
-          <p className="text-sm text-muted-foreground">Run All to see extracted citations.</p>
+        {geminiCitations.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {geminiCitations.map((c) => (
+              <SearchResult key={c.href} result={{ url: c.href, title: c.title, snippet: '' }} />
+            ))}
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {urls.map((u) => {
