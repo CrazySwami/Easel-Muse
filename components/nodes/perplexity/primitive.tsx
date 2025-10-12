@@ -428,23 +428,9 @@ export const PerplexityPrimitive = (props: PerplexityPrimitiveProps) => {
                         <ModelSelector value={model} options={filteredModels} className="w-[200px] rounded-full" onChange={(v)=> updateNodeData(props.id, { model: v })} />
                       </div>
                       <Textarea rows={3} placeholder="Describe questions to generate…" value={generatePrompt} onChange={(e)=> updateNodeData(props.id, { generatePrompt: e.target.value })} />
-                      <div className="mt-2 flex items-center justify-between">
-                        <Button variant="outline" size="sm" onClick={addGeneratedQuestion}><PlusIcon className="mr-2 h-4 w-4"/>Add</Button>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={handleGenerate} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate'}</Button>
-                          <Button size="sm" className="text-white" style={{ backgroundColor: '#32B9C6' }} onClick={sendToBatch} disabled={!generatedQuestions.length}>Send to Batch</Button>
-                        </div>
+                      <div className="mt-2 flex items-center justify-end">
+                        <Button size="sm" onClick={async ()=>{ await handleGenerate(); const existing = Array.isArray(queries) ? queries : []; updateNodeData(props.id, { inputMode: 'batch', queries: [...existing, ...((props.data as any)?.generatedQuestions ?? [])] }); }} disabled={isGenerateDisabled}>{isLoading ? 'Generating…' : 'Generate to Batch'}</Button>
                       </div>
-                      {!!generatedQuestions.length && (
-                        <div className="mt-2 max-h-48 overflow-auto space-y-2">
-                          {generatedQuestions.map((q,i)=> (
-                            <div key={i} className="flex items-center gap-2">
-                              <Input value={q} onChange={(e)=> updateGeneratedQuestion(i, e.target.value)} />
-                              <Button variant="ghost" size="icon" onClick={()=> removeGeneratedQuestion(i)}><XIcon className="h-4 w-4"/></Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                     <div className="flex items-center justify-between">
                       <div />
