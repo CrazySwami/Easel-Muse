@@ -43,6 +43,10 @@ type NodeLayoutProps = {
     maxHeight?: number;
     fullscreenSupported?: boolean;
     fullscreenOnly?: boolean;
+    dualModeSupported?: boolean;
+    mode?: 'plain' | 'generate';
+    generateMode?: boolean;
+    titleOverride?: string;
   };
   title: string;
   type: string;
@@ -80,6 +84,8 @@ export const NodeLayout = ({
   // Opt-in only: fullscreen must be explicitly enabled per node
   const fullscreenSupported = Boolean((data as any)?.fullscreenSupported);
   const fullscreenOnly = Boolean((data as any)?.fullscreenOnly);
+  const dualModeSupported = Boolean((data as any)?.dualModeSupported);
+  const modeValue = ((data as any)?.mode as 'plain' | 'generate' | undefined) ?? (((data as any)?.generateMode ? 'generate' : 'plain') as 'plain' | 'generate');
 
   const handleDelete = () => deleteElements({ nodes: [{ id }] });
   const handleShowData = () => setShowData(true);
@@ -266,6 +272,41 @@ export const NodeLayout = ({
                 <TooltipContent>Enter fullscreen</TooltipContent>
               </Tooltip>
             )}
+            {/* Dual-mode toggle (Plain/Generate) */}
+            {dualModeSupported && (
+              <div className="ml-1 inline-flex items-center rounded-full bg-white/10 p-0.5">
+                <button
+                  className={cn('h-6 rounded-full px-2 text-xs', modeValue === 'plain' ? 'bg-white text-emerald-700' : 'text-white hover:bg-white/10')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    try {
+                      const node = getNode(id);
+                      const nextData = { ...(node?.data as any), mode: 'plain', generateMode: false };
+                      updateNode(id, { data: nextData });
+                    } catch {}
+                  }}
+                >
+                  Plain
+                </button>
+                <button
+                  className={cn('h-6 rounded-full px-2 text-xs', modeValue === 'generate' ? 'bg-white text-emerald-700' : 'text-white hover:bg-white/10')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    try {
+                      const node = getNode(id);
+                      const nextData = { ...(node?.data as any), mode: 'generate', generateMode: true };
+                      updateNode(id, { data: nextData });
+                    } catch {}
+                  }}
+                >
+                  Generate
+                </button>
+              </div>
+            )}
+          </div>
+          {/* Title centered */}
+          <div className="pointer-events-none select-none px-2 text-xs font-medium text-white/90 truncate">
+            {(data as any)?.titleOverride ?? title}
           </div>
           {/* Right-side locks */}
           <div className="flex items-center gap-1">
@@ -419,28 +460,8 @@ export const NodeLayout = ({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      {type !== 'drop' && allowIncoming && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className={cn(
-            'pointer-events-auto shadow-md ring-2 ring-background/80',
-            '!-translate-y-1/2 !rounded-full !bg-emerald-600/90 hover:!bg-emerald-600',
-            '!-left-2 !top-1/2 !h-28 !w-2.5'
-          )}
-        />
-      )}
-      {type !== 'drop' && type !== 'video' && allowOutgoing && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className={cn(
-            'pointer-events-auto shadow-md ring-2 ring-background/80',
-            '!-translate-y-1/2 !rounded-full !bg-emerald-600/90 hover:!bg-emerald-600',
-            '!-right-2 !top-1/2 !h-28 !w-2.5'
-          )}
-        />
-      )}
+      {type !== 'drop' && allowIncoming && <Handle type="target" position={Position.Left} />}
+      {type !== 'drop' && type !== 'video' && allowOutgoing && <Handle type="source" position={Position.Right} />}
       <Dialog open={showData} onOpenChange={setShowData}>
         <DialogContent className="max-h-[70vh] max-w-[80vw] overflow-auto">
           <DialogHeader>
