@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ModelSelector } from '../model-selector';
 import { useGateway } from '@/providers/gateway/client';
 import { nanoid } from 'nanoid';
-import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon } from 'lucide-react';
+import { PlusIcon, Trash2Icon, GlobeIcon, RefreshCcwIcon, CopyIcon, PaperclipIcon } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
 import { useReactFlow } from '@xyflow/react';
 import { useSelf } from '@liveblocks/react';
@@ -33,6 +33,7 @@ import { Response } from '@/components/ai-elements/response';
 import { Sources, SourcesContent, SourcesTrigger, Source } from '@/components/ai-elements/sources';
 import { Reasoning, ReasoningContent, ReasoningTrigger } from '@/components/ai-elements/reasoning';
 import { Loader } from '@/components/ai-elements/loader';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type ChatPanelProps = {
   nodeId: string;
@@ -49,6 +50,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const { messages, status, sendMessage, regenerate } = useChat();
   const me = useSelf();
   const [input, setInput] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const getDefaultModel = (ms: Record<string, any>) => {
     if (ms['gpt-5-mini']) return 'gpt-5-mini';
     const entry = Object.entries(ms).find(([id]) => id.includes('gpt-5') || id.includes('mini'));
@@ -116,10 +118,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
   const handleSubmit = (message: any) => {
     const hasText = Boolean(message.text);
-    const hasAttachments = Boolean(message.files?.length);
+    const hasAttachments = Boolean((message.files?.length ?? 0) || attachedFiles.length);
     if (!(hasText || hasAttachments)) return;
-    void sendMessage({ text: message.text || 'Sent with attachments', files: message.files }, { body: { model: selectedModel, webSearch: search } });
+    const filesToSend = (message.files && message.files.length ? message.files : attachedFiles);
+    void sendMessage({ text: message.text || 'Sent with attachments', files: filesToSend }, { body: { modelId: selectedModel, webSearch: search } });
     setInput('');
+    setAttachedFiles([]);
   };
 
   return (
@@ -146,6 +150,17 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                            )}
                          </Message>
                        );
+                   case 'file':
+                     if (typeof part.mediaType === 'string' && part.mediaType.startsWith('image/') && typeof part.url === 'string') {
+                       return (
+                         <Message key={`${message.id}-${i}`} from={message.role === 'user' ? 'user' : 'assistant'} avatarUrl={message.role === 'user' ? ((me?.info as any)?.avatar as string | undefined) : '/Easel-Logo.svg'}>
+                           <div className="overflow-hidden rounded-xl border bg-card/60">
+                             <img src={part.url} alt="Generated image" className="block max-h-[420px] w-auto" />
+                           </div>
+                         </Message>
+                       );
+                     }
+                     return null;
                     case 'reasoning':
                       return (
                         <Reasoning key={`${message.id}-${i}`} className="w-full" isStreaming={status === 'streaming' && i === message.parts.length - 1 && message.id === (messages as any).at(-1)?.id}>
@@ -218,6 +233,45 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
+            {(() => {
+              const id = (selectedModel || '').toLowerCase();
+              const imageCapable = /gpt-4o|gpt-4\.1|gpt-5|gemini-1\.5|flash|haiku|sonnet|vision|llama/.test(id);
+              const fileCapable = /gpt-4o|gpt-4\.1|gpt-5|gemini-1\.5|claude-3/.test(id);
+              const accept = [imageCapable ? 'image/*' : null, fileCapable ? 'application/pdf,text/plain' : null]
+                .filter(Boolean)
+                .join(',');
+              return (
+                <>
+                  <input
+                    type="file"
+                    multiple
+                    accept={accept || undefined}
+                    className="hidden"
+                    onChange={(e) => setAttachedFiles(Array.from(e.target.files ?? []))}
+                    id={`file-input-${nodeId}`}
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <PromptInputButton
+                          onClick={() => {
+                            const el = document.getElementById(`file-input-${nodeId}`) as HTMLInputElement | null;
+                            el?.click();
+                          }}
+                          disabled={!accept}
+                        >
+                          <PaperclipIcon size={16} />
+                          <span>{attachedFiles.length ? `${attachedFiles.length} file${attachedFiles.length>1?'s':''}` : 'Attach'}</span>
+                        </PromptInputButton>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>Accepted: {accept || 'None'}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </>
+              );
+            })()}
             <PromptInputButton variant={search ? 'default' : 'ghost'} onClick={() => setSearch(!search)}>
               <GlobeIcon size={16} />
               <span>Search</span>
