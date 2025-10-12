@@ -76,10 +76,15 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       renameSessionIfNeeded(sessionId, text);
     }
     if ((messages ?? []).length > 0) {
-      const nextSessions = (sessions ?? []).map((s) =>
-        s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
-      );
-      updateNodeData(nodeId, { sessions: nextSessions });
+      const currentSaved = (sessions ?? []).find((s) => s.id === sessionId)?.messages?.length ?? 0;
+      const incoming = (messages as any[])?.length ?? 0;
+      // Prevent overwriting history with fewer/empty messages
+      if (incoming >= currentSaved) {
+        const nextSessions = (sessions ?? []).map((s) =>
+          s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
+        );
+        updateNodeData(nodeId, { sessions: nextSessions });
+      }
     }
 
     // Push latest assistant text
@@ -221,32 +226,17 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
                     </div>
                   );
                 })()}
-                {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
-                  <div className="mt-1 max-w-[80%]">
-                  <Actions className="">
-                    <Action
-                      onClick={() => {
-                        const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');
-                        const toCopy = textParts.map((p: any) => p.text).join('\n');
-                        navigator.clipboard?.writeText(toCopy);
-                      }}
-                      label="Copy"
-                    >
-                      <CopyIcon className="size-3" />
-                    </Action>
-                  </Actions>
-                  </div>
-                )}
+                {/* copy action removed per design */}
               </div>
             ))}
-            {status === 'submitted' && <Loader />}
+            {/* loader removed to avoid transient placeholder box */}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
       </div>
 
       <PromptInput className="mt-2 rounded-2xl border bg-muted/20" onSubmit={handleSubmit}>
-        <PromptInputBody className="max-h-40 overflow-y-auto">
+        <PromptInputBody className="max-h-40 overflow-y-auto" onPointerDown={(e)=>e.stopPropagation()}>
           {attachedFiles.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachedFiles.slice(0,3).map((f, i) => {

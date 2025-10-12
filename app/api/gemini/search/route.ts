@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'GOOGLE_GENERATIVE_AI_API_KEY not set' }, { status: 500 });
     }
 
-    const m = model || 'gemini-2.5-flash';
+    const m = model || 'gemini-2.5-flash-lite';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${env.GOOGLE_GENERATIVE_AI_API_KEY}`;
     const body: any = {
       contents: [{ role: 'user', parts: [{ text: q }]}],

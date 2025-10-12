@@ -61,7 +61,7 @@ export const AIComparePrimitive = (props: Props) => {
   const model = (props.data as any)?.model ?? getDefaultModel(models);
   // Per-provider model selections (with sensible defaults)
   const openaiModel = (props.data as any)?.openaiModel ?? 'gpt-4.1-mini';
-  const geminiModel = (props.data as any)?.geminiModel ?? 'gemini-2.5-flash';
+  const geminiModel = (props.data as any)?.geminiModel ?? 'gemini-2.5-flash-lite';
   const anthropicModel = (props.data as any)?.anthropicModel ?? 'claude-3-5-haiku-20241022';
 
   const setInputMode = (value: 'single'|'batch'|'settings') => updateNodeData(props.id, { inputMode: value });
@@ -76,6 +76,19 @@ export const AIComparePrimitive = (props: Props) => {
   const [isRunning, setIsRunning] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Shared helper: POST JSON with one retry and ok-guard
+  const postJson = useCallback(async (url: string, body: any) => {
+    const exec = async () => {
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(String(r.status));
+      return await r.json();
+    };
+    try { return await exec(); } catch {
+      await new Promise((res) => setTimeout(res, 500));
+      try { return await exec(); } catch { return null; }
+    }
+  }, []);
 
   const runSingle = useCallback(async () => {
     const q = (queries[0] || '').trim();
@@ -118,18 +131,18 @@ export const AIComparePrimitive = (props: Props) => {
         // mark active item as running and select it
         currentStatuses[i] = 'running';
         updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i });
-        const [o, g, a, s] = await Promise.allSettled([
-          fetch('/api/openai/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: openaiModel }) }).then(r=>r.json()),
-          fetch('/api/gemini/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: geminiModel }) }).then(r=>r.json()),
-          fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
-          fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
+        const [o, g, a, s] = await Promise.all([
+          postJson('/api/openai/search', { q, model: openaiModel }),
+          postJson('/api/gemini/search', { q, model: geminiModel }),
+          postJson('/api/anthropic/search', { q, model: anthropicModel }),
+          postJson('/api/serpapi/search', { q, hl: 'en', gl: 'US' }),
         ]);
         accum[i] = {
           query: q,
-          openai: o.status==='fulfilled'?o.value:null,
-          gemini: g.status==='fulfilled'?g.value:null,
-          anthropic: a.status==='fulfilled'?a.value:null,
-          serp: s.status==='fulfilled'?s.value:null,
+          openai: o,
+          gemini: g,
+          anthropic: a,
+          serp: s,
         };
         currentStatuses[i] = 'done';
         updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i, results: { groups: accum } });
@@ -291,7 +304,7 @@ export const AIComparePrimitive = (props: Props) => {
               <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><Loader2Icon className="h-4 w-4 animate-spin"/> Loading…</div>
             )}
             {inputMode === 'batch' && (() => {
-              const payload = getActivePayload(props.data.results, props.data.selectedQueryIndex ?? 0);
+              const payload = getActivePayload(props.data.results, props.data.selectedQueryIndex ?? 0, 'batch');
               return <AnswersCollapsible payload={payload} />;
             })()}
             <table className="w-full text-left text-sm">
@@ -306,7 +319,7 @@ export const AIComparePrimitive = (props: Props) => {
                 </tr>
               </thead>
               <tbody>
-                {renderRows(props.data.results, props.data.selectedQueryIndex ?? 0)}
+                {renderRows(props.data.results, props.data.selectedQueryIndex ?? 0, inputMode)}
               </tbody>
             </table>
           </div>
@@ -316,8 +329,8 @@ export const AIComparePrimitive = (props: Props) => {
   );
 };
 
-function renderRows(results: any, selectedIndex: number) {
-  const rows = buildCoverage(results, selectedIndex);
+function renderRows(results: any, selectedIndex: number, mode: 'single'|'batch') {
+  const rows = buildCoverage(results, selectedIndex, mode);
   if (!rows.length) {
     return (
       <tr>
@@ -342,14 +355,17 @@ function renderRows(results: any, selectedIndex: number) {
   ));
 }
 
-function buildCoverage(results: any, selectedIndex: number): Array<{ domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }> {
+function buildCoverage(results: any, selectedIndex: number, mode: 'single'|'batch'): Array<{ domain: string; openai: boolean; gemini: boolean; anthropic: boolean; serp: boolean; total: number }> {
   try {
     // Choose the active result set
     let payload: any = null;
-    if (results?.single) payload = results.single;
-    else if (Array.isArray(results?.groups)) {
-      const idx = selectedIndex ?? 0;
-      payload = results.groups[idx];
+    if (mode === 'batch') {
+      if (Array.isArray(results?.groups)) {
+        const idx = selectedIndex ?? 0;
+        payload = results.groups[idx];
+      }
+    } else if (mode === 'single') {
+      if (results?.single) payload = results.single;
     } else if (results) payload = results;
     if (!payload) return [];
 
@@ -411,7 +427,7 @@ function buildCoverage(results: any, selectedIndex: number): Array<{ domain: str
 }
 
 function SourcesPanel({ results, selectedIndex }: { results: any; selectedIndex: number }) {
-  const payload = useMemo(() => getActivePayload(results, selectedIndex), [results, selectedIndex]);
+  const payload = useMemo(() => getActivePayload(results, selectedIndex, 'single'), [results, selectedIndex]);
   const sources = useMemo(() => extractUrlsByProvider(payload), [payload]);
   const [resolved, setResolved] = useState<Map<string, string>>(new Map());
 
@@ -583,11 +599,11 @@ function AnswersCollapsible({ payload }: { payload: any }) {
   );
 }
 
-function getActivePayload(results: any, selectedIndex: number) {
+function getActivePayload(results: any, selectedIndex: number, mode: 'single'|'batch') {
   if (!results) return null;
-  if (results.single) return results.single;
-  if (Array.isArray(results.groups)) return results.groups[selectedIndex ?? 0];
-  return results;
+  if (mode === 'single') return results.single ?? null;
+  if (mode === 'batch') return Array.isArray(results.groups) ? results.groups[selectedIndex ?? 0] : null;
+  return null;
 }
 
 function extractUrlsByProvider(payload: any): { openai: string[]; gemini: string[]; anthropic: string[]; serp: string[] } {

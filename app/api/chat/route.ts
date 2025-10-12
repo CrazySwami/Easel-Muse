@@ -16,6 +16,14 @@ export async function POST(req: Request) {
     tools: undefined,
   });
 
+  // Lightweight diagnostics to verify file parts are reaching the server
+  try {
+    const first = (messages ?? [])[0] as any;
+    const fileParts = (first?.parts ?? []).filter((p: any) => p.type === 'file');
+    const mt = fileParts[0]?.mediaType || fileParts[0]?.mimeType || fileParts[0]?.contentType;
+    console.log('[chat]', { model: selectedModel, fileParts: fileParts.length, firstType: mt ?? null });
+  } catch {}
+
   return result.toUIMessageStreamResponse({
     sendSources: true,
     sendReasoning: true,
