@@ -80,10 +80,19 @@ const FontFamily = Extension.create({
   addCommands() {
     return {
       setFontFamily: (fontFamily: string) => ({ chain }: any) => {
-        return chain().setMark('textStyle', { fontFamily }).run();
+        return chain()
+          .focus()
+          .extendMarkRange('textStyle')
+          .setMark('textStyle', { fontFamily })
+          .run();
       },
       unsetFontFamily: () => ({ chain }: any) => {
-        return chain().setMark('textStyle', { fontFamily: null }).removeEmptyTextStyle().run();
+        return chain()
+          .focus()
+          .extendMarkRange('textStyle')
+          .setMark('textStyle', { fontFamily: null })
+          .removeEmptyTextStyle()
+          .run();
       },
     } as any;
   },
@@ -112,10 +121,19 @@ const FontSize = Extension.create({
   addCommands() {
     return {
       setFontSize: (fontSize: string) => ({ chain }: any) => {
-        return chain().setMark('textStyle', { fontSize }).run();
+        return chain()
+          .focus()
+          .extendMarkRange('textStyle')
+          .setMark('textStyle', { fontSize })
+          .run();
       },
       unsetFontSize: () => ({ chain }: any) => {
-        return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+        return chain()
+          .focus()
+          .extendMarkRange('textStyle')
+          .setMark('textStyle', { fontSize: null })
+          .removeEmptyTextStyle()
+          .run();
       },
     } as any;
   },
@@ -236,14 +254,9 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
         immediatelyRender: false,
         extensions: [
             StarterKit.configure({
-                bulletList: {
-                    keepMarks: true,
-                    keepAttributes: false,
-                },
-                orderedList: {
-                    keepMarks: true,
-                    keepAttributes: false,
-                },
+                bulletList: { keepMarks: true },
+                orderedList: { keepMarks: true },
+                codeBlock: false,
             }),
             Placeholder.configure({
                 placeholder: 'Start typing your collaborative document...',
@@ -584,7 +597,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 </BubbleMenu>
             )}
             <div className="relative flex h-full w-full">
-                <div className={`flex-1 overflow-auto ${sidebarOpen ? 'mr-80' : ''}`}>
+                <div className={`relative flex-1 overflow-auto ${sidebarOpen ? 'mr-80' : ''}`}>
                     <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
                 </div>
                 {sidebarOpen && (

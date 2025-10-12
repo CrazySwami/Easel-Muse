@@ -313,16 +313,6 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
           <div className="grid h-full min-h-0 grid-cols-12 gap-3">
             {/* Left: queries editor */}
             <div className="col-span-4 min-h-0 overflow-auto rounded-xl border bg-card/60 p-3">
-              <GeneratorBar
-                model={''}
-                models={{}}
-                onModelChange={() => {}}
-                prompt={''}
-                onPromptChange={() => {}}
-                onGenerate={() => {}}
-                disabled
-              />
-              <div className="h-2"/>
               <QueryList
                 queries={queries}
                 onChange={setQueries}

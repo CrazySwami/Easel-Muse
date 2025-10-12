@@ -60,7 +60,7 @@ export const CommentSidebar = ({
   };
 
   return (
-    <div className="fixed right-0 top-0 h-full w-80 border-l border-border bg-background shadow-lg">
+    <div className="absolute right-0 top-0 h-full w-80 border-l border-border bg-background shadow-lg z-20">
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="border-b border-border p-4">
