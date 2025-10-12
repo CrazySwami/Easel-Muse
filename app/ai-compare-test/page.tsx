@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { SearchResult } from '@/components/nodes/perplexity/search-result';
 import { AnthropicIcon, OpenAiIcon, GeminiIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon } from 'lucide-react';
@@ -13,6 +15,41 @@ export default function AICompareTestPage() {
   const [q, setQ] = useState('What is quantum computing? Cite sources.');
   const [out, setOut] = useState<any>({ openai: null, gemini: null, anthropic: null, serp: null });
   const [status, setStatus] = useState('');
+
+  // ---- Simple Chat Upload Test (OpenAI / Gemini / Anthropic) ----
+  const [modelId, setModelId] = useState<string>('openai/gpt-4o');
+  const [chatText, setChatText] = useState<string>('Describe the attached image.');
+  const [chatFiles, setChatFiles] = useState<Array<File>>([]);
+  const { messages, status: chatStatus, sendMessage, setMessages } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat' }),
+  });
+
+  const convertFilesToDataURLs = async (files: Array<File>) => {
+    const list = files.slice(0, 3);
+    return await Promise.all(
+      list.map(
+        (file) =>
+          new Promise<any>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({ type: 'file', mediaType: file.type, url: reader.result as string });
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+  };
+
+  const runChatTest = async () => {
+    const hasText = Boolean(chatText);
+    const hasFiles = chatFiles.length > 0;
+    if (!hasText && !hasFiles) return;
+    const parts: any[] = [];
+    if (hasText) parts.push({ type: 'text', text: chatText });
+    if (hasFiles) parts.push(...(await convertFilesToDataURLs(chatFiles)));
+    await sendMessage({ parts }, { body: { modelId } });
+    setChatText('');
+    setChatFiles([]);
+  };
 
   const runAll = async () => {
     setStatus('running…');
@@ -241,6 +278,59 @@ export default function AICompareTestPage() {
               );})}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* Chat Upload Test */}
+      <section className="grid gap-3 rounded border p-3">
+        <h2 className="text-lg font-semibold">Chat Upload Test (OpenAI / Google / Anthropic)</h2>
+        <div className="grid gap-2 md:grid-cols-3">
+          <div className="grid gap-1">
+            <label>Model</label>
+            <select className="rounded border p-2" value={modelId} onChange={(e)=> setModelId(e.target.value)}>
+              <option value="openai/gpt-4o">openai/gpt-4o</option>
+              <option value="google/gemini-1.5-pro">google/gemini-1.5-pro</option>
+              <option value="anthropic/claude-3-5-sonnet-latest">anthropic/claude-3-5-sonnet-latest</option>
+            </select>
+          </div>
+          <div className="grid gap-1 md:col-span-2">
+            <label>Prompt</label>
+            <input className="rounded border p-2" value={chatText} onChange={(e)=> setChatText(e.target.value)} placeholder="Describe the attached image…" />
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <label>Attachments (max 3)</label>
+          <input type="file" multiple accept="image/*,application/pdf,text/plain" onChange={(e)=> setChatFiles(Array.from(e.target.files ?? []))} />
+          {chatFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {chatFiles.slice(0,3).map((f, i) => (
+                <div key={i} className="overflow-hidden rounded border">
+                  {f.type.startsWith('image/') ? (
+                    <img alt={f.name} className="h-16 w-16 object-cover" src={URL.createObjectURL(f)} />
+                  ) : (
+                    <div className="h-16 w-16 p-1 text-xs flex items-center justify-center">{f.name}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="rounded bg-emerald-600 px-3 py-2 text-white" onClick={runChatTest} disabled={!chatText && chatFiles.length===0 || chatStatus==='streaming'}>
+            Send
+          </button>
+          <span className="text-sm text-muted-foreground">{chatStatus}</span>
+        </div>
+        <div className="rounded border p-2">
+          <div className="text-sm font-medium mb-1">Messages</div>
+          <div className="max-h-[40vh] overflow-auto text-sm">
+            {messages.map((m) => (
+              <div key={m.id} className="mb-3">
+                <div className="text-xs text-muted-foreground">{m.role}</div>
+                <pre className="whitespace-pre-wrap">{JSON.stringify(m.parts, null, 2)}</pre>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>

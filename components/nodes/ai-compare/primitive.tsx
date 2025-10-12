@@ -76,6 +76,9 @@ export const AIComparePrimitive = (props: Props) => {
   const [isRunning, setIsRunning] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  // local mirrors used in-render to prevent stale prev usage
+  const singleRef = (props.data as any)?.results?.single ?? null;
+  const groupsRef = Array.isArray((props.data as any)?.results?.groups) ? (props.data as any).results.groups : [];
 
   // Shared helper: POST JSON with one retry and ok-guard
   const postJson = useCallback(async (url: string, body: any) => {
@@ -101,17 +104,12 @@ export const AIComparePrimitive = (props: Props) => {
         fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
         fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
       ]);
-      updateNodeData(props.id, (prev: any) => ({
-        results: {
-          single: {
-            openai: o.status==='fulfilled'?o.value:null,
-            gemini: g.status==='fulfilled'?g.value:null,
-            anthropic: a.status==='fulfilled'?a.value:null,
-            serp: s.status==='fulfilled'?s.value:null,
-          },
-          groups: Array.isArray(prev?.results?.groups) ? prev.results.groups : [],
-        },
-      }));
+      updateNodeData(props.id, { results: { single: {
+        openai: o.status==='fulfilled'?o.value:null,
+        gemini: g.status==='fulfilled'?g.value:null,
+        anthropic: a.status==='fulfilled'?a.value:null,
+        serp: s.status==='fulfilled'?s.value:null,
+      }, groups: groupsRef } });
     } finally {
       setIsRunning(false);
     }
@@ -123,11 +121,11 @@ export const AIComparePrimitive = (props: Props) => {
     const statuses = valid.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
     // Keep a single accumulating array so prior indices retain their state
     let currentStatuses = [...statuses];
-    updateNodeData(props.id, (prev: any) => ({
+    updateNodeData(props.id, {
       batchStatuses: currentStatuses,
       selectedQueryIndex: 0,
-      results: { single: prev?.results?.single ?? null, groups: [] },
-    }));
+      results: { single: singleRef, groups: [] },
+    });
     const accum: any[] = [];
     setIsBatchRunning(true);
     for (let i = 0; i < valid.length; i++) {
@@ -150,11 +148,11 @@ export const AIComparePrimitive = (props: Props) => {
           serp: s,
         };
         currentStatuses[i] = 'done';
-        updateNodeData(props.id, (prev: any) => ({
+        updateNodeData(props.id, {
           batchStatuses: [...currentStatuses],
           selectedQueryIndex: i,
-          results: { single: prev?.results?.single ?? null, groups: accum },
-        }));
+          results: { single: singleRef, groups: accum },
+        });
       } catch {
         currentStatuses[i] = 'error';
         updateNodeData(props.id, { batchStatuses: [...currentStatuses], selectedQueryIndex: i });
