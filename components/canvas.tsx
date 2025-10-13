@@ -219,8 +219,10 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
         content: toObject(),
       });
 
-      if ('error' in response) {
-        throw new Error(response.error);
+      // Tolerate undefined or unexpected shapes from server actions in live envs
+      if (!response || (response as any).error) {
+        const msg = (response as any)?.error ?? 'Unknown save error';
+        throw new Error(msg);
       }
 
       setSaveState((prev) => ({ ...prev, lastSaved: new Date() }));

@@ -16,30 +16,22 @@ export default function Cursor({ color, x, y, message, avatar }: Props) {
         transform: `translateX(${x}px) translateY(${y}px)`,
       }}
     >
-      <svg
-        className="relative"
-        width="28"
-        height="42"
-        viewBox="0 0 24 36"
-        fill="none"
-        stroke="white"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z"
-          fill={color}
-        />
+      {/* Pointer triangle */}
+      <svg className="relative" width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1 1 L17 9 L9 10 L8 17 Z" fill={color} />
+        <path d="M1 1 L17 9" stroke="#fff" strokeOpacity="0.9" strokeWidth="1" />
       </svg>
 
       {message && (
         <div
-          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl pl-3 pr-5 py-2"
-          style={{ backgroundColor: color, borderRadius: 20 }}
+          className="absolute left-3 top-3 flex items-center gap-2 rounded-full pl-2.5 pr-4 py-1.5 shadow-sm"
+          style={{ backgroundColor: color }}
         >
           {avatar ? (
-            <img src={avatar} alt={message} width={24} height={24} className="rounded-full" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt={message} width={20} height={20} className="h-5 w-5 rounded-full object-cover" />
           ) : null}
-          <p className="whitespace-nowrap text-xs leading-normal text-white">
+          <p className="whitespace-nowrap text-[11px] leading-normal text-white">
             {message}
           </p>
         </div>

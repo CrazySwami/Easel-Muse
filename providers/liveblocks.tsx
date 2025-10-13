@@ -125,31 +125,8 @@ export const CursorsLayer = () => {
     const [tx, ty, zoom] = transform ?? [0, 0, 1];
     const x = (flowX * zoom + tx) + (paneRect?.left ?? 0);
     const y = (flowY * zoom + ty) + (paneRect?.top ?? 0);
-    return (
-    <div
-      key={key}
-      className="pointer-events-none absolute top-0 left-0"
-      style={{
-        transform: `translateX(${x}px) translateY(${y}px)`,
-        zIndex: 50,
-      }}
-    >
-      {/* Note: The user's own cursor is the native mouse pointer. We only render the name tag to follow it. */}
-      {label && (
-        <div
-          className="absolute top-5 left-2 flex items-center gap-2 rounded-3xl pl-3 pr-5 py-2"
-          style={{ backgroundColor: color, borderRadius: 20 }}
-        >
-          {avatar ? (
-            <img src={avatar} alt={label} width={24} height={24} className="rounded-full" />
-          ) : null}
-          <p className="whitespace-nowrap text-xs leading-normal text-white">
-            {label}
-          </p>
-        </div>
-      )}
-    </div>
-  ); };
+    return <Cursor key={key} color={color} x={x} y={y} message={label} avatar={avatar} />;
+  };
 
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 50 }}>
@@ -161,10 +138,7 @@ export const CursorsLayer = () => {
           const color = (user.info as any)?.color ?? '#06f';
           const name = (user.info as any)?.name ?? 'User';
           const avatar = (user.info as any)?.avatar as string | undefined;
-          const [tx, ty, zoom] = transform ?? [0, 0, 1];
-          const x = (cursor.x * zoom + tx) + (paneRect?.left ?? 0);
-          const y = (cursor.y * zoom + ty) + (paneRect?.top ?? 0);
-          return <Cursor key={user.connectionId} color={color} x={x} y={y} message={name} avatar={avatar} />;
+          return renderCursor(cursor.x, cursor.y, color, name, user.connectionId, avatar);
         })}
       {me?.presence?.cursor
         ? renderCursor(
@@ -172,6 +146,7 @@ export const CursorsLayer = () => {
             (me.presence.cursor as any).y,
             ((me.info as any)?.color as string) ?? '#06f',
             ((me.info as any)?.name as string) ?? 'You',
+            'me',
             ((me.info as any)?.avatar as string | undefined)
           )
         : null}

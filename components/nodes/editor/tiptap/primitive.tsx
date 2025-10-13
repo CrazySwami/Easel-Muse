@@ -182,9 +182,9 @@ const LineHeight = Extension.create({
   },
 });
 
-// Custom Comment Mark Extension
-const Comment = Mark.create({
-  name: 'comment',
+// Custom Comment Mark Extension (renamed to avoid conflicts with other comment extensions)
+const CommentMark = Mark.create({
+  name: 'commentMark',
   inclusive: false,
   addAttributes() {
     return {
@@ -244,10 +244,10 @@ const Comment = Mark.create({
   addCommands() {
     return {
       setComment: (attributes: { commentId: string; userId: string; userName: string; userColor?: string }) => ({ commands }: any) => {
-        return commands.setMark(this.name, attributes);
+        return commands.setMark('commentMark', attributes);
       },
       unsetComment: () => ({ commands }: any) => {
-        return commands.unsetMark(this.name);
+        return commands.unsetMark('commentMark');
       },
     } as any;
   },
@@ -303,6 +303,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 bulletList: { keepMarks: true },
                 orderedList: { keepMarks: true },
                 codeBlock: false,
+                heading: false,
             }),
             Placeholder.configure({
                 placeholder: 'Start typing your collaborative document...',
@@ -320,7 +321,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             Link.configure({
                 openOnClick: false,
             }),
-            Comment,
+            CommentMark,
             // Liveblocks + Yjs collaborative binding
             (liveblocksExtension as any),
         ],
@@ -335,8 +336,11 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                 if (el) {
                     const id = el.getAttribute('data-comment-id');
                     if (id) {
-                        setActiveCommentId(id);
-                        setSidebarOpen(true);
+                        // Defer state updates to avoid setState during render warnings
+                        queueMicrotask(() => {
+                          setActiveCommentId(id);
+                          setSidebarOpen(true);
+                        });
                         return true;
                     }
                 }
@@ -443,7 +447,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
         const userColor = userInfo?.color || '#fef08a';
 
         // Add comment mark to selected text
-        (editor.chain().focus() as any).setComment({
+            (editor.chain().focus() as any).setComment({
             commentId,
             userId: me.id as string,
             userName,
@@ -511,7 +515,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             editor.state.doc.descendants((node, pos) => {
                 if (node.marks) {
                     node.marks.forEach(mark => {
-                        if (mark.type.name === 'comment' && mark.attrs.commentId === commentId) {
+                        if (mark.type.name === 'commentMark' && mark.attrs.commentId === commentId) {
                             (editor.chain().focus().setTextSelection({ from: pos, to: pos + node.nodeSize }) as any).unsetComment().run();
                         }
                     });
@@ -658,7 +662,7 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
                   className={`relative flex-1 min-h-0 overflow-auto nowheel nodrag nopan ${sidebarOpen ? 'mr-80' : ''}`}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                    <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
+                <EditorContent editor={editor} className="h-full w-full bg-card text-foreground p-6" />
                 </div>
                 {sidebarOpen && (
                     <CommentSidebar 
@@ -903,7 +907,7 @@ const HighlightDropdown = ({ editor }: { editor: any }) => {
           <button className="rounded bg-cyan-700 px-2 py-1 text-xs" onClick={() => editor.chain().focus().unsetHighlight().run()}>
             Clear
           </button>
-        </div>
+    </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
