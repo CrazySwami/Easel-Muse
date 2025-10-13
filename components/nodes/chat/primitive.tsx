@@ -38,19 +38,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useAnalytics } from '@/hooks/use-analytics';
 import { mutate } from 'swr';
 
+
 type ChatPanelProps = {
   nodeId: string;
   sessionId: string;
   model: string;
   webSearch: boolean;
-  aiEnabled: boolean;
   sessions: ChatSession[];
   renameSessionIfNeeded: (sessId: string, firstUserText: string) => void;
   updateNodeData: ReturnType<typeof useReactFlow>['updateNodeData'];
   modelsMap: Record<string, any>;
 };
 
-const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
+const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessionIfNeeded, updateNodeData, modelsMap }: ChatPanelProps) => {
   const { messages, status, sendMessage, regenerate, setMessages } = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
     onFinish: () => {
@@ -90,78 +90,63 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
         lastHydratedSessionIdRef.current = sessionId;
       }
     } catch {}
-    // Auto-name by first user message
+    // Auto-name by first user message (local view ok; persisted separately on assistant finish below)
     const firstUser = messages.find((m) => m.role === 'user');
     if (firstUser) {
       const text = (firstUser.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
       renameSessionIfNeeded(sessionId, text);
     }
-    if ((messages ?? []).length > 0) {
-      const currentSaved = (sessions ?? []).find((s) => s.id === sessionId)?.messages?.length ?? 0;
-      const incoming = (messages as any[])?.length ?? 0;
-      // Prevent overwriting history with fewer/empty messages
-      if (incoming >= currentSaved) {
-        const nextSessions = (sessions ?? []).map((s) =>
-          s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: messages as unknown as UIMessage[] } : s
-        );
-        updateNodeData(nodeId, { sessions: nextSessions });
-      }
-    }
-
-    // Push latest assistant text
+    // Push latest assistant text to output for wiring
     const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
     if (lastAssistant) {
       const text = (lastAssistant.parts ?? []).map((p: any) => (p.type === 'text' ? p.text : '')).join(' ').trim();
       if (text) updateNodeData(nodeId, { outputTexts: [text] });
-      // Auto-title after first exchange
-      const sess = (sessions ?? []).find((s) => s.id === sessionId);
-      const isDefault = sess && (sess.name === 'New chat' || !sess.name);
-      const firstUser = messages.find((m) => m.role === 'user');
-    if (isDefault && firstUser) {
-      const abort = new AbortController();
-      fetch('/api/chat/title', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: (firstUser.parts ?? []).map((p: any)=>p.text||'').join(' '), assistant: text }),
-        signal: abort.signal,
-      }).then(async (r)=>{
-          const { title } = await r.json().catch(()=>({ title: 'New chat' }));
-          const next = (sessions ?? []).map((s)=> s.id === sessionId ? { ...s, name: title } : s);
-          updateNodeData(nodeId, { sessions: next });
-        }).catch(()=>{});
-      return () => abort.abort();
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, sessionId]);
 
   useEffect(() => {
-    if (status === 'ready') {
-      const last = messages[messages.length - 1] as any;
-      if (last?.role === 'assistant') {
-        const imageParts = (last.parts ?? []).filter((p: any) => p.type === 'image' && p.image instanceof ArrayBuffer);
-        if (imageParts.length > 0) {
-          (async () => {
-            const uploadedParts = await Promise.all(
-              imageParts.map(async (p: any) => {
-                try {
-                  const r = await fetch('/api/upload', { method: 'POST', body: p.image });
-                  const { url } = await r.json();
-                  return { ...p, image: url };
-                } catch {
-                  return p; // Keep original on error
-                }
-              })
-            );
-            const nextMessages = messages.map((m: any) =>
-              m.id === last.id
-                ? { ...m, parts: m.parts.map((p: any) => uploadedParts.find((up) => up === p) || p) }
-                : m
-            );
-            const nextSessions = sessions.map((s) => (s.id === sessionId ? { ...s, messages: nextMessages as any } : s));
-            updateNodeData(nodeId, { sessions: nextSessions });
-          })();
-        }
+    if (status !== 'ready') return;
+    const last = messages[messages.length - 1] as any;
+    if (!last) return;
+    if (last.role === 'assistant') {
+      // Append assistant to shared storage if not already present
+      const sess = sessions.find((s) => s.id === sessionId);
+      const has = (sess?.messages ?? []).some((m: any) => m.id === last.id);
+      if (!has) {
+        const nextSessions = sessions.map((s) =>
+          s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), last as any ] } : s
+        );
+        updateNodeData(nodeId, { sessions: nextSessions });
+      }
+      // If assistant emitted binary images, upload and replace with URLs
+      const imageParts = (last.parts ?? []).filter((p: any) => p.type === 'image' && p.image instanceof ArrayBuffer);
+      if (imageParts.length > 0) {
+        (async () => {
+          const uploadedParts = await Promise.all(
+            imageParts.map(async (p: any) => {
+              try {
+                const r = await fetch('/api/upload', { method: 'POST', body: p.image });
+                const { url } = await r.json();
+                return { ...p, image: url };
+              } catch {
+                return p; // Keep original on error
+              }
+            })
+          );
+          const sess2 = sessions.find((s) => s.id === sessionId);
+          if (!sess2) return;
+          const nextMessages = (sess2.messages ?? []).map((m: any) =>
+            m.id === last.id
+              ? { ...m, parts: m.parts.map((p: any) => {
+                  const match = uploadedParts.find((up) => up.type === p.type && (up.image === p.image || up === p));
+                  return match || p;
+                }) }
+              : m
+          );
+          const nextSessions = sessions.map((s) => (s.id === sessionId ? { ...s, messages: nextMessages as any } : s));
+          updateNodeData(nodeId, { sessions: nextSessions });
+        })();
       }
     }
   }, [status, messages, sessions, sessionId, nodeId, updateNodeData]);
@@ -204,7 +189,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
     lastSavedCountRef.current = current;
   }, [messages, session?.messages?.length]);
 
-  // no-op helper removed; rely on DefaultChatTransport to build multipart for File[]
+  const appendToSession = (msg: any) => {
+    const nextSessions = sessions.map((s) =>
+      s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), msg ] } : s
+    );
+    updateNodeData(nodeId, { sessions: nextSessions });
+  };
 
   const handleSubmit = async (message: any) => {
     const hasText = Boolean(message.text);
@@ -214,13 +204,14 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, aiEnabled, sessions, r
     setInput('');
     setAttachedFiles([]);
     const parts = [{ type: 'text', text: textToSend }];
-    if (aiEnabled) {
-      analytics.track('canvas', 'node', 'chat', { model: selectedModel, webSearch: search });
-      await sendMessage({ parts, userId: myId, userInfo: me?.info } as any, { body: { modelId: selectedModel, webSearch: search, aiEnabled } });
+    const userMsg: any = { id: `u_${Date.now()}`, role: 'user', userId: myId, userInfo: me?.info, parts };
+    appendToSession(userMsg);
+    const mentionsAI = /(^|\s)@(ai|assistant|bot)\b/i.test(textToSend);
+    if (mentionsAI) {
+      analytics.track('canvas', 'node', 'chat', { model: selectedModel, webSearch: search, trigger: '@mention' });
+      await sendMessage({ parts, userId: myId, userInfo: me?.info } as any, { body: { modelId: selectedModel, webSearch: search } });
     } else {
-      // Append a local user message without triggering AI
-      const newMsg: any = { id: `u_${Date.now()}`, role: 'user', userId: myId, userInfo: me?.info, parts };
-      setMessages([...(messages as any[]), newMsg] as any);
+      // Human-only; nothing else to do
     }
   };
 
@@ -475,19 +466,18 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
 
   const model = props.data.model ?? defaultModel;
   const webSearch = Boolean(props.data.webSearch);
-  const aiEnabled = (props.data as any)?.aiEnabled ?? true;
 
   const ensureSession = () => {
-		const existing = sessions.find((s) => s.id === activeId) || sessions[0];
-		if (existing) return existing.id;
-		const deterministicId = `${props.id}-default`;
-		const next: ChatSession = { id: deterministicId, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
-		updateNodeData(props.id, {
-			sessions: [...sessions, next],
-			activeSessionId: deterministicId,
-		});
-		return deterministicId;
-	};
+    const existing = sessions.find((s) => s.id === activeId) || sessions[0];
+    if (existing) return existing.id;
+    const deterministicId = `${props.id}-default`;
+    const next: ChatSession = { id: deterministicId, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
+    updateNodeData(props.id, {
+      sessions: [...sessions, next],
+      activeSessionId: deterministicId,
+    });
+    return deterministicId;
+  };
 
   const setActiveSession = (id: string) => {
     updateNodeData(props.id, { activeSessionId: id });
@@ -547,13 +537,6 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                className={`px-2 py-1 text-xs rounded-md border ${aiEnabled ? 'bg-emerald-600 text-white border-transparent' : 'bg-muted text-foreground'}`}
-                onClick={() => updateNodeData(props.id, { aiEnabled: !aiEnabled })}
-                title={aiEnabled ? 'AI responses on (click to pause)' : 'AI responses paused (click to resume)'}
-              >
-                {aiEnabled ? 'AI On' : 'AI Off'}
-              </button>
               <Button size="icon" className="rounded-md bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => {
                 const id = nanoid();
                 const next: ChatSession = { id, name: 'New chat', createdAt: Date.now(), updatedAt: Date.now(), messages: [] };
@@ -570,7 +553,6 @@ export const ChatPrimitive = (props: ChatNodeProps & { title: string }) => {
             sessionId={activeId ?? ensureSession()}
             model={model}
             webSearch={webSearch}
-            aiEnabled={aiEnabled}
             sessions={sessions}
             renameSessionIfNeeded={renameSessionIfNeeded}
             updateNodeData={updateNodeData}
