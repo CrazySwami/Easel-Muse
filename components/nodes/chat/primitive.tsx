@@ -64,6 +64,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const myId = me?.id;
   const myAvatar = (me?.info as any)?.avatar as string | undefined;
   const [input, setInput] = useState('');
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [showMentions, setShowMentions] = useState(false);
   const getDefaultModel = (ms: Record<string, any>) => {
     if (ms['gpt-5-mini']) return 'gpt-5-mini';
     const entry = Object.entries(ms).find(([id]) => id.includes('gpt-5') || id.includes('mini'));
@@ -115,7 +117,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       const has = (sess?.messages ?? []).some((m: any) => m.id === last.id);
       if (!has) {
         const nextSessions = sessions.map((s) =>
-          s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), last as any ] } : s
+          s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), { ...last, createdAt: Date.now() } as any ] } : s
         );
         updateNodeData(nodeId, { sessions: nextSessions });
       }
@@ -155,10 +157,22 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     const nowTyping = Boolean(input);
     updatePresence({ typing: nowTyping, draftText: input });
     const t = setTimeout(() => updatePresence({ typing: false }), 800);
+    // Detect @mention context (simple trailing token analysis)
+    try {
+      const match = input.match(/(^|\s)@(\w*)$/);
+      if (match) {
+        setMentionQuery(match[2] || '');
+        setShowMentions(true);
+      } else {
+        setShowMentions(false);
+        setMentionQuery(null);
+      }
+    } catch {}
     return () => clearTimeout(t);
   }, [input, updatePresence]);
 
   const [isSending, setIsSending] = useState(false);
+  const mentionsAIInInput = useMemo(() => /(^|\s)@(ai|assistant|bot)\b/i.test(input), [input]);
 
   // Prefer persisted session messages for display so switching sessions shows history
   const session = sessions.find((s) => s.id === sessionId);
@@ -177,7 +191,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     for (const m of liveArr) {
       if (!seen.has(m.id)) merged.push(m);
     }
-    return merged;
+    // Stabilize order using createdAt when present
+    return merged.slice().sort((a, b) => {
+      const ta = (a as any).createdAt ?? 0;
+      const tb = (b as any).createdAt ?? 0;
+      return ta - tb;
+    });
   })();
 
   // Guard against accidental overwrites of history with fewer/empty messages
@@ -191,9 +210,65 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 
   const appendToSession = (msg: any) => {
     const nextSessions = sessions.map((s) =>
-      s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), msg ] } : s
+      s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), { ...msg, createdAt: Date.now() } ] } : s
     );
     updateNodeData(nodeId, { sessions: nextSessions });
+  };
+
+  const roster = useMemo(() => {
+    const seen: Record<string, any> = {};
+    const list: any[] = [];
+    // AI pseudo-user
+    list.push({ id: 'ai', name: 'AI', avatar: '/Easel-Logo.svg', isAI: true, handle: 'ai' });
+    if (me) {
+      const name = (me.info as any)?.name || 'Me';
+      seen[me.id] = true;
+      list.push({ id: me.id, name, avatar: (me.info as any)?.avatar, handle: (name as string).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'me' });
+    }
+    for (const o of Array.from(others)) {
+      if (!o?.id || seen[o.id]) continue;
+      const name = (o.info as any)?.name || `User ${String(o.id).slice(-4)}`;
+      seen[o.id] = true;
+      list.push({ id: o.id, name, avatar: (o.info as any)?.avatar, handle: (name as string).toLowerCase().replace(/[^a-z0-9]+/g, '') });
+    }
+    return list;
+  }, [me, others]);
+
+  useEffect(() => {
+    try {
+      // Persist a simple roster set on the node for historical mentions (best-effort)
+      const prev: any[] = ((sessions as any).__roster ?? ([] as any[]));
+      const merged = [...prev];
+      const byId = new Set(prev.map((p: any) => p.id));
+      for (const r of roster) {
+        if (!byId.has(r.id)) {
+          merged.push({ id: r.id, name: r.name, avatar: r.avatar, handle: r.handle });
+          byId.add(r.id);
+        }
+      }
+      (sessions as any).__roster = merged;
+      updateNodeData(nodeId, { sessions });
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roster]);
+
+  const allMentionables = useMemo(() => {
+    const persisted: any[] = ((sessions as any).__roster ?? []) as any[];
+    const liveIds = new Set(roster.map((r: any) => r.id));
+    const merged = [...roster];
+    for (const p of persisted) {
+      if (!liveIds.has(p.id)) merged.push(p);
+    }
+    const q = (mentionQuery || '').toLowerCase();
+    return merged.filter((p) => !q || (p.name as string).toLowerCase().includes(q) || (p.handle as string).includes(q));
+  }, [roster, sessions, mentionQuery]);
+
+  const insertMention = (m: any) => {
+    try {
+      setInput((prev) => prev.replace(/(^|\s)@(\w*)$/, (s, sp) => `${sp}@${m.handle} `));
+      setShowMentions(false);
+      setMentionQuery(null);
+    } catch {}
   };
 
   const handleSubmit = async (message: any) => {
@@ -385,6 +460,22 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
             </div>
           )}
           <PromptInputTextarea className="max-h-32" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask anything…" />
+				{showMentions && (
+				  <div className="absolute bottom-12 left-3 z-20 min-w-[220px] max-w-[320px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow">
+				    <div className="max-h-56 overflow-y-auto">
+				      {allMentionables.slice(0, 12).map((m) => (
+				        <button key={m.id} className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => insertMention(m)}>
+				          {m.avatar ? <img src={m.avatar} alt="" className="h-5 w-5 rounded-full" /> : <span className="h-5 w-5 rounded-full bg-muted inline-block" />}
+				          <span className="truncate">{m.name}</span>
+				          <span className="ml-auto text-xs text-muted-foreground">@{m.handle}</span>
+				        </button>
+				      ))}
+				      {allMentionables.length === 0 && (
+				        <div className="px-3 py-2 text-xs text-muted-foreground">No matches</div>
+				      )}
+				    </div>
+				  </div>
+				)}
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
@@ -436,6 +527,11 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
             <div className="min-w-[240px]">
               <ModelSelector value={selectedModel} options={modelsMap as any} onChange={(v: string) => setSelectedModel(v)} className="w-full" />
             </div>
+			{mentionsAIInInput && (
+			  <div className="ml-2 hidden sm:flex items-center rounded-md border bg-card/60 px-2 py-1 text-xs text-foreground/80">
+			    Will ask AI · {selectedModel}
+			  </div>
+			)}
           </PromptInputTools>
           <PromptInputSubmit disabled={!input && !status} status={status as any} />
         </PromptInputToolbar>
