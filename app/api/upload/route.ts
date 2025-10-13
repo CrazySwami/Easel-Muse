@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY;
+    if (!url || !key) {
+      console.error('Upload API misconfiguration: missing SUPABASE envs');
+      return NextResponse.json({ error: 'Server misconfigured: missing Supabase env' }, { status: 500 });
+    }
+    const supabase = createClient(url, key);
     const file = await req.blob();
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });

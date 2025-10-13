@@ -103,3 +103,18 @@ To manage multiple environments (e.g., a "dev" server and a "production" server)
 1. Create two separate projects in the Supabase Dashboard.
 2. Link to your "dev" project first to test migrations.
 3. Once verified, unlink and relink to your "production" project and run the same `supabase migration up` command.
+
+---
+
+## 4. Upload API and Required Environment Variables
+
+The upload endpoint lives at `app/api/upload/route.ts`. It uploads a file Blob to the `node-assets` storage bucket and returns a public URL.
+
+- Runtime: Node.js (`export const runtime = 'nodejs'`) with `export const dynamic = 'force-dynamic'`.
+- The Supabase client is created inside the request handler to avoid build-time crashes when envs are absent in certain build pipelines.
+- Required environment variables:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `SUPABASE_SERVICE_KEY`
+
+If either env var is missing, the route responds with `500` and an explanatory error (`Server misconfigured: missing Supabase env`). Ensure these vars are set locally (e.g., `.env.local`) and in your deployment provider.
+

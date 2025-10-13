@@ -298,7 +298,12 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
             {(displayMessages ?? []).map((message: any, msgIdx: number) => {
               // Skip rendering empty assistant placeholders (no text, no files, no sources yet)
               if (message.role === 'assistant') {
-                const hasRenderable = (message.parts ?? []).some((p: any) => p.type === 'text' || (p.type === 'file' && (p.url || p.data)) || p.type === 'source-url');
+                const hasRenderable = (message.parts ?? []).some((p: any) =>
+                  (p.type === 'text' && typeof p.text === 'string' && p.text.trim().length > 0) ||
+                  (p.type === 'file' && (p.url || p.data)) ||
+                  (p.type === 'image' && (typeof p.image === 'string' ? p.image.length > 0 : !!p.image)) ||
+                  (p.type === 'source-url' && typeof p.url === 'string')
+                );
                 if (!hasRenderable) return null;
               }
               return (
@@ -533,7 +538,7 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
 			  </div>
 			)}
           </PromptInputTools>
-          <PromptInputSubmit disabled={!input && !status} status={status as any} />
+          <PromptInputSubmit disabled={!input?.trim() || status !== 'ready'} status={status as any} />
         </PromptInputToolbar>
       </PromptInput>
     </div>
