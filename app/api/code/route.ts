@@ -31,17 +31,21 @@ export const POST = async (req: Request) => {
   // Apply rate limiting
   if (process.env.NODE_ENV === 'production') {
     const ip = req.headers.get('x-forwarded-for') || 'anonymous';
-    const { success, limit, reset, remaining } = await rateLimiter.limit(ip);
+    try {
+      const { success, limit, reset, remaining } = await rateLimiter.limit(ip);
 
-    if (!success) {
-      return new Response('Too many requests', {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': limit.toString(),
-          'X-RateLimit-Remaining': remaining.toString(),
-          'X-RateLimit-Reset': reset.toString(),
-        },
-      });
+      if (!success) {
+        return new Response('Too many requests', {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+          },
+        });
+      }
+    } catch (err) {
+      console.warn('[rate-limit] Upstash unavailable, allowing request', err);
     }
   }
 

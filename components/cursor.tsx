@@ -24,7 +24,7 @@ export default function Cursor({ color, x, y, message, avatar }: Props) {
 
       {message && (
         <div
-          className="absolute left-3 top-3 flex items-center gap-2 rounded-full pl-3 pr-5 py-1.5 shadow-sm"
+          className="absolute left-3 top-3 flex items-center gap-2 rounded-full pl-4 pr-6 py-1.5 shadow-sm"
           style={{ backgroundColor: color }}
         >
           {avatar ? (

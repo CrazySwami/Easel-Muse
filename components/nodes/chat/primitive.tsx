@@ -80,6 +80,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const micBaseInputRef = useRef<string>('');
   const micLastIndexRef = useRef<number>(-1);
   const lastHydratedSessionIdRef = useRef<string | null>(null);
+ 	const stableTimestampsRef = useRef<Map<string, number>>(new Map());
+ 	const lastStreamSyncRef = useRef<number>(0);
 
   // Sync to node data for this session; avoid overwriting saved history with empty while switching
   useEffect(() => {
@@ -107,23 +109,41 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, sessionId]);
 
+  // Persist the latest message (user or assistant) immediately when it appears
+  useEffect(() => {
+    const last = (messages as any[])[(messages as any[]).length - 1] as any;
+    if (!last) return;
+    const sess = sessions.find((s) => s.id === sessionId);
+    const has = (sess?.messages ?? []).some((m: any) => m.id === last.id);
+    if (!has) {
+      const nextSessions = sessions.map((s) =>
+        s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), { ...last, createdAt: Date.now() } as any ] } : s
+      );
+      updateNodeData(nodeId, { sessions: nextSessions });
+    }
+  }, [messages, sessions, sessionId, nodeId, updateNodeData]);
+
+  useEffect(() => {
+    if (status !== 'streaming') return;
+    const last = (messages as any[])[(messages as any[]).length - 1] as any;
+    if (!last || last.role !== 'assistant') return;
+    const now = Date.now();
+    if (now - lastStreamSyncRef.current < 80) return; // throttle ~12fps
+    lastStreamSyncRef.current = now;
+    const sess = sessions.find((s) => s.id === sessionId);
+    if (!sess) return;
+    const exists = (sess.messages ?? []).some((m: any) => m.id === last.id);
+    if (!exists) return; // initial insert handled by other effect
+    const nextMessages = (sess.messages ?? []).map((m: any) => (m.id === last.id ? { ...m, parts: last.parts, updatedAt: now } : m));
+    const nextSessions = sessions.map((s) => (s.id === sessionId ? { ...s, messages: nextMessages } : s));
+    updateNodeData(nodeId, { sessions: nextSessions });
+  }, [messages, status, sessions, sessionId, nodeId, updateNodeData]);
+
   useEffect(() => {
     if (status !== 'ready') return;
     const last = messages[messages.length - 1] as any;
     if (!last) return;
-    // Persist last message (user or assistant) into shared session if missing
-    {
-      const sess = sessions.find((s) => s.id === sessionId);
-      const has = (sess?.messages ?? []).some((m: any) => m.id === last.id);
-      if (!has) {
-        const nextSessions = sessions.map((s) =>
-          s.id === sessionId ? { ...s, updatedAt: Date.now(), messages: [ ...(s.messages ?? []), { ...last, createdAt: Date.now() } as any ] } : s
-        );
-        updateNodeData(nodeId, { sessions: nextSessions });
-      }
-    }
     if (last.role === 'assistant') {
-      // Append assistant to shared storage if not already present
       // If assistant emitted binary images, upload and replace with URLs
       const imageParts = (last.parts ?? []).filter((p: any) => p.type === 'image' && p.image instanceof ArrayBuffer);
       if (imageParts.length > 0) {
@@ -194,12 +214,28 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     for (const m of liveArr) {
       if (!seen.has(m.id)) merged.push(m);
     }
-    // Stabilize order using createdAt when present
-    return merged.slice().sort((a, b) => {
-      const ta = (a as any).createdAt ?? 0;
-      const tb = (b as any).createdAt ?? 0;
-      return ta - tb;
-    });
+    // Stabilize order using createdAt, with a per-id stable fallback timestamp
+    const getTs = (m: any): number => {
+      if (typeof m.createdAt === 'number') return m.createdAt;
+      const found = stableTimestampsRef.current.get(m.id);
+      if (found) return found;
+      const t = Date.now();
+      stableTimestampsRef.current.set(m.id, t);
+      return t;
+    };
+    const hasRenderable = (m: any): boolean => {
+      const parts = m.parts ?? [];
+      for (const p of parts) {
+        if (p.type === 'text' && String(p.text || '').trim()) return true;
+        if (p.type === 'image' && (typeof p.image === 'string')) return true;
+        if (p.type === 'file' && (p.url || p.fileUrl)) return true;
+      }
+      return false;
+    };
+    return merged
+      .filter((m) => !(m.role === 'assistant' && !hasRenderable(m)))
+      .slice()
+      .sort((a, b) => getTs(a) - getTs(b));
   })();
 
   // Guard against accidental overwrites of history with fewer/empty messages

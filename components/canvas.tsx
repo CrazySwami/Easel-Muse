@@ -700,14 +700,14 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     return nodes.map((node) => {
       const lock = locksApi.getLock(node.id);
       // Disable dragging for 'move' and 'full'; allow dragging on 'edit'
-      const isDraggable = !lock || (lock.level !== 'move' && lock.level !== 'full');
+      const isDraggable = !isLocked && (!lock || (lock.level !== 'move' && lock.level !== 'full'));
 
       return {
         ...node,
         draggable: isDraggable ? node.draggable : false,
       };
     });
-  }, [nodes, locks]);
+  }, [nodes, locks, isLocked]);
 
   // Prevent browser page zoom on trackpad pinch (ctrlKey + wheel) so canvas zoom is used
   useEffect(() => {
@@ -734,6 +734,14 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
           <ContextMenu>
             <ContextMenuTrigger onContextMenu={handleContextMenu}>
               <div ref={reactFlowWrapper} className="relative h-full w-full">
+                {isLocked ? (
+                  <div
+                    className="absolute inset-0 z-10"
+                    onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  />
+                ) : null}
                 <ReactFlow
                 deleteKeyCode={['Backspace', 'Delete']}
                 nodes={nodesWithLock}
@@ -750,6 +758,9 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                 panOnScroll={!isLocked}
                 zoomOnScroll={!isLocked}
                 zoomOnPinch={!isLocked}
+                nodesDraggable={!isLocked}
+                nodesConnectable={!isLocked}
+                elementsSelectable={!isLocked}
                 preventScrolling
                 fitView
                 minZoom={0.02}
