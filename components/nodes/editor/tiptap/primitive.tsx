@@ -253,6 +253,36 @@ const CommentMark = Mark.create({
   },
 });
 
+// Back-compat: safely handle legacy marks named "comment" present in existing docs
+// This avoids third-party CommentsExtension render errors by providing a minimal implementation.
+const LegacyCommentMark = Mark.create({
+  name: 'comment',
+  inclusive: false,
+  addAttributes() {
+    return {
+      commentId: { default: null },
+      userId: { default: null },
+      userName: { default: null },
+      userColor: { default: null },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'span[data-comment-id]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const color = HTMLAttributes['data-user-color'] || '#fef08a';
+    return [
+      'span',
+      {
+        ...HTMLAttributes,
+        class: 'comment-highlight cursor-pointer rounded-sm px-0.5 transition-all hover:shadow-md',
+        style: `background-color: ${color}; background-opacity: 0.3;`,
+      },
+      0,
+    ];
+  },
+});
+
 type CommentThread = {
   id: string;
   text: string;
@@ -321,6 +351,8 @@ const TiptapEditor = ({ data, id, doc, provider, readOnly = false }: TiptapEdito
             Link.configure({
                 openOnClick: false,
             }),
+            // Register legacy comment mark first to safely handle existing content
+            LegacyCommentMark,
             CommentMark,
             // Liveblocks + Yjs collaborative binding
             (liveblocksExtension as any),

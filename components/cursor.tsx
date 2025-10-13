@@ -24,12 +24,12 @@ export default function Cursor({ color, x, y, message, avatar }: Props) {
 
       {message && (
         <div
-          className="absolute left-3 top-3 flex items-center gap-2 rounded-full pl-2.5 pr-4 py-1.5 shadow-sm"
+          className="absolute left-3 top-3 flex items-center gap-2 rounded-full pl-3 pr-5 py-1.5 shadow-sm"
           style={{ backgroundColor: color }}
         >
           {avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt={message} width={20} height={20} className="h-5 w-5 rounded-full object-cover" />
+            <img src={avatar} alt={message} width={20} height={20} className="h-5 w-auto rounded-full object-cover" />
           ) : null}
           <p className="whitespace-nowrap text-[11px] leading-normal text-white">
             {message}

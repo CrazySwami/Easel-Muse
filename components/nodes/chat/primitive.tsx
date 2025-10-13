@@ -111,8 +111,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     if (status !== 'ready') return;
     const last = messages[messages.length - 1] as any;
     if (!last) return;
-    if (last.role === 'assistant') {
-      // Append assistant to shared storage if not already present
+    // Persist last message (user or assistant) into shared session if missing
+    {
       const sess = sessions.find((s) => s.id === sessionId);
       const has = (sess?.messages ?? []).some((m: any) => m.id === last.id);
       if (!has) {
@@ -121,6 +121,9 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
         );
         updateNodeData(nodeId, { sessions: nextSessions });
       }
+    }
+    if (last.role === 'assistant') {
+      // Append assistant to shared storage if not already present
       // If assistant emitted binary images, upload and replace with URLs
       const imageParts = (last.parts ?? []).filter((p: any) => p.type === 'image' && p.image instanceof ArrayBuffer);
       if (imageParts.length > 0) {
@@ -274,20 +277,10 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
   const handleSubmit = async (message: any) => {
     const hasText = Boolean(message.text);
     if (!hasText) return;
-    // Clear synchronously to avoid the brief delay
     const textToSend = message.text;
     setInput('');
     setAttachedFiles([]);
-    const parts = [{ type: 'text', text: textToSend }];
-    const userMsg: any = { id: `u_${Date.now()}`, role: 'user', userId: myId, userInfo: me?.info, parts };
-    appendToSession(userMsg);
-    const mentionsAI = /(^|\s)@(ai|assistant|bot)\b/i.test(textToSend);
-    if (mentionsAI) {
-      analytics.track('canvas', 'node', 'chat', { model: selectedModel, webSearch: search, trigger: '@mention' });
-      await sendMessage({ parts, userId: myId, userInfo: me?.info } as any, { body: { modelId: selectedModel, webSearch: search } });
-    } else {
-      // Human-only; nothing else to do
-    }
+    await sendMessage({ text: textToSend, userId: myId, userInfo: me?.info } as any, { body: { modelId: selectedModel, webSearch: search } });
   };
 
   return (
@@ -295,125 +288,58 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
       <div className="nowheel nodrag nopan flex-1 min-h-0 overflow-hidden rounded-2xl border bg-muted/20" onPointerDown={(e) => e.stopPropagation()}>
         <Conversation className="h-full">
           <ConversationContent className="px-2">
-            {(displayMessages ?? []).map((message: any, msgIdx: number) => {
-              // Skip rendering empty assistant placeholders (no text, no files, no sources yet)
-              if (message.role === 'assistant') {
-                const hasRenderable = (message.parts ?? []).some((p: any) =>
-                  (p.type === 'text' && typeof p.text === 'string' && p.text.trim().length > 0) ||
-                  (p.type === 'file' && (p.url || p.data)) ||
-                  (p.type === 'image' && (typeof p.image === 'string' ? p.image.length > 0 : !!p.image)) ||
-                  (p.type === 'source-url' && typeof p.url === 'string')
-                );
-                if (!hasRenderable) return null;
-              }
-              return (
-              <div key={message.id}>
-                {/* Sources above message like the example */}
-                {/* Inline sources pills under the assistant reply (favicon + host) */}
-                {/* We render these after the message content below */}
-                {message.parts?.map((part: any, i: number) => {
-                  switch (part.type) {
-                     case 'text':
-                       const isMe = Boolean((message as any).userId) && Boolean(myId) && ((message as any).userId === myId);
-                       return (
-                        <Message key={`${message.id}-${i}`} from={isMe ? 'user' : 'assistant'} avatarUrl={isMe ? myAvatar : '/Easel-Logo.svg'}>
-                           {isMe ? (
-                             <div className="text-white">{part.text}</div>
-                           ) : (
-                             <MessageContent>
-                               <Response>{part.text}</Response>
-                             </MessageContent>
-                           )}
-                         </Message>
-                       );
-                    case 'file':
-                    if (typeof part.mediaType === 'string' && part.mediaType.startsWith('image/') && typeof part.url === 'string') {
-                       return (
-                         <Message key={`${message.id}-${i}`} from={((message as any).userId && myId && (message as any).userId === myId) ? 'user' : 'assistant'} avatarUrl={((message as any).userId && myId && (message as any).userId === myId) ? myAvatar : '/Easel-Logo.svg'}>
-                           <div className="overflow-hidden rounded-xl border bg-card/60">
-                             <img src={part.url} alt="Generated image" className="block max-h-[420px] w-auto" />
-                           </div>
-                         </Message>
-                       );
-                     }
-                     return null;
-                   case 'image':
-                     // Provider normalized image; could be URL or binary
-                     try {
-                       const src = typeof part.image === 'string' ? part.image : (part.image ? URL.createObjectURL(new Blob([part.image as any])) : undefined);
-                       if (!src) return null;
-                       return (
-                         <Message key={`${message.id}-${i}`} from={((message as any).userId && myId && (message as any).userId === myId) ? 'user' : 'assistant'} avatarUrl={((message as any).userId && myId && (message as any).userId === myId) ? myAvatar : '/Easel-Logo.svg'}>
-                           <div className="overflow-hidden rounded-xl border bg-card/60">
-                             <img src={src} alt="Image" className="block max-h-[420px] w-auto" />
-                           </div>
-                         </Message>
-                       );
-                     } catch {
-                       return null;
-                     }
-                    case 'reasoning':
-                      return (
-                        <Reasoning key={`${message.id}-${i}`} className="w-full" isStreaming={status === 'streaming' && i === message.parts.length - 1 && message.id === (messages as any).at(-1)?.id}>
-                          <ReasoningTrigger />
-                          <ReasoningContent>{part.text}</ReasoningContent>
-                        </Reasoning>
-                      );
-                    default:
-                      return null;
+            {((displayMessages as any[]) ?? []).length > 0 && (
+              (displayMessages as any[]).map((message: any) => (
+                <Message
+                  from={message.role}
+                  key={message.id}
+                  avatarUrl={
+                    message.role === 'user'
+                      ? ((message.userInfo as any)?.avatar ?? (message.userId === myId ? myAvatar : undefined))
+                      : '/Easel-Logo.svg'
                   }
-                })}
-                {message.role === 'assistant' && (() => {
-                  const urls: string[] = (message.parts ?? [])
-                    .filter((p: any) => p.type === 'source-url' && typeof p.url === 'string')
-                    .map((p: any) => p.url)
-                    .slice(0, 12);
-                  if (!urls.length) return null;
-                  const getHost = (u: string) => {
-                    try { return new URL(u).hostname; } catch { return u; }
-                  };
-                  return (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {urls.map((u, i) => {
-                        const host = getHost(u);
-                        const icon = `https://icons.duckduckgo.com/ip3/${host}.ico`;
-                        return (
-                          <a
-                            key={`${message.id}-pill-${i}`}
-                            href={u}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-full border bg-card/60 px-2 py-1 text-xs hover:bg-accent"
-                            title={u}
-                          >
-                            <img src={icon} alt="" className="h-3.5 w-3.5" />
-                            <span className="max-w-[160px] truncate">{host}</span>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-                {/* Hover actions under assistant reply */}
-                {message.role === 'assistant' && msgIdx === (displayMessages as any).length - 1 && (
-                  <div className="mt-1 max-w-[80%] opacity-0 transition-opacity hover:opacity-100">
-                    <Actions>
-                      <Action onClick={() => regenerate()} label="Retry">
-                        <RefreshCcwIcon className="size-3" />
-                      </Action>
-                      <Action onClick={() => {
-                        const textParts = (message.parts ?? []).filter((p: any) => p.type === 'text');
-                        const toCopy = textParts.map((p: any) => p.text).join('\n');
-                        navigator.clipboard?.writeText(toCopy);
-                      }} label="Copy">
-                        <CopyIcon className="size-3" />
-                      </Action>
-                    </Actions>
-                  </div>
-                )}
-              </div>
-            )})}
-            {/* loader removed to avoid transient placeholder box */}
+                >
+                  <MessageContent>
+                    {(message.parts ?? []).map((part: any, i: number) => {
+                      switch (part.type) {
+                        case 'text':
+                          return message.role === 'user' ? (
+                            <div key={`${message.id}-${i}`} className="text-white">{part.text}</div>
+                          ) : (
+                            <Response key={`${message.id}-${i}`}>{part.text}</Response>
+                          );
+                        case 'image': {
+                          const src = typeof part.image === 'string' ? part.image : undefined;
+                          if (!src) return null;
+                          return (
+                            <div key={`${message.id}-${i}`} className="mb-2">
+                              <img src={src} alt="image" className="max-h-64 w-auto rounded-md border object-contain" />
+                            </div>
+                          );
+                        }
+                        case 'file': {
+                          const url = (part.url || part.fileUrl || part.name) as string | undefined;
+                          if (url && /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(url)) {
+                            return (
+                              <div key={`${message.id}-${i}`} className="mb-2">
+                                <img src={url} alt={part.name || 'file'} className="max-h-64 w-auto rounded-md border object-contain" />
+                              </div>
+                            );
+                          }
+                          return url ? (
+                            <a key={`${message.id}-${i}`} href={url} target="_blank" rel="noreferrer" className="underline">
+                              {part.name || 'attachment'}
+                            </a>
+                          ) : null;
+                        }
+                        default:
+                          return null;
+                      }
+                    })}
+                  </MessageContent>
+                </Message>
+              ))
+            )}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
@@ -532,13 +458,8 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
             <div className="min-w-[240px]">
               <ModelSelector value={selectedModel} options={modelsMap as any} onChange={(v: string) => setSelectedModel(v)} className="w-full" />
             </div>
-			{mentionsAIInInput && (
-			  <div className="ml-2 hidden sm:flex items-center rounded-md border bg-card/60 px-2 py-1 text-xs text-foreground/80">
-			    Will ask AI · {selectedModel}
-			  </div>
-			)}
           </PromptInputTools>
-          <PromptInputSubmit disabled={!input?.trim() || status !== 'ready'} status={status as any} />
+          <PromptInputSubmit disabled={!input.trim()} status={status === 'streaming' ? 'streaming' : 'ready'} />
         </PromptInputToolbar>
       </PromptInput>
     </div>
