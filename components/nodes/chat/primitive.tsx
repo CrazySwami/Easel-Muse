@@ -222,13 +222,13 @@ const ChatPanel = ({ nodeId, sessionId, model, webSearch, sessions, renameSessio
     list.push({ id: 'ai', name: 'AI', avatar: '/Easel-Logo.svg', isAI: true, handle: 'ai' });
     if (me) {
       const name = (me.info as any)?.name || 'Me';
-      seen[me.id] = true;
-      list.push({ id: me.id, name, avatar: (me.info as any)?.avatar, handle: (name as string).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'me' });
+      if (me.id != null) { seen[String(me.id)] = true; }
+      list.push({ id: me.id ?? 'me', name, avatar: (me.info as any)?.avatar, handle: (name as string).toLowerCase().replace(/[^a-z0-9]+/g, '') || 'me' });
     }
     for (const o of Array.from(others)) {
-      if (!o?.id || seen[o.id]) continue;
+      if (!o?.id || seen[String(o.id)]) continue;
       const name = (o.info as any)?.name || `User ${String(o.id).slice(-4)}`;
-      seen[o.id] = true;
+      seen[String(o.id)] = true;
       list.push({ id: o.id, name, avatar: (o.info as any)?.avatar, handle: (name as string).toLowerCase().replace(/[^a-z0-9]+/g, '') });
     }
     return list;

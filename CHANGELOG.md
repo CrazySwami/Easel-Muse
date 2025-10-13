@@ -2,34 +2,31 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
-## v0.0.12 — Unified Search Node UI & Live Presence Polish (2025-10-13)
+## v0.0.12 — Unified Batch UI & Liveblocks Presence (2025-10-13)
 
--   **Search Node Unification (major)**
-    -   Overhauled the `AI Compare`, `Perplexity Search`, and `Google Search Results` (formerly SerpApi) nodes with a unified UI and consistent functionality for a streamlined user experience.
-    -   Introduced two new reusable components, `GeneratorBar` and `QueryList`, to centralize batch query generation and management across all three nodes.
-    -   **Batch Query UI**: The new `QueryList` provides a consistent interface with a sticky footer for "Add" and "Run Batch" buttons, inline query editing on tap, and hover-to-reveal Edit/Delete controls. A "Rerun" button has also been added to each individual query row.
-    -   **Question Generation**: The `GeneratorBar` offers a shared UI for generating batch questions, featuring a model selector, prompt input, and a "Generate to Batch" button.
-    -   **Toolbar Controls**: Moved the "Single" and "Batch" mode toggles to the node's main toolbar for consistent access across all three search nodes.
-    -   **State Management**: Hardened the state logic in all three nodes to ensure that running a single query does not clear batch results, and vice versa.
-    -   **AI Compare**:
-        -   Provider text responses are now displayed in collapsible toggles with previews and full source URLs.
-        -   Added an inline settings panel (via gear icon) for selecting models for each provider (OpenAI, Gemini, Claude).
-        -   Default models updated to `gpt-4.1-mini`, `gemini-2.5-flash-lite`, and `claude-3-5-haiku-20241022`.
-    -   **Google Search Results**:
-        -   The `SerpApi` node has been renamed to "Google Search Results" for clarity.
-        -   Streamlined the header controls into a single, compact line.
-    -   **Node Sizing**: Default dimensions for all three search nodes increased to `1280x880` to better accommodate the new, richer UIs.
+-   **Unified Batch Processing UI (major)**
+    -   Introduced a reusable `GeneratorBar` component with a model selector, prompt input, and "Generate to Batch" button to standardize question generation.
+    -   Created a shared `QueryList` component featuring a hover-to-edit list, per-query status indicators (idle, running, done, error), and sticky "Add" / "Run Batch" controls.
+    -   Refactored the AI Compare, Perplexity Search, and Google Search Results nodes to use these new components, creating a consistent, predictable batch workflow across the application.
+    -   Added per-row "Rerun" buttons to all batch query lists for quickly re-executing a single query.
 
--   **Liveblocks Presence & Cursors**
-    -   Polished the visual appearance of user presence indicators for a cleaner, more consistent look.
-    -   Added a custom SVG cursor icon for other users while removing it for the active user.
-    -   Fixed UI bugs where the background color was cut off and adjusted padding, text size, and avatar size for better legibility and spacing.
+-   **AI Compare Node**
+    -   Single mode UI now features collapsible toggles for each provider's text response and a consolidated list of source links.
+    -   An inline settings panel (gear icon) was added to allow model selection for each provider (OpenAI, Gemini, Claude).
+    -   Hardened state management to ensure running a single query does not clear batch results, and vice-versa.
+    -   Updated default models to `gpt-4.1-mini`, `gemini-2.5-flash-lite`, and `claude-3-5-haiku-20241022`.
 
--   **Tiptap Editor Stability**
-    -   Resolved critical rendering errors in the Tiptap node by ensuring Liveblocks extensions are initialized only after the editor is fully ready, improving collaborative editing stability.
+-   **Perplexity & Google Search Nodes**
+    -   The "Single" and "Batch" mode toggles have been moved into the node's main toolbar, creating a consistent entry point for all three search-oriented nodes.
+    -   The SerpApi node was renamed to "Google Search Results," and its header controls were streamlined into a single, efficient row.
+    -   State management was hardened in both nodes to isolate single and batch results.
 
--   **Backend APIs**
-    -   Updated the `/api/openai/search`, `/api/gemini/search`, and `/api/anthropic/search` routes to support model selection and align with the latest provider API contracts.
+-   **Liveblocks & Canvas UX**
+    -   Refined the Liveblocks presence indicator with multiple padding and sizing adjustments to fix background clipping and create a polished, visually balanced name tag.
+    -   Added a custom SVG cursor for other users to improve collaborative awareness, while removing it for the active user to reduce clutter.
+
+-   **Backend & API**
+    -   Patched the OpenAI, Gemini, and Anthropic search routes (`/api/*/search`) to align with recent breaking changes in provider APIs, resolving critical 400 and 500 errors.
 
 ## v0.0.11 — AI Compare Citations & Redirect Resolver (2025-10-12)
 
@@ -42,6 +39,54 @@ This changelog reflects the work in the Easel Muse fork only. We consolidated th
 -   **Docs**
     -   Updated changelog according to project policy; captured user‑visible impact and backend utility addition.
 
+
+## v0.0.10 — Perplexity Model Mode, Audio/Web fixes, UX polish (2025-10-11 → 2025-10-12)
+
+-   **Perplexity (major)**
+    -   Added a new "Perplexity model" mode that calls the `chat/completions` endpoint with a system prompt for longer, well‑structured Markdown answers. Answers render at top with compact source pills (favicon + hostname), capped to 6.
+    -   Batch mode now stores and renders per‑query `{ answer, citations }` entries (right pane mirrors Single mode). Question text is shown above each answer in both Single and Batch views.
+    -   Normalized model IDs to supported `sonar`/`sonar-pro` (dropped legacy `*-online`). UI accepts gateway ids like `perplexity/sonar-pro` and maps them correctly.
+    -   Backend route `/api/perplexity/search` updated: supports `mode=search | chat | generate_questions`, accepts optional `system` string for chat, sanitizes search payload, normalizes model ids, and flattens citations from multiple shapes.
+    -   UI hardening: invalid/missing source URLs handled gracefully; fixed `ReactMarkdown` import and children handling.
+    -   Sizing: default height reduced to `680` (was `800`) for a tighter node; fullscreen enabled; output‑only connectors enforced.
+
+-   **Audio node (consolidation + UX)**
+    -   Voice Memo node removed; Audio now includes recording as a first‑class option.
+    -   Two‑column 50/50 layout with consistent green iconography; transcript area is fully scrollable and copyable.
+    -   Immediate client‑side validation for file type/size (MP3/WAV/WEBM/M4A/MP4/OGG, ≤10MB); invalid uploads are blocked with messaging.
+    -   Dual‑mode support wired into NodeLayout (Plain/Generate), matching Text/Image/Code patterns.
+
+-   **Web Renderer (HTML/URL)**
+    -   Secure iframe (`sandbox="allow-scripts allow-same-origin"`).
+    -   URL vs Code toggle with "Load Source" via `/api/proxy`; connecting a Code node clears URL and vice‑versa.
+    -   Device viewport toggles (Mobile/Tablet/Desktop) and collapsible HTML editor with capped height.
+    -   Fixed missing `useState` import and layout expansion of the bottom editor.
+
+-   **Tiptap stability**
+    -   Liveblocks extension registration moved into a guarded `useEffect` after editor/provider are ready; UI elements (Toolbar, BubbleMenu, Threads/Composer) are guarded to avoid render‑phase updates. Resolves "Cannot update a component while rendering a different component" and undefined `state` errors.
+
+-   **Canvas, toolbar, and palette**
+    -   "Add node" palette opens centered, autofocuses search, scales relative to zoom, hides connectors, and avoids the double‑frame effect.
+    -   New node spawning aligns horizontally with the farthest‑right node, uses width‑aware spacing, and recenters the camera with a slight zoom‑out.
+    -   Added a testing action to add one of every node type in a spaced grid.
+    -   Save indicator moved into the top bar (to the left of the avatar); canvas controls moved to the bottom‑left above the "+" button.
+
+-   **NodeLayout window chrome (refinements)**
+    -   Fullscreen button lives in the left cluster and only shows when supported.
+    -   Added separate Position‑lock and Content‑lock buttons (content lock no longer affects dragging). Active state uses green icon on white background; tooltips added for all controls.
+    -   Delete action now shows a confirmation modal; bar uses the darker emerald accent and proper spacing to avoid content overlap.
+
+-   **Text/Image/Video/Code**
+    -   Text: transform view resized; prompt and output areas use `min-h-0 overflow-auto` with `nowheel nodrag nopan` to prevent canvas pan. Added compact Sources panel and copy button; plain view matches size and includes copy.
+    -   Image/Video/Code: larger defaults; dual‑mode toggles enabled; prompt inputs capped with internal scroll. Video’s model selector moved to the bottom toolbar.
+
+-   **Docs**
+    -   `docs/ui-and-component-guide.md` expanded with: dual‑mode pattern (including `titleOverride` and `dualModeSupported`), per‑node min/max sizing guidance, consistent sizing contract (palette vs component), scrolling/overscroll best practices, fullscreen/window‑chrome flags, and custom connectors (`allowIncoming`/`allowOutgoing`).
+    -   `docs/xyflow-data-consumption.md` updated to include Perplexity as a producer and new extractors.
+
+-   **Utilities & APIs**
+    -   New `/api/proxy` endpoint for CORS‑safe HTML fetching used by Web Renderer.
+    -   `lib/xyflow.ts` gained `getTextFromPerplexityNodes` and `getLinksFromPerplexityNodes`; Text Transform consumes both for better context.
 
 ## v0.0.9 — Architectural UI Overhaul & Node Consistency (2025-10-05 → 2025-10-11)
 
