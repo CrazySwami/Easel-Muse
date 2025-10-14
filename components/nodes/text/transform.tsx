@@ -27,6 +27,8 @@ import {
   getTextFromPerplexityNodes,
   getLinksFromPerplexityNodes,
   getAnswersFromPerplexityNodes,
+  getLinksFromSerpapiNodes,
+  getLinksFromFirecrawlNodes,
 } from '@/lib/xyflow';
 import { useGateway } from '@/providers/gateway/client';
 import { useProject } from '@/providers/project';
@@ -127,10 +129,12 @@ export const TextTransform = ({
     const tweetContent = getTweetContentFromTweetNodes(incomers);
     const perplexityTexts = getTextFromPerplexityNodes(incomers);
     const perplexityLinks = getLinksFromPerplexityNodes(incomers);
+    const serpLinks = getLinksFromSerpapiNodes(incomers);
+    const firecrawlLinks = getLinksFromFirecrawlNodes(incomers);
     const perplexityAnswers = getAnswersFromPerplexityNodes(incomers);
     const files = getFilesFromFileNodes(incomers);
 
-    if (!textPrompts.length && !docPrompts.length && !audioPrompts.length && !perplexityTexts.length && !data.instructions) {
+    if (!textPrompts.length && !docPrompts.length && !audioPrompts.length && !perplexityTexts.length && !data.instructions && !(perplexityLinks.length || serpLinks.length || firecrawlLinks.length)) {
       handleError('Error generating text', 'No prompts found');
       return;
     }
@@ -169,9 +173,8 @@ export const TextTransform = ({
       content.push('--- Tweet Content ---', ...tweetContent);
     }
 
-    if (perplexityLinks.length) {
-      content.push('--- Sources ---', ...perplexityLinks);
-    }
+    const allLinks = Array.from(new Set([ ...perplexityLinks, ...serpLinks, ...firecrawlLinks ]));
+    if (allLinks.length) content.push('--- Sources ---', ...allLinks);
 
     analytics.track('canvas', 'node', 'generate', {
       type,
@@ -397,18 +400,23 @@ export const TextTransform = ({
           )}
         </div>
 
-        {/* 1b. Sources from connected Perplexity nodes (if any) */}
+        {/* 1b. Sources from connected nodes (SerpApi, Perplexity, Firecrawl) */}
         {(() => {
           try {
             const incomers = getIncomers({ id }, getNodes(), getEdges());
-            const links = getLinksFromPerplexityNodes(incomers);
-            if (!links?.length) return null;
+            const links = [
+              ...getLinksFromPerplexityNodes(incomers),
+              ...getLinksFromSerpapiNodes(incomers),
+              ...getLinksFromFirecrawlNodes(incomers),
+            ].filter(Boolean);
+            const unique = Array.from(new Set(links));
+            if (!unique.length) return null;
             return (
               <div className="nowheel nodrag nopan mx-4 my-2 shrink-0 rounded-xl border border-border bg-card/60 p-3 text-xs"
                    onPointerDown={(e) => e.stopPropagation()}>
                 <p className="mb-1 font-medium text-foreground/80">Sources</p>
                 <div className="max-h-24 overflow-auto space-y-1">
-                  {links.map((u, i) => {
+                  {unique.map((u, i) => {
                     let hostname = '';
                     try { hostname = new URL(String(u)).hostname; } catch {}
                     const favicon = hostname ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=16` : undefined;

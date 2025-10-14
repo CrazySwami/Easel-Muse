@@ -7,7 +7,8 @@ import { handleError } from '@/lib/error/handle';
 import { getIncomers, useReactFlow } from '@xyflow/react';
 import { PlayIcon, RotateCcwIcon, SquareIcon, ClockIcon } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 import { toast } from 'sonner';
 import type { FirecrawlNodeProps } from './index';
 
@@ -94,12 +95,22 @@ export const FirecrawlTransform = ({ data, id, type, title }: FirecrawlTransform
         )}
       </div>
       {/* Optional instructions to pass to json extract mode */}
-      <Textarea
-        value={(data.options as any)?.jsonPrompt ?? ''}
-        onChange={(e) => updateNodeData(id, { options: { ...(data.options ?? {}), jsonPrompt: e.target.value } })}
-        placeholder="Optional: extraction prompt for JSON mode"
-        className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
-      />
+      {(() => {
+        const current = (data.options as any)?.jsonPrompt ?? '';
+        const [local, setLocal] = useState<string>(current);
+        useEffect(() => { setLocal(current); }, [current]);
+        const persist = useDebouncedCallback((v: string) => {
+          updateNodeData(id, { options: { ...(data.options ?? {}), jsonPrompt: v } });
+        }, 200);
+        return (
+          <Textarea
+            value={local}
+            onChange={(e) => { const v = e.target.value; setLocal(v); persist(v); }}
+            placeholder="Optional: extraction prompt for JSON mode"
+            className="shrink-0 resize-none rounded-none border-none bg-transparent! shadow-none focus-visible:ring-0"
+          />
+        );
+      })()}
     </NodeLayout>
   );
 };

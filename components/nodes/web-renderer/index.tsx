@@ -10,7 +10,8 @@ export type WebRendererNodeProps = {
     resizable?: boolean;
     html?: string;
     url?: string;
-    mode?: 'url' | 'code';
+    // Avoid collision with NodeLayout's `mode` (plain/generate)
+    renderMode?: 'url' | 'code';
     viewport?: 'mobile' | 'tablet' | 'desktop';
   };
 };

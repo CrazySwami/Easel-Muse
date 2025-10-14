@@ -112,6 +112,25 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
     return { texts, links };
   };
 
+  const extractAioLinks = (root: any) => {
+    try {
+      let ai = root?.ai_overview || root?.aiOverview || root;
+      if (ai?.ai_overview) ai = ai.ai_overview;
+      const links: string[] = [];
+      const pushLinks = (arr: any[]) => {
+        for (const it of arr || []) {
+          const u = it?.link || it?.url || it;
+          if (typeof u === 'string') links.push(u);
+        }
+      };
+      pushLinks(ai?.references || ai?.citations || ai?.sources || ai?.links || []);
+      const answer: string | undefined = ai?.answer?.text || ai?.content || ai?.summary;
+      return { links, answer };
+    } catch {
+      return { links: [], answer: '' };
+    }
+  };
+
   const renderAio = (root: any) => {
     let ai = root?.ai_overview || root?.aiOverview || root;
     // serpapi_link responses often nest ai_overview.ai_overview
@@ -224,12 +243,13 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
           const res = await fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q: query, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
           const json = await res.json();
           const { texts, links } = deriveOutputs(json);
-          // store single-mode only
-          updateNodeData(props.id, (prev: any) => ({ results: json?.organic_results ?? [], serpMode: mode, updatedAt: new Date().toISOString(), batchGroups: prev?.batchGroups ?? [] }));
+          // store single-mode only + expose outputs for xyflow
+          updateNodeData(props.id, (prev: any) => ({ results: json?.organic_results ?? [], serpMode: mode, updatedAt: new Date().toISOString(), batchGroups: prev?.batchGroups ?? [], outputTexts: texts, outputLinks: links }));
         } else {
           const res = await fetch('/api/serpapi/ai-overview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q: query, location, hl, gl, no_cache: noCache, google_domain: googleDomain }) });
           const json = await res.json();
-          updateNodeData(props.id, (prev: any) => ({ results: [json], serpMode: mode, updatedAt: new Date().toISOString(), batchGroups: prev?.batchGroups ?? [] }));
+          const { links, answer } = extractAioLinks(json);
+          updateNodeData(props.id, (prev: any) => ({ results: [json], serpMode: mode, updatedAt: new Date().toISOString(), batchGroups: prev?.batchGroups ?? [], outputTexts: answer ? [answer] : [], outputLinks: links }));
         }
       }
     } finally {
@@ -266,6 +286,23 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
       }
     }
     setLoading(false);
+
+    // Persist flattened outputs for xyflow consumption
+    try {
+      if (engine === 'search') {
+        const flat = groups.flatMap((g: any) => g.results ?? []);
+        const texts = flat.map((r: any) => [r?.title, r?.snippet].filter(Boolean).join(' — ')).filter(Boolean);
+        const links = flat.map((r: any) => r?.link || r?.url).filter(Boolean);
+        updateNodeData(props.id, (prev: any) => ({ ...(prev as any), outputTexts: texts, outputLinks: links }));
+      } else {
+        const allLinks: string[] = [];
+        for (const g of groups) {
+          const { links } = extractAioLinks(g?.results?.[0]);
+          allLinks.push(...links);
+        }
+        updateNodeData(props.id, (prev: any) => ({ ...(prev as any), outputLinks: allLinks }));
+      }
+    } catch {}
   };
 
   return (

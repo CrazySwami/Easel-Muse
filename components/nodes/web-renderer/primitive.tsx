@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useReactFlow, useNodeConnections, useNodesData } from '@xyflow/react';
+import { useReactFlow, useNodeConnections, useNodesData, getIncomers } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
 import type { WebRendererNodeProps } from './index';
 import { getCodeFromCodeNodes } from '@/lib/xyflow';
@@ -16,32 +16,38 @@ import { ChevronsUpDownIcon } from 'lucide-react';
 type WebRendererPrimitiveProps = WebRendererNodeProps & { title: string };
 
 export const WebRendererPrimitive = (props: WebRendererPrimitiveProps) => {
-  const { updateNodeData } = useReactFlow();
+  const { updateNodeData, getNodes, getEdges } = useReactFlow();
   const connections = useNodeConnections({ id: props.id, handleType: 'target' });
   const nodesData = useNodesData(connections.map((c) => c.source));
   const hasIncomers = connections.length > 0;
   const [isEditorOpen, setIsEditorOpen] = useState(true);
-  const mode = (props.data as any)?.mode ?? ((props.data?.html && props.data.html.length > 0) ? 'code' : 'url');
+  const mode = (props.data as any)?.renderMode ?? ((props.data?.html && props.data.html.length > 0) ? 'code' : 'url');
   const [isLoadingSource, setIsLoadingSource] = useState(false);
 
-  // When a Code node is connected, its content populates the HTML (only in 'code' mode)
+  // When a Code node is connected, populate HTML and switch to 'code' mode
+  // Auto-switch even from URL mode if no URL is set (so connecting a Code node "just works")
   useEffect(() => {
-    if (mode === 'code' && hasIncomers && nodesData) {
-      const codeNodes = getCodeFromCodeNodes(nodesData as unknown as Node[]);
-      const code = codeNodes.length > 0 ? codeNodes[0].text : undefined;
-      if (code && code !== props.data.html) {
-        // Enforce HTML mode: set html, clear url
-        updateNodeData(props.id, { html: code, url: '', mode: 'code' });
+    if (!hasIncomers) return;
+    const incomerNodesA = (nodesData?.filter(Boolean) as any[]) ?? [];
+    const incomerNodesB = getIncomers({ id: props.id } as unknown as Node, getNodes(), getEdges());
+    const combined = [...incomerNodesA, ...incomerNodesB];
+    const codeNodes = getCodeFromCodeNodes(combined as any);
+    const code = codeNodes.length > 0 ? codeNodes[0].text : undefined;
+    if (!code) return;
+    // Only override URL mode if user hasn't entered a URL, otherwise respect explicit URL mode
+    if (mode === 'code' || !(props.data.url && props.data.url.length > 0)) {
+      if (code !== props.data.html) {
+        updateNodeData(props.id, { html: code, url: '', renderMode: 'code' });
       }
     }
-  }, [nodesData, hasIncomers, props.data.html, props.id, updateNodeData, mode]);
+  }, [nodesData, hasIncomers, props.data.html, props.data.url, props.id, updateNodeData, mode, getNodes, getEdges]);
 
   const toolbar: ComponentProps<typeof NodeLayout>['toolbar'] = [
     { children: <div className="px-2 text-xs text-muted-foreground">HTML/URL renderer</div> },
   ];
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => updateNodeData(props.id, { url: e.target.value, mode: 'url' });
-  const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodeData(props.id, { html: e.target.value, mode: 'code' });
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => updateNodeData(props.id, { url: e.target.value, renderMode: 'url' });
+  const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => updateNodeData(props.id, { html: e.target.value, renderMode: 'code' });
 
   const handleLoadSource = async () => {
     if (!props.data.url) return;
@@ -66,17 +72,17 @@ export const WebRendererPrimitive = (props: WebRendererPrimitiveProps) => {
       type={props.type}
       title={props.title}
       toolbar={toolbar}
-      data={{ ...props.data, width: 1920, height: 1080, resizable: false, fullscreenSupported: true, fullscreenOnly: false }}
+      data={{ ...((): any => { const d: any = { ...props.data }; delete d.mode; return d; })(), width: 1920, height: 1080, resizable: false, fullscreenSupported: true, fullscreenOnly: false }}
     >
       {/* "Fill Frame" Pattern: Wrapper has h-full */}
       <div className="flex h-full flex-col gap-3 p-3">
         {/* Header Controls (Fixed Height) */}
-        <div className="shrink-0 rounded-2xl border bg-muted/20 p-3">
+        <div className="shrink-0 rounded-2xl border bg-muted/20 p-3 relative z-10" onPointerDown={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3">
             {mode === 'url' ? (
               <>
                 <Input placeholder="https://..." value={props.data.url ?? ''} onChange={handleUrlChange} className="flex-1" />
-                <Button size="sm" onClick={() => updateNodeData(props.id, { html: undefined, mode: 'url' })}>Load</Button>
+                <Button size="sm" onClick={() => updateNodeData(props.id, { html: undefined, renderMode: 'url' })}>Load</Button>
                 <Button size="sm" variant="secondary" disabled={isLoadingSource || !props.data.url} onClick={handleLoadSource}>
                   {isLoadingSource ? 'Loading…' : 'Load Source'}
                 </Button>
@@ -90,14 +96,14 @@ export const WebRendererPrimitive = (props: WebRendererPrimitiveProps) => {
                 size="sm"
                 variant={mode === 'url' ? 'default' : 'ghost'}
                 className="h-8 px-2"
-                onClick={() => updateNodeData(props.id, { mode: 'url' })}
+                onClick={() => updateNodeData(props.id, { renderMode: 'url' })}
               >URL</Button>
               <Button
                 type="button"
                 size="sm"
                 variant={mode === 'code' ? 'default' : 'ghost'}
                 className="h-8 px-2"
-                onClick={() => updateNodeData(props.id, { mode: 'code' })}
+                onClick={() => updateNodeData(props.id, { renderMode: 'code' })}
               >Code</Button>
             </div>
             <div className="inline-flex rounded-md border p-0.5">
@@ -127,7 +133,7 @@ export const WebRendererPrimitive = (props: WebRendererPrimitiveProps) => {
         </div>
 
         {/* Main Content (Grows to fill frame) */}
-        <div className="flex-1 overflow-hidden rounded-2xl border bg-card">
+        <div className="flex-1 overflow-hidden rounded-2xl border bg-card relative z-0" onPointerDown={(e) => e.stopPropagation()}>
           <iframe
             title={`web-${props.id}`}
             srcDoc={mode === 'code' ? (props.data.html || '') : undefined}
