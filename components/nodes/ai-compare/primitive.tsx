@@ -9,7 +9,6 @@ import { GeneratorBar } from '@/components/ui/batch/generator-bar';
 import { QueryList } from '@/components/ui/batch/query-list';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { useDebouncedCallback } from 'use-debounce';
 import { OpenAiIcon, GeminiIcon, AnthropicIcon, GoogleIcon } from '@/lib/icons';
 import { CheckIcon, PlusIcon, XIcon, Loader2Icon, SettingsIcon } from 'lucide-react';
 import { useGateway } from '@/providers/gateway/client';
@@ -67,32 +66,13 @@ export const AIComparePrimitive = (props: Props) => {
   const anthropicModel = (props.data as any)?.anthropicModel ?? 'claude-3-5-haiku-20241022';
 
   const setInputMode = (value: 'single'|'batch'|'settings') => updateNodeData(props.id, { inputMode: value });
-
-  // Local mirrors to prevent caret jump
-  const [singleQuery, setSingleQuery] = useState(queries[0] ?? '');
-  useEffect(() => { setSingleQuery(queries[0] ?? ''); }, [queries[0]]);
-  const [localQueries, setLocalQueries] = useState<string[]>(queries);
-  useEffect(() => { setLocalQueries(queries); }, [queries]);
-  const [localGenPrompt, setLocalGenPrompt] = useState(generatePrompt);
-  useEffect(() => { setLocalGenPrompt(generatePrompt); }, [generatePrompt]);
-
-  const persistQueries = useDebouncedCallback((next: string[]) => {
+  const updateQuery = (i: number, v: string) => {
+    const next = [...queries];
+    next[i] = v;
     updateNodeData(props.id, { queries: next });
-  }, 200);
-  const persistGenPrompt = useDebouncedCallback((v: string) => {
-    updateNodeData(props.id, { generatePrompt: v });
-  }, 200);
-
-  const addQuery = () => {
-    const next = [...localQueries, ''];
-    setLocalQueries(next);
-    persistQueries(next);
   };
-  const removeQuery = (i: number) => {
-    const next = localQueries.filter((_, idx) => idx !== i);
-    setLocalQueries(next);
-    persistQueries(next);
-  };
+  const addQuery = () => updateNodeData(props.id, { queries: [...queries, ''] });
+  const removeQuery = (i: number) => updateNodeData(props.id, { queries: queries.filter((_, idx) => idx !== i) });
 
   const [isRunning, setIsRunning] = useState(false);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
@@ -115,7 +95,7 @@ export const AIComparePrimitive = (props: Props) => {
   }, []);
 
   const runSingle = useCallback(async () => {
-    const q = (singleQuery || '').trim();
+    const q = (queries[0] || '').trim();
     if (!q) return;
     setIsRunning(true);
     try {
@@ -125,10 +105,6 @@ export const AIComparePrimitive = (props: Props) => {
         fetch('/api/anthropic/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, model: anthropicModel }) }).then(r=>r.json()),
         fetch('/api/serpapi/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, hl: 'en', gl: 'US' }) }).then(r=>r.json()),
       ]);
-      // Persist latest query to node data for consistency
-      if ((queries[0] ?? '') !== singleQuery) {
-        updateNodeData(props.id, { queries: [singleQuery, ...queries.slice(1)] });
-      }
       updateNodeData(props.id, { results: { single: {
         openai: o.status==='fulfilled'?o.value:null,
         gemini: g.status==='fulfilled'?g.value:null,
@@ -138,10 +114,10 @@ export const AIComparePrimitive = (props: Props) => {
     } finally {
       setIsRunning(false);
     }
-  }, [singleQuery, queries, updateNodeData, props.id, groupsRef, openaiModel, geminiModel, anthropicModel]);
+  }, [queries, updateNodeData, props.id, groupsRef, openaiModel, geminiModel, anthropicModel]);
 
   const runBatch = useCallback(async () => {
-    const valid = localQueries.map((x) => x.trim()).filter(Boolean);
+    const valid = queries.map((x) => x.trim()).filter(Boolean);
     if (!valid.length) return;
     const statuses = valid.map(() => 'idle') as Array<'idle'|'running'|'done'|'error'>;
     // Keep a single accumulating array so prior indices retain their state
@@ -184,7 +160,7 @@ export const AIComparePrimitive = (props: Props) => {
       }
     }
     setIsBatchRunning(false);
-  }, [localQueries, updateNodeData, props.id, singleRef, openaiModel, geminiModel, anthropicModel]);
+  }, [queries, updateNodeData, props.id, singleRef, openaiModel, geminiModel, anthropicModel]);
 
   // No Gemini-only mode; keep bulk mode for multiple questions
 
@@ -205,13 +181,13 @@ export const AIComparePrimitive = (props: Props) => {
   const isGenerateDisabled = isGenerating || !generatePrompt.trim();
 
   const handleGenerate = useCallback(async () => {
-    if (!localGenPrompt.trim()) return;
+    if (!generatePrompt.trim()) return;
     setIsGenerating(true);
     try {
       const resp = await fetch('/api/perplexity/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'generate_questions', prompt: localGenPrompt, model }),
+        body: JSON.stringify({ mode: 'generate_questions', prompt: generatePrompt, model }),
       });
       const data = await resp.json();
       if (Array.isArray(data?.questions) && data.questions.length) {
@@ -222,7 +198,7 @@ export const AIComparePrimitive = (props: Props) => {
     } finally {
       setIsGenerating(false);
     }
-  }, [localGenPrompt, model, updateNodeData, props.id]);
+  }, [generatePrompt, model, updateNodeData, props.id]);
 
   const [showSettings, setShowSettings] = useState(false);
 
@@ -238,17 +214,7 @@ export const AIComparePrimitive = (props: Props) => {
         <div className="shrink-0 flex items-center justify-between gap-2 rounded-2xl border bg-card/60 p-3">
           {inputMode === 'single' ? (
             <div className="flex w-full items-center gap-2">
-              <Input
-                className="w-full"
-                value={singleQuery}
-                onChange={(e) => setSingleQuery(e.target.value)}
-                onBlur={() => {
-                  if ((queries[0] ?? '') !== singleQuery) {
-                    updateNodeData(props.id, { queries: [singleQuery, ...queries.slice(1)] });
-                  }
-                }}
-                placeholder="Enter your query…"
-              />
+              <Input className="w-full" value={queries[0]} onChange={(e) => updateQuery(0, e.target.value)} placeholder="Enter your query…" />
               <div className="ml-auto inline-flex items-center gap-2">
                 <Button onClick={runSingle} disabled={isRunning}>{isRunning ? 'Running…' : 'Run'}</Button>
                 <Button variant="ghost" size="icon" onClick={() => setShowSettings((v) => !v)} title="Settings">
@@ -267,8 +233,8 @@ export const AIComparePrimitive = (props: Props) => {
               <Input
                 className="flex-1"
                 placeholder="Describe questions to generate…"
-                value={localGenPrompt}
-                onChange={(e) => { const v = e.target.value; setLocalGenPrompt(v); persistGenPrompt(v); }}
+                value={generatePrompt}
+                onChange={(e) => updateNodeData(props.id, { generatePrompt: e.target.value })}
               />
               <div className="ml-auto inline-flex items-center gap-2">
                 <Button onClick={handleGenerate} disabled={isGenerateDisabled}>{isGenerating ? 'Generating…' : 'Generate to Batch'}</Button>
@@ -323,14 +289,14 @@ export const AIComparePrimitive = (props: Props) => {
               <div className="flex h-full min-h-0 flex-col gap-2">
                 <div className="min-h-0 flex-1 overflow-auto nowheel nodrag nopan" onPointerDown={(e)=>e.stopPropagation()}>
                   <QueryList
-                    queries={localQueries}
-                    onChange={(next) => { setLocalQueries(next); persistQueries(next); }}
+                    queries={queries}
+                    onChange={(next) => updateNodeData(props.id, { queries: next })}
                     selectedIndex={props.data.selectedQueryIndex ?? 0}
                     onSelect={(i) => updateNodeData(props.id, { selectedQueryIndex: i })}
                     onAdd={addQuery}
                     onRun={runBatch}
                     onRerun={async (i) => {
-                      const q = (localQueries[i] || '').trim();
+                      const q = (queries[i] || '').trim();
                       if (!q) return;
                       updateNodeData(props.id, { selectedQueryIndex: i });
                       setIsBatchRunning(true);
