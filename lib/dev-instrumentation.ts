@@ -29,8 +29,11 @@ if (process.env.NODE_ENV !== 'production') {
         })
         .catch(() => {});
 
-      // Load react-scan overlay from a known existing path
-      import('react-scan/dist/auto.global.js' as any).catch(() => {});
+      // Load react-scan install hook first, then overlay
+      import('react-scan/dist/install-hook.global.js' as any)
+        .then(() => import('react-scan/dist/auto.global.js' as any))
+        .then(() => { try { console.info('[diags] React Scan overlay enabled'); } catch {} })
+        .catch(() => {});
     }
   }
 }
