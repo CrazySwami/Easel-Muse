@@ -168,6 +168,9 @@ export function RoadmapBoard({ items: initial, editable = false, compactImages =
                         {f.status !== 'in_progress' && (
                           <DropdownMenuItem onClick={() => updateStatus(f.id, 'in_progress')}>Move to In progress</DropdownMenuItem>
                         )}
+                        {f.status !== 'on_hold' && (
+                          <DropdownMenuItem onClick={() => updateStatus(f.id, 'on_hold')}>Move to On hold</DropdownMenuItem>
+                        )}
                         {f.status !== 'resolved' && (
                           <DropdownMenuItem onClick={() => updateStatus(f.id, 'resolved')}>Mark Resolved</DropdownMenuItem>
                         )}
