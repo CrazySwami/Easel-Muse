@@ -14,7 +14,26 @@ How to use: Work top-to-bottom. For each item, record status and notes under Res
 - [ ] Save/persistence: Debounced, idempotent saves; skip if payload is identical to last serialized content.
 
 Results:
-- Notes:
+- 2025-10-19 — Shallow selectors for graph state (nodes/edges) to reduce unrelated re-renders.
+  - Commit: 2d840b2
+  - Expected outcome: fewer React Flow updates when unrelated store keys change; steadier FPS during idle, pan, and simple selections.
+  - How to verify:
+    1) Open canvas and React Scan. Move selection between nodes; overlays should show limited rerenders.
+    2) With React DevTools Profiler, record a select→deselect; expect lower commit count vs before.
+
+- 2025-10-19 — Skip identical save payloads (idempotent saves) to avoid unnecessary work.
+  - Commit: 2d840b2
+  - Expected outcome: fewer network calls and no save-induced reflows when the graph hasn’t changed; reduced lockups during rapid interactions.
+  - How to verify:
+    1) Perform small interactions that don’t change graph structure; watch Network tab — no redundant save requests.
+    2) Toggle a selection repeatedly; confirm no saves fire until actual graph changes occur.
+
+- 2025-10-19 — Preserve node object references when `draggable` is unchanged (cuts projection churn).
+  - Commit: b72beec
+  - Expected outcome: React Flow avoids re-laying out unchanged nodes; smoother drag/zoom on large graphs.
+  - How to verify:
+    1) With React Scan enabled, pan/zoom — expect fewer node highlights on non-changing frames.
+    2) Profiler: drag a node for ~1s; expect fewer commits from node lists.
 
 ---
 
