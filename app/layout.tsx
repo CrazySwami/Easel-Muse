@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/providers/theme';
 import { Analytics } from '@vercel/analytics/next';
 import type { ReactNode } from 'react';
 import DevDiagnostics from '@/components/dev-diagnostics';
+import Script from 'next/script';
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -23,7 +24,20 @@ const RootLayout = ({ children }: RootLayoutProps) => (
         'bg-background text-foreground antialiased [scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden'
       )}
     >
-      {process.env.NODE_ENV !== 'production' ? <DevDiagnostics /> : null}
+      {process.env.NODE_ENV !== 'production' ? (
+        <>
+          {/* Small, in-app signals and local instrumentation */}
+          <DevDiagnostics />
+          {/* Hard-load React Scan from CDN to ensure overlay initializes in dev */}
+          {String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1' ? (
+            <>
+              <Script src="https://unpkg.com/react-scan/dist/rsc-shim.global.js" strategy="afterInteractive" />
+              <Script src="https://unpkg.com/react-scan/dist/install-hook.global.js" strategy="afterInteractive" />
+              <Script src="https://unpkg.com/react-scan/dist/auto.global.js" strategy="afterInteractive" />
+            </>
+          ) : null}
+        </>
+      ) : null}
       <PostHogProvider>
         <ThemeProvider
           attribute="class"
