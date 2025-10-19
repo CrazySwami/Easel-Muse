@@ -1,5 +1,7 @@
 # UI and Component Guide
 
+See also: `docs/memory-optimizations.md` for profiling and render/memory guard patterns.
+
 This document outlines the key UI patterns, component implementations, and design principles used in the Easel application.
 
 ## Core Principles
