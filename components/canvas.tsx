@@ -698,16 +698,21 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   };
 
   const nodesWithLock = useMemo(() => {
-    return nodes.map((node) => {
+    // Fast path: no locks and not globally locked → return original array to avoid churn
+    if (!isLocked && (!locks || Object.keys(locks).length === 0)) return nodes;
+
+    let changed = false;
+    const next = nodes.map((node) => {
       const lock = locksApi.getLock(node.id);
       // Disable dragging for 'move' and 'full'; allow dragging on 'edit'
       const isDraggable = !isLocked && (!lock || (lock.level !== 'move' && lock.level !== 'full'));
-
-      return {
-        ...node,
-        draggable: isDraggable ? node.draggable : false,
-      };
+      const desiredDraggable = isDraggable ? node.draggable : false;
+      // Preserve reference when no effective change to reduce React Flow work
+      if (node.draggable === desiredDraggable) return node;
+      changed = true;
+      return { ...node, draggable: desiredDraggable };
     });
+    return changed ? next : nodes;
   }, [nodes, locks, isLocked]);
 
   // Prevent browser page zoom on trackpad pinch (ctrlKey + wheel) so canvas zoom is used
