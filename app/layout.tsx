@@ -31,7 +31,6 @@ const RootLayout = ({ children }: RootLayoutProps) => (
           {/* Hard-load React Scan from CDN to ensure overlay initializes in dev */}
           {String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1' ? (
             <>
-              <Script src="https://unpkg.com/react-scan/dist/rsc-shim.global.js" strategy="afterInteractive" />
               <Script src="https://unpkg.com/react-scan/dist/install-hook.global.js" strategy="afterInteractive" />
               <Script src="https://unpkg.com/react-scan/dist/auto.global.js" strategy="afterInteractive" />
             </>

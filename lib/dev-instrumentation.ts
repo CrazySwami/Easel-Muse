@@ -21,7 +21,8 @@ if (process.env.NODE_ENV !== 'production') {
               (React as any).whyDidYouRender = true;
               wdyr(React, {
                 trackAllPureComponents: true,
-                trackHooks: true,
+                // Disable hook tracking to avoid hooks-order issues with HMR
+                trackHooks: false,
                 collapseGroups: true,
                 exclude: [/^Tooltip/, /^ContextMenu/, /^Dialog/, /^NodeResizer/, /^ReactFlow/],
               });
