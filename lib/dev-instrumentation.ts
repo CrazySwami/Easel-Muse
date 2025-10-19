@@ -92,10 +92,22 @@ if (process.env.NODE_ENV !== 'production') {
         g.clearDiags = () => { buf.length = 0; };
         g.copyDiags = async () => {
           try {
+            if (!document.hasFocus()) throw new Error('document-not-focused');
             await navigator.clipboard.writeText(buf.join('\n'));
             orig.info('[diags] Copied diagnostics to clipboard');
           } catch (e) {
-            orig.warn('[diags] Failed to copy diagnostics:', e);
+            try {
+              // Fallback: download if clipboard blocked/unfocused
+              const why = (e as any)?.message || e;
+              orig.warn('[diags] Clipboard unavailable, downloading instead:', why);
+              const blob = new Blob([buf.join('\n')], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = `diags-${Date.now()}.txt`; a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 5000);
+            } catch (err2) {
+              orig.warn('[diags] Failed to download diagnostics:', err2);
+            }
           }
         };
         g.pauseDiags = () => { removeWrap(); orig.info('[diags] capture paused'); };
