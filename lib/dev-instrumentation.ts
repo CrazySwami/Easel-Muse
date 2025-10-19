@@ -11,6 +11,7 @@ if (process.env.NODE_ENV !== 'production') {
   if (typeof window !== 'undefined') {
     const enabled = String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1';
     if (enabled) {
+      try { console.info('[diags] Enabling dev instrumentation…'); } catch {}
       const WDYR = '@welldone-software/why-did-you-render';
       import(WDYR as any)
         .then((mod: any) => {
@@ -24,6 +25,7 @@ if (process.env.NODE_ENV !== 'production') {
                 collapseGroups: true,
                 exclude: [/^Tooltip/, /^ContextMenu/, /^Dialog/, /^NodeResizer/, /^ReactFlow/],
               });
+              try { console.info('[diags] why-did-you-render enabled'); } catch {}
             }
           } catch {}
         })

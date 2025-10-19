@@ -10,6 +10,8 @@ const DevDiagnostics = () => {
     try {
       const on = String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1';
       setEnabled(on);
+      // eslint-disable-next-line no-console
+      console.info('[diags] DevDiagnostics mounted, enabled =', on);
     } catch {}
   }, []);
 
