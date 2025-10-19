@@ -31,7 +31,7 @@ export default function ImageModal({ editable }: { editable?: boolean }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setOpen(false)}>
-      <div className={`w-full rounded-xl border bg-card p-4 ${url ? 'max-w-4xl' : 'max-w-xl'}`} onClick={(e) => e.stopPropagation()}>
+      <div className={`w-full rounded-xl border bg-card p-4 max-w-xl`} onClick={(e) => e.stopPropagation()}>
         <div className={`h-1 w-full rounded ${meta?.kind === 'bug' ? 'bg-orange-500' : 'bg-blue-600'}`} />
         <div className="flex items-center mt-3">
           <div className="text-primary text-lg font-semibold truncate flex-1">{meta?.title || 'Untitled'}</div>
@@ -61,8 +61,8 @@ export default function ImageModal({ editable }: { editable?: boolean }) {
         <div className="text-xs text-muted-foreground mt-1"><span className="text-primary font-medium">Date</span>: {meta?.createdAt ? new Date(meta.createdAt).toLocaleString() : 'Unknown'}</div>
         <div className="mb-3 mt-2 max-h-[40vh] overflow-auto whitespace-pre-wrap text-sm"><span className="text-primary font-medium">Description</span>: {meta?.message || 'No description provided.'}</div>
         {url && (
-          <div className="relative group">
-            <img src={url} alt="preview" className="w-full h-auto max-h-[40vh] rounded object-contain" />
+          <div className="relative group rounded-xl ring-2 ring-primary p-1 bg-background">
+            <img src={url} alt="preview" className="w-full h-auto max-h-[40vh] rounded-lg object-contain" />
             <button
               className="absolute top-2 right-2 hidden group-hover:inline-flex rounded bg-primary px-2 py-1 text-primary-foreground text-xs"
               onClick={() => {

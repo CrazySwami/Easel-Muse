@@ -126,7 +126,7 @@ export function RoadmapBoard({ items: initial, editable = false, compactImages =
               .map((f) => (
               <div
                 key={f.id}
-                className={`rounded-md border bg-background ${editable ? 'cursor-grab' : 'cursor-pointer'} ${dragId === f.id ? 'opacity-80 scale-[0.98] shadow-lg' : ''} min-h-[160px] flex flex-col`}
+                className={`rounded-md border bg-card dark:bg-background ${editable ? 'cursor-grab' : 'cursor-pointer'} ${dragId === f.id ? 'opacity-80 scale-[0.98] shadow-lg' : ''} min-h-[160px] flex flex-col`}
                 draggable={editable}
                 onDragStart={(e) => onDragStart(e, f.id)}
                 onDragEnd={() => { setDragId(null); setOverCol(null); }}
@@ -144,7 +144,7 @@ export function RoadmapBoard({ items: initial, editable = false, compactImages =
                 }}
               >
                 <div className={`h-1 w-full rounded-t ${f.kind === 'bug' ? 'bg-orange-500' : 'bg-blue-600'}`} />
-                <div className="p-2 pb-0">
+                <div className="px-2 pt-2 pb-0 md:pt-3">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-primary font-semibold truncate">{f.title || 'Untitled'}</div>
                     <span className={`ml-2 inline-block rounded px-2 py-0.5 text-[11px] font-medium text-white ${f.kind === 'bug' ? 'bg-orange-500' : 'bg-blue-600'}`}>
@@ -178,7 +178,7 @@ export function RoadmapBoard({ items: initial, editable = false, compactImages =
                 </div>
                 {(() => { const showImg = Boolean(f.imageUrl && showImages); return (
                 <div className={`px-2 ${showImg ? '' : 'pb-2'}`}>
-                  <div className="mt-1 mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="my-[6px] flex items-center gap-2 text-xs text-muted-foreground">
                     {f.authorAvatar ? (
                       <img src={f.authorAvatar} alt="avatar" className="h-5 w-5 rounded-full" />
                     ) : (
