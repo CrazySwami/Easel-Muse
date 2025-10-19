@@ -23,6 +23,20 @@ if (process.env.NODE_ENV !== 'production') {
           error: console.error.bind(console),
           info: console.info.bind(console),
         } as const;
+        let wrapped = false;
+        let suppressed = 0;
+        let sampleMode = false;
+        let eventsThisTick = 0;
+        const SAMPLE_THRESHOLD = 500; // logs/sec
+        const tick = () => {
+          if (eventsThisTick > SAMPLE_THRESHOLD) {
+            sampleMode = true;
+          } else if (sampleMode && eventsThisTick < SAMPLE_THRESHOLD / 2) {
+            sampleMode = false;
+          }
+          eventsThisTick = 0;
+        };
+        const ticker = setInterval(tick, 1000);
         const toLine = (level: string, args: any[]) => {
           const ts = new Date().toISOString();
           const parts = args.map((a) => {
@@ -37,17 +51,43 @@ if (process.env.NODE_ENV !== 'production') {
         };
         const wrap = (level: keyof typeof orig) =>
           (...args: any[]) => {
+            eventsThisTick++;
             try {
-              const line = toLine(level, args);
-              buf.push(line);
-              if (buf.length > MAX) buf.splice(0, buf.length - MAX);
+              if (sampleMode) {
+                suppressed++;
+              } else {
+                const line = toLine(level, args);
+                buf.push(line);
+                if (buf.length > MAX) buf.splice(0, buf.length - MAX);
+              }
             } catch {}
             return (orig as any)[level](...args);
           };
-        console.log = wrap('log') as any;
-        console.warn = wrap('warn') as any;
-        console.error = wrap('error') as any;
-        console.info = wrap('info') as any;
+        const applyWrap = () => {
+          if (wrapped) return;
+          console.log = wrap('log') as any;
+          console.warn = wrap('warn') as any;
+          console.error = wrap('error') as any;
+          console.info = wrap('info') as any;
+          wrapped = true;
+        };
+        const removeWrap = () => {
+          if (!wrapped) return;
+          console.log = orig.log as any;
+          console.warn = orig.warn as any;
+          console.error = orig.error as any;
+          console.info = orig.info as any;
+          wrapped = false;
+        };
+        applyWrap();
+        // Emit periodic summary while sampling
+        const sampler = setInterval(() => {
+          if (!sampleMode || suppressed === 0) return;
+          const line = `[${new Date().toISOString()}] INFO: [diags] sampling active, suppressed ${suppressed} logs in the last interval`;
+          buf.push(line);
+          if (buf.length > MAX) buf.splice(0, buf.length - MAX);
+          suppressed = 0;
+        }, 1500);
         g.getDiags = () => [...buf];
         g.clearDiags = () => { buf.length = 0; };
         g.copyDiags = async () => {
@@ -58,6 +98,28 @@ if (process.env.NODE_ENV !== 'production') {
             orig.warn('[diags] Failed to copy diagnostics:', e);
           }
         };
+        g.pauseDiags = () => { removeWrap(); orig.info('[diags] capture paused'); };
+        g.resumeDiags = () => { applyWrap(); orig.info('[diags] capture resumed'); };
+        g.downloadDiags = () => {
+          try {
+            const blob = new Blob([buf.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `diags-${Date.now()}.txt`; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          } catch (e) { orig.warn('[diags] Failed to download diagnostics:', e); }
+        };
+        // Hotkeys: Cmd/Ctrl+Shift+C copy, +D toggle, +L download
+        const onKey = (e: KeyboardEvent) => {
+          const mod = e.metaKey || e.ctrlKey;
+          if (!mod || !e.shiftKey) return;
+          if (e.code === 'KeyC') { e.preventDefault(); g.copyDiags(); }
+          if (e.code === 'KeyD') { e.preventDefault(); wrapped ? g.pauseDiags() : g.resumeDiags(); }
+          if (e.code === 'KeyL') { e.preventDefault(); g.downloadDiags(); }
+        };
+        window.addEventListener('keydown', onKey);
+        window.addEventListener('beforeunload', () => { try { g.copyDiags(); } catch {} });
+        g.__diagsCleanup = () => { clearInterval(tick as any); clearInterval(sampler as any); window.removeEventListener('keydown', onKey); };
         orig.info('[diags] Console capture enabled (window.copyDiags)');
       } catch {}
       const WDYR = '@welldone-software/why-did-you-render';
