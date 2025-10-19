@@ -7,6 +7,7 @@ import { PostHogProvider } from '@/providers/posthog-provider';
 import { ThemeProvider } from '@/providers/theme';
 import { Analytics } from '@vercel/analytics/next';
 import type { ReactNode } from 'react';
+import DevDiagnostics from '@/components/dev-diagnostics';
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -22,6 +23,7 @@ const RootLayout = ({ children }: RootLayoutProps) => (
         'bg-background text-foreground antialiased [scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden'
       )}
     >
+      {process.env.NODE_ENV !== 'production' ? <DevDiagnostics /> : null}
       <PostHogProvider>
         <ThemeProvider
           attribute="class"
