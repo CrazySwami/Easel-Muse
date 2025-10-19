@@ -16,14 +16,8 @@ const DevDiagnostics = () => {
   }, []);
 
   if (!enabled) return null;
-  return (
-    <div
-      style={{ position: 'fixed', bottom: 12, right: 12, zIndex: 9999999 }}
-      className="pointer-events-none select-none rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white shadow"
-    >
-      Diagnostics ON
-    </div>
-  );
+  // Badge removed as React Scan provides its own UI
+  return null;
 };
 
 export default DevDiagnostics;
