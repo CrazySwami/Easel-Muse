@@ -29,8 +29,10 @@ if (process.env.NODE_ENV !== 'production') {
         })
         .catch(() => {});
 
-      const RSCAN = 'react-scan/dist/auto';
-      import(RSCAN as any).catch(() => {});
+      // Try common entry points for react-scan auto overlay
+      import('react-scan/auto' as any)
+        .catch(() => import('react-scan/dist/auto' as any))
+        .catch(() => {});
     }
   }
 }
