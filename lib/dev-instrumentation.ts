@@ -29,10 +29,9 @@ if (process.env.NODE_ENV !== 'production') {
         })
         .catch(() => {});
 
-      // Try common entry points for react-scan auto overlay
-      import('react-scan/auto' as any)
-        .catch(() => import('react-scan/dist/auto' as any))
-        .catch(() => {});
+      // Load react-scan overlay via an existing path without static resolution
+      const rsPath = ['react-scan', 'dist', 'auto.global.js'].join('/');
+      import(rsPath as any).catch(() => {});
     }
   }
 }
