@@ -15,6 +15,7 @@ type UploaderProps = {
   className?: string;
   bucket?: 'avatars' | 'files';
   children?: ReactNode;
+  maxSizeBytes?: number; // default 5MB
 };
 
 export const Uploader = ({
@@ -23,6 +24,7 @@ export const Uploader = ({
   className,
   bucket = 'files',
   children,
+  maxSizeBytes = 1024 * 1024 * 5,
 }: UploaderProps) => {
   const [files, setFiles] = useState<File[] | undefined>();
 
@@ -44,7 +46,7 @@ export const Uploader = ({
 
   return (
     <Dropzone
-      maxSize={1024 * 1024 * 10}
+      maxSize={maxSizeBytes}
       minSize={1024}
       maxFiles={1}
       multiple={false}

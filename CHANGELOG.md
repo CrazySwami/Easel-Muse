@@ -2,6 +2,30 @@
 
 This changelog reflects the work in the Easel Muse fork only. We consolidated the last 42 commits from our repository into v0.0.1 through v0.0.3 to capture the bootstrapping steps, core collaboration features, and authentication/UX polish.
 
+## v0.0.13 — Roadmap (Features/Bugs), Unified Board, Admin Toggle (2025-10-19)
+
+-   **Roadmap & Feedback (major)**
+    -   Introduced a single unified `RoadmapBoard` component used on both user and admin views, controlled by a simple `editable` capability flag.
+    -   User-facing page `/roadmap`: read-only board with columns (New / In progress / On hold / Resolved), compact and list views, scrollable columns, and a modal “Submit feedback” button.
+    -   Admin mode on `/roadmap`: if `profile.role === 'superadmin'`, a header button toggles admin mode via `?admin=1`, enabling drag-and-drop, per-card menu (Move/In progress/On hold/Resolved/Delete), and a detail modal with status actions.
+    -   Removed redundant admin page; `/admin/roadmap` now redirects to `/roadmap`.
+
+-   **Feedback infrastructure**
+    -   Database: added `public.feedback` table (kind, email, message, image_url, status, timestamps), `profile.role` enum (`user|admin|superadmin`), and `feedback.status` enum (`new|in_progress|resolved`).
+    -   Later additions: `status` includes `on_hold`, and feedback has `title`, `author_name`, `author_email`, `author_avatar` for richer records.
+    -   API: `POST /api/feedback` (create + notify), `PATCH /api/feedback/[id]` (status updates), `DELETE /api/feedback/[id]` (remove), plus form POST fallback.
+    -   Uploads: single image up to 5MB stored in Supabase `files` bucket; public preview supported.
+    -   Notifications: sends to `SUPPORT_EMAIL` (falls back to `RESEND_EMAIL`).
+
+-   **UI & navigation**
+    -   New reusable `PageHeader` (logo → projects, title, descriptor, right-side actions, theme/menu) used on `/projects`, `/roadmap`, and admin.
+    -   Menu avatar “Feedback” link now points to `/roadmap`.
+    -   Consistent width and spacing with the top bar; columns use `max-h` + internal scroll.
+
+-   **Docs**
+    -   Expanded `docs/ui-and-component-guide.md` with the new `PageHeader` usage and the roadmap/feedback flow.
+
+
 ## v0.0.12 — Unified Batch UI & Liveblocks Presence (2025-10-13)
 
 -   **Unified Batch Processing UI (major)**

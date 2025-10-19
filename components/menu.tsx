@@ -110,16 +110,12 @@ export const Menu = () => {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <a
-              href="https://github.com/haydenbleasel/tersa"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between"
-            >
-              <span>Send feedback</span>
+            <Link href="/roadmap" className="flex items-center justify-between">
+              <span>Feedback</span>
               <ArrowUpRight size={16} className="text-muted-foreground" />
-            </a>
+            </Link>
           </DropdownMenuItem>
+          
           <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
