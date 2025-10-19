@@ -1,3 +1,54 @@
+description: >
+  Enforce Vercel AI-SDK agent patterns and build every visual workflow
+  with React Flow’s node/edge/data contracts.
+alwaysApply: true
+
+# 📚 Canonical references  
+1. Vercel AI Agents – How to build agents with the AI SDK  
+   https://vercel.com/guides/ai-agents#how-to-build-agents-with-the-ai-sdk  
+2. React Flow Learn – Getting Started & Building a Flow  
+   https://reactflow.dev/learn  
+3. MDN – HTML Drag & Drop API (for sidebar palettes)
+
+## ⚙️ Agent logic (Vercel AI SDK)
+- Prefer generateText or streamText with explicit { tools, maxSteps }.
+- Wrap external integrations in tool({ schema, run }) and export from tools.ts.
+- Structure long-running workflows via Sequential Chains, Parallel Tool Calls, and Evaluation Loops.
+- Use Vercel functions’ waitUntil / after hooks for post-response tasks.
+- Keep agent logic pure; I/O lives in tools. Use TypeScript strict mode and Zod for schema safety.
+
+## 🖼️ UI graph (React Flow)
+- State: useNodesState + useEdgesState; treat flows as controlled
+- Nodes: Custom components with input/output handles
+- Edges: Create via addEdge in onConnect; validate to avoid duplicates
+- Drag & Drop: HTML Drag-and-Drop API + React Flow handlers
+- Zoom & pan: Wrap in <ReactFlowProvider>; expose useReactFlow() for control
+- Custom edges: Extend BaseEdge for labels/actions
+- Drop-to-create: Implement with onConnectStart / onConnectEnd shortcuts
+- Persistence: Serialize { nodes, edges } to JSON; rehydrate via reactFlowInstance.toObject()
+- Advanced UX: Constrain drag handles with a .dragHandle class
+
+## 🛠️ Implementation checklist
+1. Imports
+   import { openai } from '@vercel/ai';
+   import { ReactFlow, useNodesState, useEdgesState, addEdge, ReactFlowProvider } from 'reactflow';
+
+2. Agent tools
+   export const summarizeTool = tool({ schema: z.object({ text: z.string() }), run: async ({ text }) => {} });
+
+3. Agent invocation
+   const resp = await openai.generateText({ tools: [summarizeTool], maxSteps: 3 });
+
+4. Flow state
+   const [nodes, , onNodesChange] = useNodesState(initialNodes);
+   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+   const onConnect = params => setEdges(e => addEdge(params, e));
+
+5. Persistence
+   useEffect(() => { localStorage.setItem('flow', JSON.stringify({ nodes, edges })); }, [nodes, edges]);
+
+6. Shared schemas
+   Re-export Zod schemas from /lib/validators.ts and reuse for both tools and node props.
 # agent_graph_ui.mdc
 description: >
   Enforce Vercel AI-SDK agent patterns **and** build every visual workflow

@@ -45,6 +45,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
 import { edgeTypes } from './edges';
 import { nodeTypes as staticNodeTypes } from './nodes';
+import '@/lib/dev-instrumentation';
 import {
   ContextMenu,
   ContextMenuContent,

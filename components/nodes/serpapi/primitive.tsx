@@ -72,7 +72,12 @@ export const SerpApiPrimitive = (props: SerpApiNodeProps & { title: string }) =>
   const [genModel, setGenModel] = useState<string>(Object.keys(textModels)[0]);
   const [genPrompt, setGenPrompt] = useState('');
   const [genLoading, setGenLoading] = useState(false);
-  useEffect(() => { if (!genModel && Object.keys(textModels).length) setGenModel(Object.keys(textModels)[0]); }, [textModels, genModel]);
+  // Initialize default text model once when models load; avoid churn
+  useEffect(() => {
+    const first = Object.keys(textModels)[0];
+    if (!first) return;
+    if (!genModel) setGenModel(first);
+  }, [textModels, genModel]);
 
   useEffect(() => {
     const t = setTimeout(async () => {

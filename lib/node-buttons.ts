@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   MicIcon,
   VideoIcon,
+  MessageSquareIcon,
 } from 'lucide-react';
 
 import { CodeIcon, ImageIcon, TextIcon } from 'lucide-react';
@@ -12,6 +13,19 @@ import { GlobeIcon, MonitorIcon, Maximize2Icon, SearchIcon } from 'lucide-react'
 import { PerplexityIcon } from '@/lib/icons';
 
 export const nodeButtons = [
+  {
+    id: 'chat',
+    label: 'Chat',
+    icon: MessageSquareIcon,
+    data: {
+      width: 1400,
+      height: 980,
+      resizable: false,
+      fullscreenSupported: true,
+      allowIncoming: true,
+      allowOutgoing: true,
+    },
+  },
   {
     id: 'text',
     label: 'Text',
