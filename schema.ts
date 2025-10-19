@@ -36,4 +36,21 @@ export const profile = pgTable('profile', {
   lightBackground: text('light_bg'),
   darkBackground: text('dark_bg'),
   debug: boolean('debug').notNull().default(false),
+  role: text('role'),
+});
+
+export const feedback = pgTable('feedback', {
+  id: text('id').primaryKey().default(uuid).notNull(),
+  userId: text('user_id').notNull(),
+  projectId: text('project_id'),
+  kind: text('kind').notNull(),
+  email: text('email'),
+  title: text('title'),
+  message: text('message').notNull(),
+  imageUrl: text('image_url'),
+  status: text('status').notNull().default('new'),
+  authorName: text('author_name'),
+  authorEmail: text('author_email'),
+  authorAvatar: text('author_avatar'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });

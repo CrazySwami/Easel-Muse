@@ -45,6 +45,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { ConnectionLine } from './connection-line';
 import { edgeTypes } from './edges';
 import { nodeTypes as staticNodeTypes } from './nodes';
+import { shallow } from 'zustand/shallow';
 import '@/lib/dev-instrumentation';
 import {
   ContextMenu,
@@ -79,8 +80,8 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     ...rest
   } = props ?? {};
   const content = project?.content as { nodes: Node[]; edges: Edge[] };
-  const nodes = useFlowStore((s: { nodes: Node[] }) => s.nodes);
-  const edges = useFlowStore((s: { edges: Edge[] }) => s.edges);
+  const nodes = useFlowStore((s: { nodes: Node[] }) => s.nodes, shallow);
+  const edges = useFlowStore((s: { edges: Edge[] }) => s.edges, shallow);
   const setNodes = useFlowStore((s: { setNodes: (u: (p: Node[]) => Node[]) => void }) => s.setNodes);
   const setEdges = useFlowStore((s: { setEdges: (u: (p: Edge[]) => Edge[]) => void }) => s.setEdges);
   const replaceAll = useFlowStore((s: { replaceAll: (d: { nodes?: Node[]; edges?: Edge[] }) => void }) => s.replaceAll);
@@ -98,6 +99,7 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   const rAFRef = useRef<number | null>(null);
   const pendingNodeChangesRef = useRef<Parameters<OnNodesChange>[0] | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const lastSerializedRef = useRef<string | null>(null);
 
   // Expose a minimal React Flow instance for debugging (graph size, etc.)
   useEffect(() => {
@@ -216,8 +218,16 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
     try {
       setSaveState((prev) => ({ ...prev, isSaving: true }));
 
+      const contentObj = toObject();
+      let serialized: string | null = null;
+      try { serialized = JSON.stringify(contentObj); } catch { serialized = null; }
+      if (serialized && serialized === lastSerializedRef.current) {
+        // No-op save: skip identical payloads
+        return;
+      }
+
       const response = await updateProjectAction(project.id, {
-        content: toObject(),
+        content: contentObj,
       });
 
       // Tolerate undefined or unexpected shapes from server actions in live envs
@@ -227,6 +237,7 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
       }
 
       setSaveState((prev) => ({ ...prev, lastSaved: new Date() }));
+      if (serialized) lastSerializedRef.current = serialized;
     } catch (error) {
       handleError('Error saving project', error);
     } finally {
@@ -698,16 +709,21 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
   };
 
   const nodesWithLock = useMemo(() => {
-    return nodes.map((node) => {
+    // Fast path: no locks and not globally locked → return original array to avoid churn
+    if (!isLocked && (!locks || Object.keys(locks).length === 0)) return nodes;
+
+    let changed = false;
+    const next = nodes.map((node) => {
       const lock = locksApi.getLock(node.id);
       // Disable dragging for 'move' and 'full'; allow dragging on 'edit'
       const isDraggable = !isLocked && (!lock || (lock.level !== 'move' && lock.level !== 'full'));
-
-      return {
-        ...node,
-        draggable: isDraggable ? node.draggable : false,
-      };
+      const desiredDraggable = isDraggable ? node.draggable : false;
+      // Preserve reference when no effective change to reduce React Flow work
+      if (node.draggable === desiredDraggable) return node;
+      changed = true;
+      return { ...node, draggable: desiredDraggable };
     });
+    return changed ? next : nodes;
   }, [nodes, locks, isLocked]);
 
   // Prevent browser page zoom on trackpad pinch (ctrlKey + wheel) so canvas zoom is used

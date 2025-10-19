@@ -1,5 +1,7 @@
 # UI and Component Guide
 
+See also: `docs/memory-optimizations.md` for profiling and render/memory guard patterns and `docs/performance-checklist.md` for a step-by-step optimization plan and result logging.
+
 This document outlines the key UI patterns, component implementations, and design principles used in the Easel application.
 
 ## Core Principles
@@ -24,6 +26,36 @@ The projects page serves as the main dashboard for authenticated users. It has b
     - **Clickable Rows:** The project name in each row is a direct link to the canvas.
     - **Actions Menu:** An actions menu (`...`) provides options for renaming and deleting projects.
 - **Dialogs:** Project creation, renaming, and deletion are handled through Shadcn dialogs and alert dialogs to provide a non-disruptive user experience.
+
+### Reusable Page Header (non-canvas pages)
+
+- Component: `components/page-header.tsx`
+- Purpose: Shared header used across logged-in pages (e.g., `/projects`, `/roadmap`, `/admin/roadmap`).
+- Props:
+  - `title: string` – page title.
+  - `description?: string` – short descriptor under the title.
+  - `rightSlot?: ReactNode` – actions (e.g., New Project button).
+  - `iconHref?: string` – logo link target (default `/projects`).
+  - `titleClassName?: string` – override title styling (font family/weight).
+- Defaults:
+  - Title uses the serif header style: `font-serif text-4xl font-semibold tracking-tight`.
+  - Right side includes the user menu and theme switcher.
+- Usage example:
+```tsx
+<PageHeader
+  title="Roadmap"
+  description="Track upcoming features and bug fixes."
+  rightSlot={<Button>New</Button>}
+  iconHref="/projects"
+/>
+```
+
+### Global colors
+
+- Always use the global design tokens for color.
+  - Green/accent uses the theme `primary` color and its variants.
+  - Do not hardcode hex/rgb values for greens in components; prefer utility classes like `text-primary`, `bg-primary`, `border-primary`, and translucent variants (e.g., `bg-primary/10`, `ring-primary/40`).
+  - When indicating active states (toggles, icons), apply `text-primary` and `border-primary` together for consistency.
 
 ### Typography
 
@@ -901,3 +933,14 @@ The floating zoom/theme/lock control stack has been moved into the top toolbar a
 - Component: `components/controls.tsx` exports `ControlsMenu` for the top bar.
 - Mounted in `components/top-bar.tsx` beside `ShareDialog` in a rounded group.
 - The old floating `Controls` panel is removed from `components/toolbar.tsx`.
+
+---
+
+## Feedback submission
+
+- Authenticated users can submit feedback at `/feedback` for two types: feature or bug.
+- Allowed fields: optional email, required message, optional image (one, max 5MB).
+- Images are uploaded to the `files` bucket via `components/uploader.tsx`.
+- API: `POST /api/feedback` stores a record in `public.feedback` and triggers an email to support.
+- Support email is configurable via `SUPPORT_EMAIL` (fallback to `RESEND_EMAIL`).
+- Superadmins can view submissions at `/admin/feedback` (gated by `profile.role = 'superadmin'`).

@@ -118,3 +118,10 @@ You correctly noticed that general text/chat models are handled differently.
 The main chat interface (`app/api/chat/route.ts`) does **not** use the catalog system. It calls the Vercel AI SDK directly with a hardcoded model ID (e.g., `openai('gpt-4o')`).
 
 This is a simpler, more direct approach suitable for a single chat interface. The more complex catalog system is used for the canvas nodes, where users can select from a variety of specialized models for specific tasks.
+
+---
+
+## Environment Variables
+
+- `OPENAI_API_KEY`, `XAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, etc.
+- `SUPPORT_EMAIL` (optional): address to receive feedback submissions. Falls back to `RESEND_EMAIL` from `lib/env.ts` if unset.
