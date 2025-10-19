@@ -31,6 +31,7 @@ NEXT_PUBLIC_ENABLE_RENDER_DIAGS=1 pnpm dev
 Notes:
 - Instrumentation is dev-only and gated by `NEXT_PUBLIC_ENABLE_RENDER_DIAGS=1`.
 - It’s imported via `components/canvas.tsx` → `lib/dev-instrumentation.ts` and no-ops in prod.
+- See also: `docs/performance-checklist.md` for a step-by-step optimization plan and result logging.
 
 Enable/disable:
 - Instrumentation is loaded from `lib/dev-instrumentation.ts` which runs in development.
