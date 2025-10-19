@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -n \"Next.js,Supabase,Email,Stripe\" \"next dev --turbopack\" \"npx supabase start\" \"email dev --port 3001\" \"stripe listen --forward-to localhost:3000/api/webhooks/stripe\"",
+    "dev:diags": "cross-env NEXT_PUBLIC_ENABLE_RENDER_DIAGS=1 next dev --turbopack",
     "bump-deps": "npx npm-check-updates -u && pnpm install",
     "bump-ui": "npx shadcn@latest add --all --overwrite",
     "build": "next build",
@@ -175,13 +176,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@welldone-software/why-did-you-render": "^10.0.1",
     "concurrently": "^9.2.0",
     "drizzle-kit": "^0.31.1",
     "prettier": "^3.5.3",
     "react-email": "4.0.16",
+    "react-scan": "^0.4.3",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "ultracite": "4.2.10"
+    "ultracite": "4.2.10",
+    "cross-env": "^7.0.3"
   },
   "pnpm": {
     "overrides": {}

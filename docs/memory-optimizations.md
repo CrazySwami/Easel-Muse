@@ -19,6 +19,19 @@ Installation:
 pnpm add -D @welldone-software/why-did-you-render react-scan
 ```
 
+Enable diagnostics (env toggle):
+```bash
+# Start Next dev with diagnostics enabled
+pnpm dev:diags
+
+# Or manually
+NEXT_PUBLIC_ENABLE_RENDER_DIAGS=1 pnpm dev
+```
+
+Notes:
+- Instrumentation is dev-only and gated by `NEXT_PUBLIC_ENABLE_RENDER_DIAGS=1`.
+- It’s imported via `components/canvas.tsx` → `lib/dev-instrumentation.ts` and no-ops in prod.
+
 Enable/disable:
 - Instrumentation is loaded from `lib/dev-instrumentation.ts` which runs in development.
 - Optionally gate with `NEXT_PUBLIC_ENABLE_RENDER_DIAGS=1` (planned).

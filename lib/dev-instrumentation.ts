@@ -9,30 +9,29 @@ import React from 'react';
 
 if (process.env.NODE_ENV !== 'production') {
   if (typeof window !== 'undefined') {
-    // why-did-you-render: helps spot unnecessary re-renders
-    const WDYR = '@welldone-software/why-did-you-render';
-    // use indirection to avoid type-resolution when package is not installed
-    import(WDYR as any)
-      .then((mod: any) => {
-        try {
-          const wdyr = (mod && (mod.default || mod)) as (r: typeof React, opts?: any) => void;
-          if (wdyr) {
-            (React as any).whyDidYouRender = true;
-            wdyr(React, {
-              trackAllPureComponents: true,
-              trackHooks: true,
-              collapseGroups: true,
-              // Reduce noise from common primitives; adjust as needed
-              exclude: [/^Tooltip/, /^ContextMenu/, /^Dialog/],
-            });
-          }
-        } catch {}
-      })
-      .catch(() => {});
+    const enabled = String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1';
+    if (enabled) {
+      const WDYR = '@welldone-software/why-did-you-render';
+      import(WDYR as any)
+        .then((mod: any) => {
+          try {
+            const wdyr = (mod && (mod.default || mod)) as (r: typeof React, opts?: any) => void;
+            if (wdyr) {
+              (React as any).whyDidYouRender = true;
+              wdyr(React, {
+                trackAllPureComponents: true,
+                trackHooks: true,
+                collapseGroups: true,
+                exclude: [/^Tooltip/, /^ContextMenu/, /^Dialog/, /^NodeResizer/, /^ReactFlow/],
+              });
+            }
+          } catch {}
+        })
+        .catch(() => {});
 
-    // react-scan overlay: visualizes component render frequency/cost
-    const RSCAN = 'react-scan/dist/auto';
-    import(RSCAN as any).catch(() => {});
+      const RSCAN = 'react-scan/dist/auto';
+      import(RSCAN as any).catch(() => {});
+    }
   }
 }
 
