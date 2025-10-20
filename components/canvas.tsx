@@ -759,7 +759,53 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                     onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   />
                 ) : null}
-                <ReactFlow
+                {process.env.NODE_ENV !== 'production' && String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1' ? (
+                  <React.Profiler id="CanvasProfiler" onRender={(id, phase, actualDuration, baseDuration, startTime, commitTime) => {
+                    try {
+                      // eslint-disable-next-line no-console
+                      console.info('[profiler]', { id, phase, actualDuration: Number(actualDuration.toFixed(2)), baseDuration: Number(baseDuration.toFixed(2)), startTime: Number(startTime.toFixed(2)), commitTime: Number(commitTime.toFixed(2)) });
+                    } catch {}
+                  }}>
+                    <ReactFlow
+                      deleteKeyCode={['Backspace', 'Delete']}
+                      nodes={nodesWithLock}
+                      onNodesChange={handleNodesChange}
+                      edges={edges}
+                      onEdgesChange={handleEdgesChange}
+                      onConnectStart={handleConnectStart}
+                      onConnect={handleConnect}
+                      onConnectEnd={handleConnectEnd}
+                      nodeTypes={nodeTypes}
+                      edgeTypes={edgeTypes}
+                      isValidConnection={isValidConnection}
+                      connectionLineComponent={ConnectionLine}
+                      panOnScroll={!isLocked}
+                      zoomOnScroll={!isLocked}
+                      zoomOnPinch={!isLocked}
+                      nodesDraggable={!isLocked}
+                      nodesConnectable={!isLocked}
+                      elementsSelectable={!isLocked}
+                      preventScrolling
+                      fitView
+                      minZoom={0.02}
+                      maxZoom={2}
+                      zoomOnDoubleClick={false}
+                      panOnDrag={!isLocked}
+                      selectionOnDrag
+                      onDoubleClick={addDropNode}
+                      {...rest}
+                    >
+                      <Background gap={28} size={2.2} />
+                      {/* Dev-only stress utilities */}
+                      {debug ? <StressPanel /> : null}
+                      {children}
+                      <Panel position="bottom-right" className="m-2 flex gap-2">
+                        {/* existing button */}
+                      </Panel>
+                    </ReactFlow>
+                  </React.Profiler>
+                ) : (
+                  <ReactFlow
                 deleteKeyCode={['Backspace', 'Delete']}
                 nodes={nodesWithLock}
                 onNodesChange={handleNodesChange}
@@ -787,13 +833,13 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                 selectionOnDrag
                 onDoubleClick={addDropNode}
                 {...rest}
-              >
-                <Background gap={28} size={2.2} />
-                {/* Dev-only stress utilities */}
-                {debug ? <StressPanel /> : null}
-                {children}
-                <Panel position="bottom-right" className="m-2 flex gap-2">
-                  <button
+                  >
+                    <Background gap={28} size={2.2} />
+                    {/* Dev-only stress utilities */}
+                    {debug ? <StressPanel /> : null}
+                    {children}
+                    <Panel position="bottom-right" className="m-2 flex gap-2">
+                      <button
                     className="rounded-full bg-emerald-600 px-3 py-1 text-xs text-white shadow hover:bg-emerald-700"
                     onClick={() => {
                       try {
@@ -824,12 +870,13 @@ export const Canvas = ({ children, debug, ...props }: CanvasProps) => {
                         const types = Object.keys(nodeTypes);
                         types.forEach((t, i) => addNode(t, { position: { x: x0 + (i % 2) * dx, y: y0 + Math.floor(i / 2) * dy } }));
                       }
-                    }}
-                  >
-                    Add all nodes
-                  </button>
-                </Panel>
-              </ReactFlow>
+                        }}
+                      >
+                        Add all nodes
+                      </button>
+                    </Panel>
+                  </ReactFlow>
+                )}
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>

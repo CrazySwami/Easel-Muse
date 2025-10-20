@@ -29,3 +29,22 @@ export const nodeTypes = {
   chat: ChatNode,
   'ai-compare': AICompareNode,
 };
+
+// Dev-only render logging wrapper (env-gated)
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  try {
+    const enabled = String(process.env.NEXT_PUBLIC_ENABLE_RENDER_DIAGS || '').toLowerCase() === '1';
+    if (enabled) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { withRenderLog } = require('@/lib/debug/render-log');
+      for (const key of Object.keys(nodeTypes)) {
+        const Comp = (nodeTypes as any)[key];
+        if (typeof Comp === 'function' && !(Comp as any).__wrappedWithRenderLog) {
+          const Wrapped = withRenderLog(Comp, `Node:${key}`);
+          (Wrapped as any).__wrappedWithRenderLog = true;
+          (nodeTypes as any)[key] = Wrapped;
+        }
+      }
+    }
+  } catch {}
+}
